@@ -2,12 +2,19 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 )
 
 // Config holds all runtime configuration for the daemon.
 type Config struct {
-	GitHubToken  string
+	// PAT auth
+	GitHubToken string
+	// GitHub App auth
+	AppClientID      string
+	AppInstallationID int64
+	AppPrivateKeyPath string
+	// Common
 	GitHubURL    string
 	RunnerGroup  string
 	ScaleSetName string
@@ -15,15 +22,35 @@ type Config struct {
 	MaxRunners   int
 }
 
+// AuthMode returns which authentication method is configured.
+func (c *Config) AuthMode() string {
+	if c.AppClientID != "" {
+		return "app"
+	}
+	return "pat"
+}
+
 // Load parses flags and environment variables into a Config.
 // Flags take precedence over environment variables.
 func Load() *Config {
 	cfg := &Config{}
 
+	// PAT auth
 	flag.StringVar(&cfg.GitHubToken, "token", os.Getenv("GITHUB_TOKEN"),
-		"GitHub personal access token (or GITHUB_TOKEN env var)")
+		"GitHub PAT (or GITHUB_TOKEN env). Used when --app-client-id is not set.")
+
+	// GitHub App auth
+	flag.StringVar(&cfg.AppClientID, "app-client-id", os.Getenv("GITHUB_APP_CLIENT_ID"),
+		"GitHub App Client ID (or GITHUB_APP_CLIENT_ID env)")
+	var installationID int64
+	flag.Int64Var(&installationID, "app-installation-id", 0,
+		"GitHub App Installation ID (or GITHUB_APP_INSTALLATION_ID env)")
+	flag.StringVar(&cfg.AppPrivateKeyPath, "app-private-key", os.Getenv("GITHUB_APP_PRIVATE_KEY_PATH"),
+		"Path to GitHub App private key PEM file (or GITHUB_APP_PRIVATE_KEY_PATH env)")
+
+	// Common
 	flag.StringVar(&cfg.GitHubURL, "url", os.Getenv("GITHUB_CONFIG_URL"),
-		"GitHub config URL, e.g. https://github.com/myorg (or GITHUB_CONFIG_URL env var)")
+		"GitHub config URL — org or repo, e.g. https://github.com/myorg (or GITHUB_CONFIG_URL env)")
 	flag.StringVar(&cfg.RunnerGroup, "runner-group", envOrDefault("GITHUB_RUNNER_GROUP", "Default"),
 		"Runner group name")
 	flag.StringVar(&cfg.ScaleSetName, "scale-set-name", envOrDefault("SCALE_SET_NAME", "elastic-fruit-runner"),
@@ -34,6 +61,14 @@ func Load() *Config {
 		"Maximum concurrent runners (Apple EULA limit for macOS VMs is 2)")
 
 	flag.Parse()
+
+	// Resolve installation ID: flag > env
+	if installationID != 0 {
+		cfg.AppInstallationID = installationID
+	} else if v := os.Getenv("GITHUB_APP_INSTALLATION_ID"); v != "" {
+		fmt.Sscanf(v, "%d", &cfg.AppInstallationID)
+	}
+
 	return cfg
 }
 

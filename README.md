@@ -33,12 +33,27 @@ go build -o elastic-fruit-runner ./cmd/daemon
 
 ### Run
 
-**Org-level runner** (all repos in the org can use it):
+#### Option A — GitHub App (recommended for org deployments)
+
+Create a GitHub App with `manage_runners:org` and `organization_self_hosted_runners:write` permissions, install it on your org, then:
+
+```sh
+GITHUB_APP_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx \
+GITHUB_APP_INSTALLATION_ID=12345678 \
+GITHUB_APP_PRIVATE_KEY_PATH=/path/to/private-key.pem \
+GITHUB_CONFIG_URL=https://github.com/your-org \
+./elastic-fruit-runner
+```
+
+#### Option B — Personal Access Token
+
 ```sh
 GITHUB_TOKEN=ghp_xxx \
 GITHUB_CONFIG_URL=https://github.com/your-org \
 ./elastic-fruit-runner
 ```
+
+> Scope required: `manage_runners:org` (org-level) or `repo` (repo-level).
 
 **Repo-level runner** (only one repo):
 ```sh
@@ -49,12 +64,20 @@ GITHUB_CONFIG_URL=https://github.com/your-org/your-repo \
 
 **All flags:**
 ```
-  --token           GitHub PAT (or GITHUB_TOKEN env)
-  --url             GitHub config URL — org or repo (or GITHUB_CONFIG_URL env)
-  --runner-group    Runner group name (default: Default)
-  --scale-set-name  Name shown in GitHub Actions UI (default: elastic-fruit-runner)
-  --vm-image        Tart base image to clone per job (default: ghcr.io/cirruslabs/macos-sequoia-base:latest)
-  --max-runners     Max concurrent VMs, Apple EULA caps macOS VMs at 2 per host (default: 2)
+  # Auth — GitHub App (takes precedence over PAT if set)
+  --app-client-id         GitHub App Client ID (or GITHUB_APP_CLIENT_ID env)
+  --app-installation-id   GitHub App Installation ID (or GITHUB_APP_INSTALLATION_ID env)
+  --app-private-key       Path to PEM private key file (or GITHUB_APP_PRIVATE_KEY_PATH env)
+
+  # Auth — PAT (fallback)
+  --token                 GitHub PAT (or GITHUB_TOKEN env)
+
+  # Common
+  --url                   GitHub config URL — org or repo (or GITHUB_CONFIG_URL env)
+  --runner-group          Runner group name (default: Default)
+  --scale-set-name        Name shown in GitHub Actions UI (default: elastic-fruit-runner)
+  --vm-image              Tart base image to clone per job (default: ghcr.io/cirruslabs/macos-sequoia-base:latest)
+  --max-runners           Max concurrent VMs, Apple EULA caps macOS VMs at 2 per host (default: 2)
 ```
 
 ### Use in a workflow
