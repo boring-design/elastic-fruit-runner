@@ -1,0 +1,25 @@
+.gitignore
+  03b76455772a5b1d 1-3
+CLAUDE.md
+  03b76455772a5b1d 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "313783cf6a4bb44a2bddaa2eb6ec13ef681eb9ee",
+  "prompts": {
+    "03b76455772a5b1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f79ac4b-bb47-4a7f-8aba-ce427720c457",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 0,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    }
+  }
+}
