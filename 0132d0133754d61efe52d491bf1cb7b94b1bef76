@@ -1,0 +1,23 @@
+internal/daemon/daemon.go
+  03b76455772a5b1d 28,112-113,115-121,123,126,144-146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "0132d0133754d61efe52d491bf1cb7b94b1bef76",
+  "prompts": {
+    "03b76455772a5b1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f79ac4b-bb47-4a7f-8aba-ce427720c457",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 7,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
