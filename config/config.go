@@ -11,7 +11,7 @@ type Config struct {
 	// PAT auth
 	GitHubToken string
 	// GitHub App auth
-	AppClientID      string
+	AppClientID       string
 	AppInstallationID int64
 	AppPrivateKeyPath string
 	// Common
@@ -20,6 +20,8 @@ type Config struct {
 	ScaleSetName string
 	VMImage      string
 	MaxRunners   int
+	// Backend mode: "host" or "tart"
+	Mode string
 }
 
 // AuthMode returns which authentication method is configured.
@@ -59,6 +61,8 @@ func Load() *Config {
 		"Tart VM image to clone for each runner")
 	flag.IntVar(&cfg.MaxRunners, "max-runners", 2,
 		"Maximum concurrent runners (Apple EULA limit for macOS VMs is 2)")
+	flag.StringVar(&cfg.Mode, "mode", envOrDefault("RUNNER_MODE", "tart"),
+		"Backend mode: 'host' (run on host directly) or 'tart' (ephemeral VMs)")
 
 	flag.Parse()
 

@@ -11,33 +11,29 @@ import (
 	"github.com/actions/scaleset/listener"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
-	"github.com/boring-design/elastic-fruit-runner/internal/runner"
-	"github.com/boring-design/elastic-fruit-runner/internal/tart"
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 )
 
 // Daemon is the main controller. It registers a GitHub Actions Runner Scale
-// Set, polls for job assignments, and manages ephemeral Tart VMs.
+// Set, polls for job assignments, and manages ephemeral runners.
 type Daemon struct {
 	cfg        *config.Config
 	client     *scaleset.Client
 	scaleSetID int
 
-	tart      *tart.Manager
-	registrar *runner.Registrar
-	logger    *slog.Logger
+	backend backend.Backend
+	logger  *slog.Logger
 
 	vmCounter atomic.Int64
 }
 
 // New creates a Daemon from the given config and authenticated client.
-func New(cfg *config.Config, client *scaleset.Client, logger *slog.Logger) *Daemon {
-	t := tart.NewManager(logger)
+func New(cfg *config.Config, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *Daemon {
 	return &Daemon{
-		cfg:       cfg,
-		client:    client,
-		tart:      t,
-		registrar: runner.NewRegistrar(t, logger),
-		logger:    logger,
+		cfg:     cfg,
+		client:  client,
+		backend: b,
+		logger:  logger,
 	}
 }
 
@@ -96,8 +92,8 @@ func (d *Daemon) Run(ctx context.Context) error {
 }
 
 // HandleDesiredRunnerCount implements listener.Scaler.
-// Called when the number of pending jobs changes. We spawn one VM per desired
-// runner, up to the configured maximum.
+// Called when the number of pending jobs changes. We spawn one runner per
+// desired count, up to the configured maximum.
 func (d *Daemon) HandleDesiredRunnerCount(ctx context.Context, count int) (int, error) {
 	actual := min(count, d.cfg.MaxRunners)
 	d.logger.Info("scaling", "desired", count, "spawning", actual)
@@ -120,44 +116,29 @@ func (d *Daemon) HandleJobCompleted(_ context.Context, job *scaleset.JobComplete
 	return nil
 }
 
-// spawnRunner clones a Tart VM, registers an ephemeral runner with a JIT
-// config, runs the job, then tears down the VM. Runs in its own goroutine.
+// spawnRunner prepares the backend environment, registers an ephemeral runner
+// with a JIT config, runs the job, then cleans up. Runs in its own goroutine.
 func (d *Daemon) spawnRunner(ctx context.Context) {
 	id := d.vmCounter.Add(1)
-	vmName := fmt.Sprintf("efr-%d-%d", time.Now().Unix(), id)
-	log := d.logger.With("vm", vmName)
+	name := fmt.Sprintf("efr-%d-%d", time.Now().Unix(), id)
+	log := d.logger.With("runner", name)
 
-	log.Info("spawning ephemeral runner VM")
+	log.Info("spawning ephemeral runner")
 
 	defer func() {
-		log.Info("cleaning up VM")
+		log.Info("cleaning up runner")
 		cleanCtx := context.Background()
-		if err := d.tart.Stop(cleanCtx, vmName); err != nil {
-			log.Warn("stop VM", "err", err)
-		}
-		if err := d.tart.Delete(cleanCtx, vmName); err != nil {
-			log.Warn("delete VM", "err", err)
-		}
-		log.Info("VM removed")
+		d.backend.Cleanup(cleanCtx, name)
+		log.Info("runner cleaned up")
 	}()
 
-	if err := d.tart.Clone(ctx, d.cfg.VMImage, vmName); err != nil {
-		log.Error("clone VM failed", "err", err)
-		return
-	}
-
-	if err := d.tart.Start(ctx, vmName); err != nil {
-		log.Error("start VM failed", "err", err)
-		return
-	}
-
-	if _, err := d.tart.IPAddress(ctx, vmName); err != nil {
-		log.Error("VM unreachable", "err", err)
+	if err := d.backend.Prepare(ctx, name); err != nil {
+		log.Error("prepare failed", "err", err)
 		return
 	}
 
 	jitCfg, err := d.client.GenerateJitRunnerConfig(ctx,
-		&scaleset.RunnerScaleSetJitRunnerSetting{Name: vmName},
+		&scaleset.RunnerScaleSetJitRunnerSetting{Name: name},
 		d.scaleSetID,
 	)
 	if err != nil {
@@ -165,7 +146,7 @@ func (d *Daemon) spawnRunner(ctx context.Context) {
 		return
 	}
 
-	if err := d.registrar.StartWithJITConfig(ctx, vmName, jitCfg.EncodedJITConfig); err != nil {
+	if err := d.backend.RunRunner(ctx, name, jitCfg.EncodedJITConfig); err != nil {
 		log.Error("runner failed", "err", err)
 		return
 	}

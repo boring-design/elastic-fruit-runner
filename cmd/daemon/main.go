@@ -11,6 +11,7 @@ import (
 	"github.com/actions/scaleset"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/daemon"
 )
 
@@ -72,16 +73,29 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Select backend based on mode.
+	var b backend.Backend
+	switch cfg.Mode {
+	case "host":
+		b = backend.NewHostBackend(logger)
+		logger.Info("using host backend (runner runs directly on this machine)")
+	case "tart":
+		b = backend.NewTartBackend(cfg.VMImage, logger)
+	default:
+		logger.Error("unknown mode — use 'host' or 'tart'", "mode", cfg.Mode)
+		os.Exit(1)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	d := daemon.New(cfg, client, logger)
+	d := daemon.New(cfg, client, b, logger)
 
 	logger.Info("elastic-fruit-runner starting",
 		"url", cfg.GitHubURL,
+		"mode", cfg.Mode,
 		"scaleSet", cfg.ScaleSetName,
 		"runnerGroup", cfg.RunnerGroup,
-		"vmImage", cfg.VMImage,
 		"maxRunners", cfg.MaxRunners,
 	)
 
