@@ -88,7 +88,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("create message session: %w", err)
 	}
-	defer msgClient.Close(ctx)
+	defer msgClient.Close(context.Background())
 
 	// Build the listener (handles long-polling and message acknowledgement).
 	l, err := listener.New(msgClient, listener.Config{
