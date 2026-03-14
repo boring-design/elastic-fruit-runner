@@ -24,7 +24,8 @@ type Daemon struct {
 	backend backend.Backend
 	logger  *slog.Logger
 
-	vmCounter atomic.Int64
+	vmCounter    atomic.Int64
+	activeRunner atomic.Int64
 }
 
 // New creates a Daemon from the given config and authenticated client.
@@ -108,16 +109,21 @@ func (d *Daemon) Run(ctx context.Context) error {
 }
 
 // HandleDesiredRunnerCount implements listener.Scaler.
-// Called when the number of pending jobs changes. We spawn one runner per
-// desired count, up to the configured maximum.
+// Called when the number of pending jobs changes. We only spawn runners
+// for the gap between what's already active and what's needed.
 func (d *Daemon) HandleDesiredRunnerCount(ctx context.Context, count int) (int, error) {
-	actual := min(count, d.cfg.MaxRunners)
-	d.logger.Info("scaling", "desired", count, "spawning", actual)
+	active := int(d.activeRunner.Load())
+	needed := min(count, d.cfg.MaxRunners) - active
+	if needed < 0 {
+		needed = 0
+	}
 
-	for i := 0; i < actual; i++ {
+	d.logger.Info("scaling", "desired", count, "active", active, "spawning", needed)
+
+	for i := 0; i < needed; i++ {
 		go d.spawnRunner(context.Background())
 	}
-	return actual, nil
+	return active + needed, nil
 }
 
 // HandleJobStarted implements listener.Scaler.
@@ -135,6 +141,9 @@ func (d *Daemon) HandleJobCompleted(_ context.Context, job *scaleset.JobComplete
 // spawnRunner prepares the backend environment, registers an ephemeral runner
 // with a JIT config, runs the job, then cleans up. Runs in its own goroutine.
 func (d *Daemon) spawnRunner(ctx context.Context) {
+	d.activeRunner.Add(1)
+	defer d.activeRunner.Add(-1)
+
 	id := d.vmCounter.Add(1)
 	name := fmt.Sprintf("efr-%d-%d", time.Now().Unix(), id)
 	log := d.logger.With("runner", name)
