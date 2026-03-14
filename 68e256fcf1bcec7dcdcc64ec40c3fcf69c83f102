@@ -1,0 +1,23 @@
+README.md
+  03b76455772a5b1d 5-6,18-20,35,37-43,45-53,55-57,64,67,72,81,86-88,101-103,123,127-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "68e256fcf1bcec7dcdcc64ec40c3fcf69c83f102",
+  "prompts": {
+    "03b76455772a5b1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f79ac4b-bb47-4a7f-8aba-ce427720c457",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 17,
+      "accepted_lines": 40,
+      "overriden_lines": 0
+    }
+  }
+}
