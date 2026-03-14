@@ -47,22 +47,38 @@ func (d *Daemon) Run(ctx context.Context) error {
 	}
 	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
 
-	// Get existing scale set or create one.
+	// Desired labels for the scale set.
+	desiredLabels := []scaleset.Label{
+		{Name: d.cfg.ScaleSetName},
+		{Name: "self-hosted"},
+		{Name: "macOS"},
+		{Name: "arm64"},
+	}
+
+	// Reuse existing scale set if possible, update labels if needed, or create new.
 	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.cfg.ScaleSetName)
-	if err != nil {
-		d.logger.Info("scale set not found — creating", "name", d.cfg.ScaleSetName)
+	if err != nil || ss == nil {
+		d.logger.Info("creating scale set", "name", d.cfg.ScaleSetName)
 		ss, err = d.client.CreateRunnerScaleSet(ctx, &scaleset.RunnerScaleSet{
 			Name:          d.cfg.ScaleSetName,
 			RunnerGroupID: group.ID,
-			Labels: []scaleset.Label{
-				{Name: "self-hosted"},
-				{Name: "macOS"},
-				{Name: "arm64"},
-			},
+			Labels:        desiredLabels,
 		})
 		if err != nil {
 			return fmt.Errorf("create runner scale set: %w", err)
 		}
+	} else if !labelsMatch(ss.Labels, desiredLabels) {
+		d.logger.Info("updating scale set labels", "id", ss.ID)
+		ss, err = d.client.UpdateRunnerScaleSet(ctx, ss.ID, &scaleset.RunnerScaleSet{
+			Name:          d.cfg.ScaleSetName,
+			RunnerGroupID: group.ID,
+			Labels:        desiredLabels,
+		})
+		if err != nil {
+			return fmt.Errorf("update runner scale set: %w", err)
+		}
+	} else {
+		d.logger.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
 	}
 	d.scaleSetID = ss.ID
 	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
@@ -152,4 +168,22 @@ func (d *Daemon) spawnRunner(ctx context.Context) {
 	}
 
 	log.Info("runner completed successfully")
+}
+
+// labelsMatch returns true if both slices contain the same label names
+// (order-independent).
+func labelsMatch(a, b []scaleset.Label) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	set := make(map[string]struct{}, len(a))
+	for _, l := range a {
+		set[l.Name] = struct{}{}
+	}
+	for _, l := range b {
+		if _, ok := set[l.Name]; !ok {
+			return false
+		}
+	}
+	return true
 }

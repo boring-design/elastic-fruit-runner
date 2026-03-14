@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	runnerVersion     = "2.322.0"
 	runnerDownloadURL = "https://github.com/actions/runner/releases/download/v%s/actions-runner-osx-arm64-%s.tar.gz"
 )
 
@@ -42,7 +41,12 @@ func (b *TartBackend) Prepare(ctx context.Context, name string) error {
 }
 
 func (b *TartBackend) RunRunner(ctx context.Context, name, jitConfig string) error {
-	url := fmt.Sprintf(runnerDownloadURL, runnerVersion, runnerVersion)
+	version, err := ResolveRunnerVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("resolve runner version: %w", err)
+	}
+
+	url := fmt.Sprintf(runnerDownloadURL, version, version)
 
 	script := fmt.Sprintf(`
 set -euo pipefail
@@ -55,9 +59,8 @@ if [ ! -f ./run.sh ]; then
   rm runner.tar.gz
 fi
 
-./config.sh --unattended --jitconfig "%s"
-./run.sh
-`, runnerVersion, url, jitConfig)
+./run.sh --jitconfig "%s"
+`, version, url, jitConfig)
 
 	out, err := b.tart.ExecOutput(ctx, name, "bash", "-c", script)
 	if err != nil {

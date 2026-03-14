@@ -50,21 +50,12 @@ func (b *HostBackend) RunRunner(ctx context.Context, name, jitConfig string) err
 
 	b.logger.Info("starting runner on host", "runner", name, "workDir", workDir)
 
-	configPath := filepath.Join(runnerDir, "config.sh")
-	configCmd := exec.CommandContext(ctx, configPath,
-		"--unattended",
-		"--jitconfig", jitConfig,
-		"--work", workDir,
-	)
-	configCmd.Dir = runnerDir
-	configCmd.Stdout = os.Stdout
-	configCmd.Stderr = os.Stderr
-	if err := configCmd.Run(); err != nil {
-		return fmt.Errorf("configure runner: %w", err)
-	}
-
+	// Use run.sh --jitconfig which handles both configuration and execution
+	// in a single step. The JIT config contains all registration details.
 	runPath := filepath.Join(runnerDir, "run.sh")
-	runCmd := exec.CommandContext(ctx, runPath)
+	runCmd := exec.CommandContext(ctx, runPath,
+		"--jitconfig", jitConfig,
+	)
 	runCmd.Dir = runnerDir
 	runCmd.Stdout = os.Stdout
 	runCmd.Stderr = os.Stderr
@@ -90,7 +81,12 @@ func (b *HostBackend) ensureRunner(ctx context.Context, dir string) error {
 		return nil
 	}
 
-	b.logger.Info("downloading actions/runner", "version", runnerVersion, "dir", dir)
+	version, err := ResolveRunnerVersion(ctx)
+	if err != nil {
+		return fmt.Errorf("resolve runner version: %w", err)
+	}
+
+	b.logger.Info("downloading actions/runner", "version", version, "dir", dir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -98,7 +94,7 @@ func (b *HostBackend) ensureRunner(ctx context.Context, dir string) error {
 	archSuffix := runnerArchSuffix()
 	url := fmt.Sprintf(
 		"https://github.com/actions/runner/releases/download/v%s/actions-runner-%s-%s.tar.gz",
-		runnerVersion, archSuffix, runnerVersion,
+		version, archSuffix, version,
 	)
 
 	cmd := exec.CommandContext(ctx, "bash", "-c",
