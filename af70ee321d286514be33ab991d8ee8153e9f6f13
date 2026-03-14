@@ -1,0 +1,31 @@
+internal/daemon/daemon.go
+  03b76455772a5b1d 50-58,60-61,65,70-75,77-81,172-189
+internal/backend/host.go
+  03b76455772a5b1d 53-56,84-89,97
+internal/backend/tart.go
+  03b76455772a5b1d 44-47,49,62-63
+.gitignore
+  03b76455772a5b1d 2-3
+internal/backend/runner_version.go
+  03b76455772a5b1d 1-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "af70ee321d286514be33ab991d8ee8153e9f6f13",
+  "prompts": {
+    "03b76455772a5b1d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9f79ac4b-bb47-4a7f-8aba-ce427720c457",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 150,
+      "total_deletions": 61,
+      "accepted_lines": 125,
+      "overriden_lines": 0
+    }
+  }
+}
