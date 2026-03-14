@@ -85,9 +85,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
 	// Create a message session client (handles the long-poll session lifecycle).
-	msgClient, err := d.client.MessageSessionClient(ctx, ss.ID, d.cfg.ScaleSetName,
-		scaleset.WithTimeout(15*time.Second),
-	)
+	msgClient, err := d.client.MessageSessionClient(ctx, ss.ID, d.cfg.ScaleSetName)
 	if err != nil {
 		return fmt.Errorf("create message session: %w", err)
 	}
