@@ -1,0 +1,14 @@
+[[repos]]
+repo = "https://github.com/dnephin/pre-commit-golang"
+rev = "v0.5.1"
+hooks = [
+  { id = "go-fmt" },
+  { id = "go-imports" },
+]
+
+[[repos]]
+repo = "https://github.com/golangci/golangci-lint"
+rev = "v2.11.3"
+hooks = [
+  { id = "golangci-lint" },
+]
