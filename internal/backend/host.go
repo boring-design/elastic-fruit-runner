@@ -47,7 +47,20 @@ func (b *HostBackend) Prepare(ctx context.Context, name string) error {
 	inst := b.instanceDir(name)
 	b.logger.Info("copying runner template for instance", "src", tmpl, "dst", inst)
 
-	cmd := exec.CommandContext(ctx, "cp", "-a", tmpl, inst)
+	if err := os.MkdirAll(inst, 0o755); err != nil {
+		return fmt.Errorf("create instance dir: %w", err)
+	}
+
+	// Use rsync to copy only the runner binaries, excluding runtime state
+	// that would conflict between concurrent instances.
+	cmd := exec.CommandContext(ctx, "rsync", "-a",
+		"--exclude", "_work",
+		"--exclude", "_diag",
+		"--exclude", ".runner",
+		"--exclude", ".credentials",
+		"--exclude", ".credentials_rsaparams",
+		tmpl+"/", inst+"/",
+	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
