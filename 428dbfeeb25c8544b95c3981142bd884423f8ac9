@@ -1,0 +1,66 @@
+config/config.go
+  6e84a62b08cc18ab 23,65-66,79-81
+internal/trigger/scaleset.go
+  6e84a62b08cc18ab 1-103
+internal/runnerpool/slot.go
+  6e84a62b08cc18ab 1-44
+internal/trigger/trigger.go
+  6e84a62b08cc18ab 1-20
+internal/tart/manager.go
+  50c06374387810dd 80-84,120-124
+  4c55a23105dbadea 10,13-16,21,24-26,31-32,56,64-68,71,73-79,85-94,96,100,108-110
+internal/scheduler/job.go
+  6e84a62b08cc18ab 1-37
+cmd/daemon/main.go
+  6e84a62b08cc18ab 6,16-18,101,104,111-194
+internal/runnerpool/pool.go
+  6e84a62b08cc18ab 1-178
+internal/scheduler/scheduler.go
+  6e84a62b08cc18ab 1-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "428dbfeeb25c8544b95c3981142bd884423f8ac9",
+  "prompts": {
+    "4c55a23105dbadea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7d55f8dc-072f-4e5f-bd95-5da0eb2aba42",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 13,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    },
+    "50c06374387810dd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5467bbed-9b60-49b9-9645-f7e3e2e636f4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 1,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    },
+    "6e84a62b08cc18ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7163c288-068c-4d4d-bfa5-e6da4d8edbae",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 687,
+      "total_deletions": 21,
+      "accepted_lines": 670,
+      "overriden_lines": 0
+    }
+  }
+}
