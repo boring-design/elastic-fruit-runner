@@ -19,7 +19,8 @@ type Config struct {
 	RunnerGroup  string
 	ScaleSetName string
 	VMImage      string
-	MaxRunners   int
+	MaxRunners int
+	PoolSize   int
 	// Backend mode: "host" or "tart"
 	Mode string
 }
@@ -61,6 +62,8 @@ func Load() *Config {
 		"Tart VM image to clone for each runner")
 	flag.IntVar(&cfg.MaxRunners, "max-runners", 2,
 		"Maximum concurrent runners (Apple EULA limit for macOS VMs is 2)")
+	flag.IntVar(&cfg.PoolSize, "pool-size", 0,
+		"Number of pre-warmed runner slots (defaults to --max-runners if 0)")
 	flag.StringVar(&cfg.Mode, "mode", envOrDefault("RUNNER_MODE", "tart"),
 		"Backend mode: 'host' (run on host directly) or 'tart' (ephemeral VMs)")
 
@@ -71,6 +74,11 @@ func Load() *Config {
 		cfg.AppInstallationID = installationID
 	} else if v := os.Getenv("GITHUB_APP_INSTALLATION_ID"); v != "" {
 		fmt.Sscanf(v, "%d", &cfg.AppInstallationID)
+	}
+
+	// Default pool size to max runners.
+	if cfg.PoolSize == 0 {
+		cfg.PoolSize = cfg.MaxRunners
 	}
 
 	return cfg
