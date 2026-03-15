@@ -1,0 +1,23 @@
+internal/backend/host.go
+  286e5024cc90a639 50-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "b409e7d634c861a15184455f6e0a4f057304f1f5",
+  "prompts": {
+    "286e5024cc90a639": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b426f330-cee2-4903-b807-1693c85d92f6",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 1,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    }
+  }
+}
