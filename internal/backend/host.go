@@ -26,37 +26,46 @@ func NewHostBackend(logger *slog.Logger) *HostBackend {
 	}
 }
 
-func (b *HostBackend) runnerDir() string {
+// templateDir is the shared directory where the runner binary is downloaded once.
+func (b *HostBackend) templateDir() string {
 	return filepath.Join(b.basePath, "runner")
 }
 
-func (b *HostBackend) workDir(name string) string {
-	return filepath.Join(b.basePath, "work", name)
+// instanceDir returns the per-runner copy of the runner binary directory.
+// Each runner gets its own copy so multiple runners can run concurrently
+// without conflicting on lock files and state.
+func (b *HostBackend) instanceDir(name string) string {
+	return filepath.Join(b.basePath, "instances", name)
 }
 
-func (b *HostBackend) Prepare(_ context.Context, name string) error {
-	dir := b.workDir(name)
-	b.logger.Info("preparing host work directory", "dir", dir)
-	return os.MkdirAll(dir, 0o755)
-}
-
-func (b *HostBackend) RunRunner(ctx context.Context, name, jitConfig string) error {
-	runnerDir := b.runnerDir()
-	workDir := b.workDir(name)
-
-	if err := b.ensureRunner(ctx, runnerDir); err != nil {
+func (b *HostBackend) Prepare(ctx context.Context, name string) error {
+	tmpl := b.templateDir()
+	if err := b.ensureRunner(ctx, tmpl); err != nil {
 		return fmt.Errorf("ensure runner binary: %w", err)
 	}
 
-	b.logger.Info("starting runner on host", "runner", name, "workDir", workDir)
+	inst := b.instanceDir(name)
+	b.logger.Info("copying runner template for instance", "src", tmpl, "dst", inst)
 
-	// Use run.sh --jitconfig which handles both configuration and execution
-	// in a single step. The JIT config contains all registration details.
-	runPath := filepath.Join(runnerDir, "run.sh")
+	cmd := exec.CommandContext(ctx, "cp", "-a", tmpl, inst)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("copy runner template: %w", err)
+	}
+	return nil
+}
+
+func (b *HostBackend) RunRunner(ctx context.Context, name, jitConfig string) error {
+	inst := b.instanceDir(name)
+
+	b.logger.Info("starting runner on host", "runner", name, "dir", inst)
+
+	runPath := filepath.Join(inst, "run.sh")
 	runCmd := exec.CommandContext(ctx, runPath,
 		"--jitconfig", jitConfig,
 	)
-	runCmd.Dir = runnerDir
+	runCmd.Dir = inst
 	runCmd.Stdout = os.Stdout
 	runCmd.Stderr = os.Stderr
 	if err := runCmd.Run(); err != nil {
@@ -67,10 +76,10 @@ func (b *HostBackend) RunRunner(ctx context.Context, name, jitConfig string) err
 }
 
 func (b *HostBackend) Cleanup(_ context.Context, name string) {
-	dir := b.workDir(name)
-	b.logger.Info("cleaning up work directory", "dir", dir)
+	dir := b.instanceDir(name)
+	b.logger.Info("cleaning up runner instance", "dir", dir)
 	if err := os.RemoveAll(dir); err != nil {
-		b.logger.Warn("cleanup work directory", "dir", dir, "err", err)
+		b.logger.Warn("cleanup runner instance", "dir", dir, "err", err)
 	}
 }
 
