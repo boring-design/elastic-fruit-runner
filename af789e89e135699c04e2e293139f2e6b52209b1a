@@ -1,0 +1,50 @@
+cmd/daemon/main.go
+  4cd1096b4b1a8b4c 16,80-91,99,103
+config/config.go
+  4cd1096b4b1a8b4c 7,24,64-65
+internal/tart/manager.go
+  4cd1096b4b1a8b4c 10-14,17,31-38,40-45,51-55,59-62,71-75,80-83,85-87,92-96,99-104,109-113,120-123,130-134,136-141,146-150,152-157
+internal/tracing/setup.go
+  4cd1096b4b1a8b4c 1-50
+internal/backend/backend.go
+  4cd1096b4b1a8b4c 6,10,13-16,19
+internal/backend/tart.go
+  4cd1096b4b1a8b4c 8-12,16-17,38-42,44-47,50-53,56-59,64-72,75-78,80,84-85,97,100-104,110-114,117,121
+internal/daemon/daemon.go
+  4cd1096b4b1a8b4c 11,17,19-22,31-35,38-40,50-53,56,77,88,99,110,114-117,124,126-128,130
+internal/daemon/scaler.go
+  4cd1096b4b1a8b4c 1-283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.12",
+  "base_commit_sha": "af789e89e135699c04e2e293139f2e6b52209b1a",
+  "prompts": {
+    "4cd1096b4b1a8b4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd7518a7-c7a5-44ca-bf15-b16043c99b69",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 770,
+      "total_deletions": 423,
+      "accepted_lines": 576,
+      "overriden_lines": 0
+    },
+    "77af5253a2b85f16": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94a328e0-dec0-4f5e-83c6-1170bb9e631f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 2070,
+      "total_deletions": 864,
+      "accepted_lines": 1389,
+      "overriden_lines": 0
+    }
+  }
+}
