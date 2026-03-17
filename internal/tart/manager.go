@@ -7,7 +7,14 @@ import (
 	"log/slog"
 	"os/exec"
 	"strings"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
+
+var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/tart")
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
@@ -21,17 +28,38 @@ func NewManager(logger *slog.Logger) *Manager {
 
 // Clone creates a new VM by cloning an existing image.
 func (m *Manager) Clone(ctx context.Context, image, name string) error {
+	ctx, span := tracer.Start(ctx, "tart.clone",
+		trace.WithAttributes(
+			attribute.String("vm.image", image),
+			attribute.String("vm.name", name),
+		),
+	)
+	defer span.End()
+
 	m.logger.Info("cloning VM", "image", image, "name", name)
-	return m.run(ctx, "clone", image, name)
+	if err := m.run(ctx, "clone", image, name); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+	return nil
 }
 
 // Start launches a VM in the background (no graphics).
 // Returns after the VM process has started; the VM runs asynchronously.
 func (m *Manager) Start(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "tart.start",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	m.logger.Info("starting VM", "name", name)
 	cmd := exec.CommandContext(ctx, "tart", "run", name, "--no-graphics")
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start VM %s: %w", name, err)
+		err = fmt.Errorf("start VM %s: %w", name, err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 	// Detach: we don't wait for this process — it outlives this call.
 	go func() { _ = cmd.Wait() }()
@@ -40,45 +68,93 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 
 // IPAddress waits up to 60 s for the VM to get a DHCP address and returns it.
 func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
+	ctx, span := tracer.Start(ctx, "tart.ip_address",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	m.logger.Info("waiting for VM IP", "name", name)
 	cmd := exec.CommandContext(ctx, "tart", "ip", name, "--wait", "60")
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("tart ip %s: %w", name, err)
+		err = fmt.Errorf("tart ip %s: %w", name, err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
 	}
-	return strings.TrimSpace(string(out)), nil
+	ip := strings.TrimSpace(string(out))
+	span.SetAttributes(attribute.String("vm.ip", ip))
+	return ip, nil
 }
 
 // Exec runs a command inside the VM via `tart exec`.
 func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
+	ctx, span := tracer.Start(ctx, "tart.exec",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	cmdArgs := append([]string{"exec", name, "--"}, args...)
 	m.logger.Info("exec in VM", "name", name, "args", args)
-	return m.run(ctx, cmdArgs...)
+	if err := m.run(ctx, cmdArgs...); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+	return nil
 }
 
 // ExecOutput runs a command inside the VM and returns combined stdout+stderr.
 func (m *Manager) ExecOutput(ctx context.Context, name string, args ...string) ([]byte, error) {
+	ctx, span := tracer.Start(ctx, "tart.exec_output",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	cmdArgs := append([]string{"exec", name, "--"}, args...)
 	var buf bytes.Buffer
 	cmd := exec.CommandContext(ctx, "tart", cmdArgs...)
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 	if err := cmd.Run(); err != nil {
-		return buf.Bytes(), fmt.Errorf("tart exec %s %v: %w\n%s", name, args, err, buf.Bytes())
+		err = fmt.Errorf("tart exec %s %v: %w\n%s", name, args, err, buf.Bytes())
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return buf.Bytes(), err
 	}
 	return buf.Bytes(), nil
 }
 
 // Stop halts a running VM.
 func (m *Manager) Stop(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "tart.stop",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	m.logger.Info("stopping VM", "name", name)
-	return m.run(ctx, "stop", name)
+	if err := m.run(ctx, "stop", name); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+	return nil
 }
 
 // Delete removes a stopped VM and its disk image.
 func (m *Manager) Delete(ctx context.Context, name string) error {
+	ctx, span := tracer.Start(ctx, "tart.delete",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	m.logger.Info("deleting VM", "name", name)
-	return m.run(ctx, "delete", name)
+	if err := m.run(ctx, "delete", name); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+	return nil
 }
 
 func (m *Manager) run(ctx context.Context, args ...string) error {

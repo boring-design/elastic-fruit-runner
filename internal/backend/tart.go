@@ -5,8 +5,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/boring-design/elastic-fruit-runner/internal/tart"
 )
+
+var tartTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/tart")
 
 const (
 	runnerDownloadURL = "https://github.com/actions/runner/releases/download/v%s/actions-runner-osx-arm64-%s.tar.gz"
@@ -28,26 +35,54 @@ func NewTartBackend(vmImage string, logger *slog.Logger) *TartBackend {
 }
 
 func (b *TartBackend) Prepare(ctx context.Context, name string) error {
+	ctx, span := tartTracer.Start(ctx, "backend.tart.prepare",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	if err := b.tart.Clone(ctx, b.vmImage, name); err != nil {
-		return fmt.Errorf("clone VM: %w", err)
+		err = fmt.Errorf("clone VM: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 	if err := b.tart.Start(ctx, name); err != nil {
-		return fmt.Errorf("start VM: %w", err)
+		err = fmt.Errorf("start VM: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 	if _, err := b.tart.IPAddress(ctx, name); err != nil {
-		return fmt.Errorf("VM unreachable: %w", err)
+		err = fmt.Errorf("VM unreachable: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 	return nil
 }
 
-func (b *TartBackend) RunRunner(ctx context.Context, name, jitConfig string) error {
+// StartRunner downloads (if needed) and starts the GitHub Actions runner inside
+// the VM with the given JIT config. The runner process is started in the
+// background via nohup, so this call returns as soon as the process is launched.
+func (b *TartBackend) StartRunner(ctx context.Context, name, jitConfig string) error {
+	ctx, span := tartTracer.Start(ctx, "backend.tart.start_runner",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	version, err := ResolveRunnerVersion(ctx)
 	if err != nil {
-		return fmt.Errorf("resolve runner version: %w", err)
+		err = fmt.Errorf("resolve runner version: %w", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
+	span.SetAttributes(attribute.String("runner.version", version))
 
 	url := fmt.Sprintf(runnerDownloadURL, version, version)
 
+	// Download runner binary if not already present, then launch it in the
+	// background. nohup ensures the runner process outlives this tart exec call.
 	script := fmt.Sprintf(`
 set -euo pipefail
 mkdir -p ~/actions-runner && cd ~/actions-runner
@@ -59,22 +94,30 @@ if [ ! -f ./run.sh ]; then
   rm runner.tar.gz
 fi
 
-./run.sh --jitconfig "%s"
+nohup ./run.sh --jitconfig "%s" > /tmp/runner.log 2>&1 &
 `, version, url, jitConfig)
 
-	out, err := b.tart.ExecOutput(ctx, name, "bash", "-c", script)
-	if err != nil {
-		b.logger.Error("runner script failed", "vm", name, "output", string(out), "err", err)
-		return fmt.Errorf("runner in VM %s: %w", name, err)
+	if err := b.tart.Exec(ctx, name, "bash", "-c", script); err != nil {
+		err = fmt.Errorf("start runner in VM %s: %w", name, err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 	return nil
 }
 
 func (b *TartBackend) Cleanup(ctx context.Context, name string) {
+	ctx, span := tartTracer.Start(ctx, "backend.tart.cleanup",
+		trace.WithAttributes(attribute.String("vm.name", name)),
+	)
+	defer span.End()
+
 	if err := b.tart.Stop(ctx, name); err != nil {
 		b.logger.Warn("stop VM", "vm", name, "err", err)
+		span.RecordError(err)
 	}
 	if err := b.tart.Delete(ctx, name); err != nil {
 		b.logger.Warn("delete VM", "vm", name, "err", err)
+		span.RecordError(err)
 	}
 }

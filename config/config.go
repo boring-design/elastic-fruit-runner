@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 )
 
 // Config holds all runtime configuration for the daemon.
@@ -18,10 +19,9 @@ type Config struct {
 	GitHubURL    string
 	RunnerGroup  string
 	ScaleSetName string
-	VMImage      string
-	MaxRunners   int
-	// Backend mode: "host" or "tart"
-	Mode string
+	VMImage     string
+	MaxRunners  int
+	IdleTimeout time.Duration
 }
 
 // AuthMode returns which authentication method is configured.
@@ -61,8 +61,8 @@ func Load() *Config {
 		"Tart VM image to clone for each runner")
 	flag.IntVar(&cfg.MaxRunners, "max-runners", 2,
 		"Maximum concurrent runners (Apple EULA limit for macOS VMs is 2)")
-	flag.StringVar(&cfg.Mode, "mode", envOrDefault("RUNNER_MODE", "tart"),
-		"Backend mode: 'host' (run on host directly) or 'tart' (ephemeral VMs)")
+	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 15*time.Minute,
+		"How long an idle runner waits for a job before being shut down (or RUNNER_IDLE_TIMEOUT env)")
 
 	flag.Parse()
 

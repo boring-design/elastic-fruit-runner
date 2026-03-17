@@ -13,6 +13,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/daemon"
+	"github.com/boring-design/elastic-fruit-runner/internal/tracing"
 )
 
 func main() {
@@ -73,34 +74,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Select backend based on mode.
-	var b backend.Backend
-	switch cfg.Mode {
-	case "host":
-		b = backend.NewHostBackend(logger)
-		logger.Info("using host backend (runner runs directly on this machine)")
-	case "tart":
-		b = backend.NewTartBackend(cfg.VMImage, logger)
-	default:
-		logger.Error("unknown mode — use 'host' or 'tart'", "mode", cfg.Mode)
-		os.Exit(1)
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	tracingShutdown, err := tracing.Setup(ctx)
+	if err != nil {
+		logger.Error("failed to initialize tracing", "err", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if shutdownErr := tracingShutdown(context.Background()); shutdownErr != nil {
+			logger.Warn("tracing shutdown error", "err", shutdownErr)
+		}
+	}()
+
+	b := backend.NewTartBackend(cfg.VMImage, logger)
 	d := daemon.New(cfg, client, b, logger)
 
 	logger.Info("elastic-fruit-runner starting",
 		"url", cfg.GitHubURL,
-		"mode", cfg.Mode,
 		"scaleSet", cfg.ScaleSetName,
 		"runnerGroup", cfg.RunnerGroup,
 		"maxRunners", cfg.MaxRunners,
+		"vmImage", cfg.VMImage,
 	)
 
 	if err := d.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		logger.Error("daemon exited with error", "err", err)
+		logger.Error("controller exited with error", "err", err)
 		os.Exit(1)
 	}
 

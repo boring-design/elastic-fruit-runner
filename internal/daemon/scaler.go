@@ -1,0 +1,283 @@
+package daemon
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/actions/scaleset"
+	"github.com/actions/scaleset/listener"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+)
+
+const reaperInterval = time.Minute
+
+var _ listener.Scaler = (*ScaleSetController)(nil)
+
+// HandleDesiredRunnerCount implements listener.Scaler.
+// count is statistics.TotalAssignedJobs, which includes both jobs waiting for
+// a runner and jobs already running (TotalAssignedJobs >= TotalRunningJobs).
+// Runner names are registered as "preparing" before goroutines are launched,
+// so a subsequent call observes the correct count immediately.
+func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count int) (int, error) {
+	ctx, span := tracer.Start(ctx, "daemon.HandleDesiredRunnerCount")
+	defer span.End()
+
+	current := d.runners.count()
+	needed := min(count, d.cfg.MaxRunners) - current
+	if needed < 0 {
+		needed = 0
+	}
+
+	span.SetAttributes(
+		attribute.Int("runner.desired", count),
+		attribute.Int("runner.current", current),
+		attribute.Int("runner.spawning", needed),
+	)
+	d.logger.Info("scaling", "desired", count, "current", current, "spawning", needed)
+
+	for range needed {
+		id := d.vmCounter.Add(1)
+		name := fmt.Sprintf("efr-%d-%d", time.Now().Unix(), id)
+		d.runners.addPreparing(name)
+		go d.prepareAndStart(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
+	}
+	return d.runners.count(), nil
+}
+
+// HandleJobStarted implements listener.Scaler.
+// Marks the runner as busy so it is not counted as available for scaling.
+func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset.JobStarted) error {
+	_, span := tracer.Start(ctx, "daemon.HandleJobStarted",
+		trace.WithAttributes(
+			attribute.String("runner.name", job.RunnerName),
+			attribute.Int64("runner.id", int64(job.RunnerID)),
+		),
+	)
+	defer span.End()
+
+	d.runners.markBusy(job.RunnerName)
+	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
+	return nil
+}
+
+// HandleJobCompleted implements listener.Scaler.
+// Removes the runner from tracked state and triggers async VM cleanup.
+func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scaleset.JobCompleted) error {
+	_, span := tracer.Start(ctx, "daemon.HandleJobCompleted",
+		trace.WithAttributes(
+			attribute.String("runner.name", job.RunnerName),
+			attribute.String("job.result", job.Result),
+		),
+	)
+	defer span.End()
+
+	name := job.RunnerName
+	d.runners.markDone(name)
+	d.logger.Info("job completed", "runner", name, "result", job.Result)
+
+	go func() {
+		cleanCtx, cleanSpan := tracer.Start(context.Background(), "daemon.runner.cleanup",
+			trace.WithAttributes(attribute.String("runner.name", name)),
+		)
+		defer cleanSpan.End()
+		d.backend.Cleanup(cleanCtx, name)
+	}()
+
+	return nil
+}
+
+// prepareAndStart is launched as a goroutine for each new runner.
+// It clones and starts the VM, generates a JIT config, and starts the runner
+// process inside the VM. Once the runner is up it moves to idle state and
+// the goroutine exits — the runner's lifecycle is then driven by job events.
+// The caller must call runners.addPreparing(name) before launching this goroutine.
+func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
+	log := d.logger.With("runner", name)
+
+	ctx, span := tracer.Start(ctx, "daemon.runner.prepare_and_start",
+		trace.WithAttributes(attribute.String("runner.name", name)),
+	)
+	defer span.End()
+
+	log.Info("preparing runner")
+
+	if err := d.backend.Prepare(ctx, name); err != nil {
+		log.Error("prepare failed", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "prepare failed")
+		d.runners.markDone(name)
+		return
+	}
+
+	jitCtx, jitSpan := tracer.Start(ctx, "daemon.generate_jit_config")
+	jitCfg, err := d.client.GenerateJitRunnerConfig(jitCtx,
+		&scaleset.RunnerScaleSetJitRunnerSetting{Name: name},
+		d.scaleSetID,
+	)
+	jitSpan.End()
+	if err != nil {
+		log.Error("generate JIT config failed", "err", err)
+		jitSpan.RecordError(err)
+		jitSpan.SetStatus(codes.Error, "generate JIT config failed")
+		span.SetStatus(codes.Error, "generate JIT config failed")
+		d.runners.markDone(name)
+		d.backend.Cleanup(context.Background(), name)
+		return
+	}
+
+	if err := d.backend.StartRunner(ctx, name, jitCfg.EncodedJITConfig); err != nil {
+		log.Error("start runner failed", "err", err)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "start runner failed")
+		d.runners.markDone(name)
+		d.backend.Cleanup(context.Background(), name)
+		return
+	}
+
+	d.runners.moveToIdle(name)
+	log.Info("runner started, waiting for job assignment")
+}
+
+// shutdown cleans up all idle and busy runners. Called after the listener
+// exits. Preparing runners are cancelled via runnerCtx and clean up themselves.
+func (d *ScaleSetController) shutdown(ctx context.Context) {
+	d.logger.Info("shutting down, cleaning up runners")
+
+	d.runners.mu.Lock()
+	toCleanup := make([]string, 0, len(d.runners.idle)+len(d.runners.busy))
+	for name := range d.runners.idle {
+		toCleanup = append(toCleanup, name)
+	}
+	for name := range d.runners.busy {
+		toCleanup = append(toCleanup, name)
+	}
+	preparingCount := len(d.runners.preparing)
+	d.runners.idle = make(map[string]time.Time)
+	d.runners.busy = make(map[string]struct{})
+	d.runners.mu.Unlock()
+
+	if preparingCount > 0 {
+		d.logger.Info("aborting in-flight preparations", "count", preparingCount)
+	}
+
+	for _, name := range toCleanup {
+		d.logger.Info("cleaning up runner on shutdown", "runner", name)
+		d.backend.Cleanup(ctx, name)
+	}
+}
+
+// runIdleReaper periodically evicts idle runners that have exceeded the idle
+// timeout, mirroring the keepAliveTime behaviour of ThreadPoolExecutor.
+func (d *ScaleSetController) runIdleReaper(ctx context.Context) {
+	ticker := time.NewTicker(reaperInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			d.reapExpiredIdleRunners()
+		}
+	}
+}
+
+func (d *ScaleSetController) reapExpiredIdleRunners() {
+	now := time.Now()
+	timeout := d.cfg.IdleTimeout
+
+	d.runners.mu.Lock()
+	var expired []string
+	for name, idleSince := range d.runners.idle {
+		if now.Sub(idleSince) > timeout {
+			expired = append(expired, name)
+		}
+	}
+	for _, name := range expired {
+		delete(d.runners.idle, name)
+	}
+	d.runners.mu.Unlock()
+
+	for _, name := range expired {
+		d.logger.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
+		go func(n string) {
+			cleanCtx, cleanSpan := tracer.Start(context.Background(), "daemon.runner.cleanup",
+				trace.WithAttributes(
+					attribute.String("runner.name", n),
+					attribute.String("cleanup.reason", "idle_timeout"),
+				),
+			)
+			defer cleanSpan.End()
+			d.backend.Cleanup(cleanCtx, n)
+		}(name)
+	}
+}
+
+// runnerState tracks the lifecycle phase of each runner.
+// preparing: VM is being cloned/started, no job assigned yet.
+// idle:       Runner process is up, waiting for GitHub to assign a job.
+//             The value is the time the runner entered idle state, used for
+//             idle timeout eviction (keepAliveTime semantics).
+// busy:       Runner has picked up a job and is executing it.
+type runnerState struct {
+	mu        sync.Mutex
+	runnerCtx context.Context
+	preparing map[string]struct{}
+	idle      map[string]time.Time
+	busy      map[string]struct{}
+}
+
+func (r *runnerState) setRunnerCtx(ctx context.Context) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.runnerCtx = ctx
+}
+
+func (r *runnerState) count() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.preparing) + len(r.idle) + len(r.busy)
+}
+
+func (r *runnerState) addPreparing(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.preparing == nil {
+		r.preparing = make(map[string]struct{})
+	}
+	r.preparing[name] = struct{}{}
+}
+
+func (r *runnerState) moveToIdle(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.preparing, name)
+	if r.idle == nil {
+		r.idle = make(map[string]time.Time)
+	}
+	r.idle[name] = time.Now()
+}
+
+func (r *runnerState) markBusy(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.idle, name)
+	if r.busy == nil {
+		r.busy = make(map[string]struct{})
+	}
+	r.busy[name] = struct{}{}
+}
+
+// markDone removes the runner from whichever set it is in.
+// Safe to call multiple times (idempotent).
+func (r *runnerState) markDone(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.preparing, name)
+	delete(r.idle, name)
+	delete(r.busy, name)
+}
