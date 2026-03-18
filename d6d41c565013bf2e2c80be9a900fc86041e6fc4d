@@ -1,0 +1,27 @@
+.github/workflows/release.yaml
+  12e22aff9df167e4 29
+.goreleaser.yaml
+  12e22aff9df167e4 15,22-37
+README.md
+  12e22aff9df167e4 16,18-20,22-23,31-40,44-61,70-71,73,75,85,95,107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "d6d41c565013bf2e2c80be9a900fc86041e6fc4d",
+  "prompts": {
+    "12e22aff9df167e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd3accd8-9de9-461a-8426-cc142d700a29",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 87,
+      "total_deletions": 41,
+      "accepted_lines": 61,
+      "overriden_lines": 0
+    }
+  }
+}
