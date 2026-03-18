@@ -1,0 +1,23 @@
+internal/tart/manager.go
+  12e22aff9df167e4 90-91,93,98-99,105-106,108,112,152-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "7de46f789b09ffa56f8ef39979bb75aeecfc0706",
+  "prompts": {
+    "12e22aff9df167e4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd3accd8-9de9-461a-8426-cc142d700a29",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 19,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  }
+}
