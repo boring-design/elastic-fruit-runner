@@ -13,7 +13,7 @@ GitHub Actions ←→  Scale Set API  ←→  Daemon  ←→  Tart VMs
 
 ## Component Design
 
-### `cmd/daemon/main.go`
+### `cmd/elastic-fruit-runner/main.go`
 Entry point. Parses config (flags + env vars), builds the authenticated `scaleset.Client`, wires everything together, and handles SIGINT/SIGTERM via `signal.NotifyContext`.
 
 ### `config/config.go`

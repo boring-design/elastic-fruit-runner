@@ -1,8 +1,7 @@
 version: 2
 
 builds:
-  - main: ./cmd/daemon
-    binary: elastic-fruit-runner
+  - main: ./cmd/elastic-fruit-runner
     env:
       - CGO_ENABLED=0
     goos:

@@ -27,7 +27,7 @@ Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 ```sh
 git clone https://github.com/boring-design/elastic-fruit-runner
 cd elastic-fruit-runner
-go build -o elastic-fruit-runner ./cmd/daemon
+go build ./cmd/elastic-fruit-runner
 ```
 
 ### Run
