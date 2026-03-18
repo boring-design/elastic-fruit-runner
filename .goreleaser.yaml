@@ -12,12 +12,28 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats: ["tar.gz"]
     name_template: >-
       {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
 
 checksum:
   name_template: checksums.txt
+
+homebrew_casks:
+  - repository:
+      owner: boring-design
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: https://github.com/boring-design/elastic-fruit-runner
+    description: Elastic GitHub Actions self-hosted runner manager for Apple Silicon
+    license: AGPL-3.0
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/elastic-fruit-runner"]
+          end
 
 changelog:
   sort: asc
