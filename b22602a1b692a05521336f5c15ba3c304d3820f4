@@ -1,0 +1,25 @@
+prek.toml
+  8622305bf652a70f 5
+internal/tracing/setup.go
+  8622305bf652a70f 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "b22602a1b692a05521336f5c15ba3c304d3820f4",
+  "prompts": {
+    "8622305bf652a70f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "00a26734-0879-4579-b3d2-c4093c1c2f42",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 3,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
