@@ -27,7 +27,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	defer span.End()
 
 	current := d.runners.count()
-	needed := min(count, d.cfg.MaxRunners) - current
+	needed := min(count, d.rsCfg.MaxRunners) - current
 	if needed < 0 {
 		needed = 0
 	}

@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/actions/scaleset"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
@@ -76,18 +76,40 @@ func main() {
 		}
 	}()
 
-	b := backend.NewTartBackend(cfg.VMImage, logger)
-	d := controller.New(cfg, client, b, logger)
+	runnerSets := config.DefaultRunnerSets(cfg)
 
-	logger.Info("elastic-fruit-runner starting",
-		"url", cfg.GitHubURL,
-		"scaleSet", cfg.ScaleSetName,
-		"runnerGroup", cfg.RunnerGroup,
-		"maxRunners", cfg.MaxRunners,
-		"vmImage", cfg.VMImage,
-	)
+	g, gCtx := errgroup.WithContext(ctx)
+	for i := range runnerSets {
+		rs := &runnerSets[i]
+		rsLogger := logger.With("runnerSet", rs.Name)
 
-	if err := d.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		var b backend.Backend
+		switch rs.Backend {
+		case "tart":
+			b = backend.NewTartBackend(rs.Image, rsLogger)
+		case "docker":
+			b = backend.NewDockerBackend(rs.Image, rs.Platform, rsLogger)
+		default:
+			logger.Error("unknown backend", "backend", rs.Backend, "runnerSet", rs.Name)
+			os.Exit(1)
+		}
+
+		d := controller.New(cfg, rs, client, b, rsLogger)
+
+		rsLogger.Info("launching controller",
+			"url", cfg.GitHubURL,
+			"runnerGroup", cfg.RunnerGroup,
+			"maxRunners", rs.MaxRunners,
+			"image", rs.Image,
+			"labels", rs.Labels,
+		)
+
+		g.Go(func() error {
+			return d.Run(gCtx)
+		})
+	}
+
+	if err := g.Wait(); err != nil {
 		logger.Error("controller exited with error", "err", err)
 		os.Exit(1)
 	}

@@ -26,9 +26,11 @@ var (
 
 // ScaleSetController registers a GitHub Actions Runner Scale Set, polls for
 // job assignments via the listener, and manages the lifecycle of ephemeral
-// Tart VMs that run each job.
+// runners that run each job.
 type ScaleSetController struct {
-	cfg        *config.Config
+	cfg   *config.Config
+	rsCfg *config.RunnerSetConfig
+
 	client     *scaleset.Client
 	scaleSetID int
 
@@ -44,9 +46,10 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController from the given config and authenticated client.
-func New(cfg *config.Config, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
+func New(cfg *config.Config, rsCfg *config.RunnerSetConfig, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
 	return &ScaleSetController{
 		cfg:     cfg,
+		rsCfg:   rsCfg,
 		client:  client,
 		backend: b,
 		logger:  logger,
@@ -66,18 +69,17 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	}
 	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
 
-	desiredLabels := []scaleset.Label{
-		{Name: d.cfg.ScaleSetName},
-		{Name: "self-hosted"},
-		{Name: "macOS"},
-		{Name: "arm64"},
+	desiredLabels := make([]scaleset.Label, 0, len(d.rsCfg.Labels)+1)
+	desiredLabels = append(desiredLabels, scaleset.Label{Name: d.rsCfg.Name})
+	for _, l := range d.rsCfg.Labels {
+		desiredLabels = append(desiredLabels, scaleset.Label{Name: l})
 	}
 
-	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.cfg.ScaleSetName)
+	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.rsCfg.Name)
 	if err != nil || ss == nil {
-		d.logger.Info("creating scale set", "name", d.cfg.ScaleSetName)
+		d.logger.Info("creating scale set", "name", d.rsCfg.Name)
 		ss, err = d.client.CreateRunnerScaleSet(ctx, &scaleset.RunnerScaleSet{
-			Name:          d.cfg.ScaleSetName,
+			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
 			Labels:        desiredLabels,
 		})
@@ -88,7 +90,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	} else if !labelsMatch(ss.Labels, desiredLabels) {
 		d.logger.Info("updating scale set labels", "id", ss.ID)
 		ss, err = d.client.UpdateRunnerScaleSet(ctx, ss.ID, &scaleset.RunnerScaleSet{
-			Name:          d.cfg.ScaleSetName,
+			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
 			Labels:        desiredLabels,
 		})
@@ -122,6 +124,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		hostname = uuid.NewString()
 		d.logger.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
 	}
+	hostname = fmt.Sprintf("%s-%s", hostname, d.rsCfg.Name)
 
 	msgClient, err := d.client.MessageSessionClient(ctx, ss.ID, hostname)
 	if err != nil {
@@ -132,7 +135,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 
 	l, err := listener.New(msgClient, listener.Config{
 		ScaleSetID: ss.ID,
-		MaxRunners: d.cfg.MaxRunners,
+		MaxRunners: d.rsCfg.MaxRunners,
 		Logger:     d.logger,
 	})
 	if err != nil {
@@ -146,8 +149,8 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	go d.runIdleReaper(runnerCtx)
 
 	d.logger.Info("listening for jobs",
-		"scaleSet", d.cfg.ScaleSetName,
-		"maxRunners", d.cfg.MaxRunners,
+		"scaleSet", d.rsCfg.Name,
+		"maxRunners", d.rsCfg.MaxRunners,
 	)
 
 	listenerErr := l.Run(ctx, d)

@@ -17,12 +17,48 @@ type Config struct {
 	AppInstallationID int64
 	AppPrivateKeyPath string
 	// Common
-	GitHubURL    string
-	RunnerGroup  string
-	ScaleSetName string
-	VMImage      string
-	MaxRunners   int
-	IdleTimeout  time.Duration
+	GitHubURL   string
+	RunnerGroup string
+	VMImage     string
+	IdleTimeout time.Duration
+}
+
+// RunnerSetConfig describes a single runner scale set.
+type RunnerSetConfig struct {
+	Name       string
+	Backend    string // "tart" or "docker"
+	Image      string
+	Labels     []string
+	MaxRunners int
+	Platform   string // docker-only, e.g. "linux/amd64"
+}
+
+// DefaultRunnerSets returns the 3 hardcoded runner scale set configurations.
+func DefaultRunnerSets(cfg *Config) []RunnerSetConfig {
+	return []RunnerSetConfig{
+		{
+			Name:       "efr-macos-arm64",
+			Backend:    "tart",
+			Image:      cfg.VMImage,
+			Labels:     []string{"self-hosted", "macOS", "ARM64"},
+			MaxRunners: 2,
+		},
+		{
+			Name:       "efr-linux-arm64",
+			Backend:    "docker",
+			Image:      "ghcr.io/actions/actions-runner:latest",
+			Labels:     []string{"self-hosted", "Linux", "ARM64"},
+			MaxRunners: 4,
+		},
+		{
+			Name:       "efr-linux-amd64",
+			Backend:    "docker",
+			Image:      "ghcr.io/actions/actions-runner:latest",
+			Labels:     []string{"self-hosted", "Linux", "X64"},
+			MaxRunners: 4,
+			Platform:   "linux/amd64",
+		},
+	}
 }
 
 // AuthMode returns which authentication method is configured.
@@ -56,12 +92,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	if c.ScaleSetName == "" {
-		return fmt.Errorf("scale set name is required")
-	}
-	if c.MaxRunners <= 0 {
-		return fmt.Errorf("--max-runners must be greater than 0")
-	}
 	if c.IdleTimeout <= 0 {
 		return fmt.Errorf("--idle-timeout must be greater than 0")
 	}
@@ -91,12 +121,8 @@ func Load() *Config {
 		"GitHub config URL — org or repo, e.g. https://github.com/myorg (or GITHUB_CONFIG_URL env)")
 	flag.StringVar(&cfg.RunnerGroup, "runner-group", envOrDefault("GITHUB_RUNNER_GROUP", "Default"),
 		"Runner group name")
-	flag.StringVar(&cfg.ScaleSetName, "scale-set-name", envOrDefault("SCALE_SET_NAME", "elastic-fruit-runner"),
-		"Scale set name shown in GitHub Actions")
 	flag.StringVar(&cfg.VMImage, "vm-image", envOrDefault("TART_VM_IMAGE", "ghcr.io/cirruslabs/macos-sequoia-base:latest"),
 		"Tart VM image to clone for each runner")
-	flag.IntVar(&cfg.MaxRunners, "max-runners", 2,
-		"Maximum concurrent runners (Apple EULA limit for macOS VMs is 2)")
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 15*time.Minute,
 		"How long an idle runner waits for a job before being shut down (or RUNNER_IDLE_TIMEOUT env)")
 
