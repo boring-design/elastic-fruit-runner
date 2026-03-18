@@ -87,42 +87,34 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	return ip, nil
 }
 
-// Exec runs a command inside the VM via `tart exec`.
+// Exec runs a command inside the VM via SSH (using `tart ip` to discover the address).
+// The default Cirrus Labs macOS base images use admin:admin credentials.
 func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
-	ctx, span := tracer.Start(ctx, "tart.exec",
+	ctx, span := tracer.Start(ctx, "tart.ssh_exec",
 		trace.WithAttributes(attribute.String("vm.name", name)),
 	)
 	defer span.End()
 
-	cmdArgs := append([]string{"exec", name, "--"}, args...)
-	m.logger.Info("exec in VM", "name", name, "args", args)
-	if err := m.run(ctx, cmdArgs...); err != nil {
+	ip, err := m.IPAddress(ctx, name)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	sshArgs := m.buildSSHArgs(ip, args...)
+	m.logger.Info("ssh exec in VM", "name", name, "ip", ip, "args", args)
+	var buf bytes.Buffer
+	cmd := exec.CommandContext(ctx, "sshpass", sshArgs...)
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	if err := cmd.Run(); err != nil {
+		err = fmt.Errorf("ssh exec %s (%s): %w\n%s", name, ip, err, buf.Bytes())
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 	return nil
-}
-
-// ExecOutput runs a command inside the VM and returns combined stdout+stderr.
-func (m *Manager) ExecOutput(ctx context.Context, name string, args ...string) ([]byte, error) {
-	ctx, span := tracer.Start(ctx, "tart.exec_output",
-		trace.WithAttributes(attribute.String("vm.name", name)),
-	)
-	defer span.End()
-
-	cmdArgs := append([]string{"exec", name, "--"}, args...)
-	var buf bytes.Buffer
-	cmd := exec.CommandContext(ctx, "tart", cmdArgs...)
-	cmd.Stdout = &buf
-	cmd.Stderr = &buf
-	if err := cmd.Run(); err != nil {
-		err = fmt.Errorf("tart exec %s %v: %w\n%s", name, args, err, buf.Bytes())
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return buf.Bytes(), err
-	}
-	return buf.Bytes(), nil
 }
 
 // Stop halts a running VM.
@@ -155,6 +147,20 @@ func (m *Manager) Delete(ctx context.Context, name string) error {
 		return err
 	}
 	return nil
+}
+
+// buildSSHArgs constructs sshpass + ssh arguments for executing a command in the VM.
+// Uses admin:admin credentials (Cirrus Labs macOS base image default).
+func (m *Manager) buildSSHArgs(ip string, args ...string) []string {
+	sshArgs := []string{
+		"-p", "admin",
+		"ssh",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-o", "LogLevel=ERROR",
+		"admin@" + ip,
+	}
+	return append(sshArgs, args...)
 }
 
 func (m *Manager) run(ctx context.Context, args ...string) error {
