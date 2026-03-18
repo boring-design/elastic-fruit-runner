@@ -1,0 +1,29 @@
+internal/controller/scaler.go
+  4cd1096b4b1a8b4c 1-285
+internal/controller/controller.go
+  4cd1096b4b1a8b4c 1-178
+config/config.go
+  4cd1096b4b1a8b4c 6,36-68
+cmd/daemon/main.go
+  4cd1096b4b1a8b4c 15,26-27,80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.15",
+  "base_commit_sha": "0bc7a9e25824115365f82c28537dc817a2b2af93",
+  "prompts": {
+    "4cd1096b4b1a8b4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd7518a7-c7a5-44ca-bf15-b16043c99b69",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 536,
+      "total_deletions": 20,
+      "accepted_lines": 533,
+      "overriden_lines": 0
+    }
+  }
+}
