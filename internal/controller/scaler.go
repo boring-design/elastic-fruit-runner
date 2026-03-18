@@ -1,4 +1,4 @@
-package daemon
+package controller
 
 import (
 	"context"
@@ -23,7 +23,7 @@ var _ listener.Scaler = (*ScaleSetController)(nil)
 // Runner names are registered as "preparing" before goroutines are launched,
 // so a subsequent call observes the correct count immediately.
 func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count int) (int, error) {
-	ctx, span := tracer.Start(ctx, "daemon.HandleDesiredRunnerCount")
+	ctx, span := tracer.Start(ctx, "controller.HandleDesiredRunnerCount")
 	defer span.End()
 
 	current := d.runners.count()
@@ -51,7 +51,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 // HandleJobStarted implements listener.Scaler.
 // Marks the runner as busy so it is not counted as available for scaling.
 func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset.JobStarted) error {
-	_, span := tracer.Start(ctx, "daemon.HandleJobStarted",
+	_, span := tracer.Start(ctx, "controller.HandleJobStarted",
 		trace.WithAttributes(
 			attribute.String("runner.name", job.RunnerName),
 			attribute.Int64("runner.id", int64(job.RunnerID)),
@@ -67,7 +67,7 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 // HandleJobCompleted implements listener.Scaler.
 // Removes the runner from tracked state and triggers async VM cleanup.
 func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scaleset.JobCompleted) error {
-	_, span := tracer.Start(ctx, "daemon.HandleJobCompleted",
+	_, span := tracer.Start(ctx, "controller.HandleJobCompleted",
 		trace.WithAttributes(
 			attribute.String("runner.name", job.RunnerName),
 			attribute.String("job.result", job.Result),
@@ -80,7 +80,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
 	go func() {
-		cleanCtx, cleanSpan := tracer.Start(context.Background(), "daemon.runner.cleanup",
+		cleanCtx, cleanSpan := tracer.Start(context.Background(), "controller.runner.cleanup",
 			trace.WithAttributes(attribute.String("runner.name", name)),
 		)
 		defer cleanSpan.End()
@@ -98,7 +98,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
 	log := d.logger.With("runner", name)
 
-	ctx, span := tracer.Start(ctx, "daemon.runner.prepare_and_start",
+	ctx, span := tracer.Start(ctx, "controller.runner.prepare_and_start",
 		trace.WithAttributes(attribute.String("runner.name", name)),
 	)
 	defer span.End()
@@ -113,7 +113,7 @@ func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
 		return
 	}
 
-	jitCtx, jitSpan := tracer.Start(ctx, "daemon.generate_jit_config")
+	jitCtx, jitSpan := tracer.Start(ctx, "controller.generate_jit_config")
 	jitCfg, err := d.client.GenerateJitRunnerConfig(jitCtx,
 		&scaleset.RunnerScaleSetJitRunnerSetting{Name: name},
 		d.scaleSetID,
@@ -205,7 +205,7 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 	for _, name := range expired {
 		d.logger.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
 		go func(n string) {
-			cleanCtx, cleanSpan := tracer.Start(context.Background(), "daemon.runner.cleanup",
+			cleanCtx, cleanSpan := tracer.Start(context.Background(), "controller.runner.cleanup",
 				trace.WithAttributes(
 					attribute.String("runner.name", n),
 					attribute.String("cleanup.reason", "idle_timeout"),
@@ -220,8 +220,10 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 // runnerState tracks the lifecycle phase of each runner.
 // preparing: VM is being cloned/started, no job assigned yet.
 // idle:       Runner process is up, waiting for GitHub to assign a job.
-//             The value is the time the runner entered idle state, used for
-//             idle timeout eviction (keepAliveTime semantics).
+//
+//	The value is the time the runner entered idle state, used for
+//	idle timeout eviction (keepAliveTime semantics).
+//
 // busy:       Runner has picked up a job and is executing it.
 type runnerState struct {
 	mu        sync.Mutex

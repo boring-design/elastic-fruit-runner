@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"time"
 )
@@ -19,9 +20,9 @@ type Config struct {
 	GitHubURL    string
 	RunnerGroup  string
 	ScaleSetName string
-	VMImage     string
-	MaxRunners  int
-	IdleTimeout time.Duration
+	VMImage      string
+	MaxRunners   int
+	IdleTimeout  time.Duration
 }
 
 // AuthMode returns which authentication method is configured.
@@ -30,6 +31,41 @@ func (c *Config) AuthMode() string {
 		return "app"
 	}
 	return "pat"
+}
+
+// Validate returns an error if the configuration is invalid.
+func (c *Config) Validate() error {
+	if c.GitHubURL == "" {
+		return fmt.Errorf("GitHub config URL is required: set --url or GITHUB_CONFIG_URL")
+	}
+	if _, err := url.ParseRequestURI(c.GitHubURL); err != nil {
+		return fmt.Errorf("invalid GitHub config URL %q: %w", c.GitHubURL, err)
+	}
+
+	switch c.AuthMode() {
+	case "app":
+		if c.AppInstallationID == 0 {
+			return fmt.Errorf("GitHub App auth requires --app-installation-id or GITHUB_APP_INSTALLATION_ID")
+		}
+		if c.AppPrivateKeyPath == "" {
+			return fmt.Errorf("GitHub App auth requires --app-private-key or GITHUB_APP_PRIVATE_KEY_PATH")
+		}
+	default:
+		if c.GitHubToken == "" {
+			return fmt.Errorf("no auth configured: set --token (PAT) or --app-client-id (GitHub App)")
+		}
+	}
+
+	if c.ScaleSetName == "" {
+		return fmt.Errorf("scale set name is required")
+	}
+	if c.MaxRunners <= 0 {
+		return fmt.Errorf("--max-runners must be greater than 0")
+	}
+	if c.IdleTimeout <= 0 {
+		return fmt.Errorf("--idle-timeout must be greater than 0")
+	}
+	return nil
 }
 
 // Load parses flags and environment variables into a Config.

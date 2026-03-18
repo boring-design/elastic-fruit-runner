@@ -12,7 +12,7 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
-	"github.com/boring-design/elastic-fruit-runner/internal/daemon"
+	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/tracing"
 )
 
@@ -23,8 +23,8 @@ func main() {
 
 	cfg := config.Load()
 
-	if cfg.GitHubURL == "" {
-		logger.Error("GitHub config URL is required: set --url flag or GITHUB_CONFIG_URL env var")
+	if err := cfg.Validate(); err != nil {
+		logger.Error("invalid configuration", "err", err)
 		os.Exit(1)
 	}
 
@@ -33,14 +33,6 @@ func main() {
 
 	switch cfg.AuthMode() {
 	case "app":
-		if cfg.AppInstallationID == 0 {
-			logger.Error("GitHub App auth requires --app-installation-id or GITHUB_APP_INSTALLATION_ID")
-			os.Exit(1)
-		}
-		if cfg.AppPrivateKeyPath == "" {
-			logger.Error("GitHub App auth requires --app-private-key or GITHUB_APP_PRIVATE_KEY_PATH")
-			os.Exit(1)
-		}
 		pemBytes, readErr := os.ReadFile(cfg.AppPrivateKeyPath)
 		if readErr != nil {
 			logger.Error("failed to read GitHub App private key", "path", cfg.AppPrivateKeyPath, "err", readErr)
@@ -56,10 +48,6 @@ func main() {
 			},
 		})
 	default:
-		if cfg.GitHubToken == "" {
-			logger.Error("no auth configured: set --token (PAT) or --app-client-id (GitHub App)")
-			os.Exit(1)
-		}
 		logger.Info("authenticating with PAT")
 		client, err = scaleset.NewClientWithPersonalAccessToken(
 			scaleset.NewClientWithPersonalAccessTokenConfig{
@@ -89,7 +77,7 @@ func main() {
 	}()
 
 	b := backend.NewTartBackend(cfg.VMImage, logger)
-	d := daemon.New(cfg, client, b, logger)
+	d := controller.New(cfg, client, b, logger)
 
 	logger.Info("elastic-fruit-runner starting",
 		"url", cfg.GitHubURL,

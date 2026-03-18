@@ -1,20 +1,28 @@
-package daemon
+package controller
 
 import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"sync/atomic"
 
 	"github.com/actions/scaleset"
 	"github.com/actions/scaleset/listener"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 )
 
-var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/daemon")
+var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/controller")
+
+// Version and CommitSHA are set at build time via -ldflags.
+var (
+	Version   = "dev"
+	CommitSHA = "unknown"
+)
 
 // ScaleSetController registers a GitHub Actions Runner Scale Set, polls for
 // job assignments via the listener, and manages the lifecycle of ephemeral
@@ -94,7 +102,28 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.scaleSetID = ss.ID
 	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
-	msgClient, err := d.client.MessageSessionClient(ctx, ss.ID, d.cfg.ScaleSetName)
+	d.client.SetSystemInfo(scaleset.SystemInfo{
+		System:     "elastic-fruit-runner",
+		Subsystem:  "controller",
+		Version:    Version,
+		CommitSHA:  CommitSHA,
+		ScaleSetID: ss.ID,
+	})
+
+	defer func() {
+		d.logger.Info("deleting runner scale set", "id", ss.ID)
+		if err := d.client.DeleteRunnerScaleSet(context.WithoutCancel(ctx), ss.ID); err != nil {
+			d.logger.Error("failed to delete runner scale set", "id", ss.ID, "err", err)
+		}
+	}()
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = uuid.NewString()
+		d.logger.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
+	}
+
+	msgClient, err := d.client.MessageSessionClient(ctx, ss.ID, hostname)
 	if err != nil {
 		runnerCancel()
 		return fmt.Errorf("create message session: %w", err)
