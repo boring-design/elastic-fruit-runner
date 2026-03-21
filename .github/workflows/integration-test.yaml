@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: fastfetch
         run: |
-          curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-macos-universal.tar.gz" | tar xz
-          ./fastfetch
+          curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-macos-aarch64.tar.gz" | tar xz
+          ./fastfetch-macos-aarch64/usr/bin/fastfetch
 
   test-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
@@ -21,7 +21,7 @@ jobs:
       - name: fastfetch
         run: |
           curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-linux-aarch64.tar.gz" | tar xz
-          ./fastfetch
+          ./fastfetch-linux-aarch64/usr/bin/fastfetch
 
   test-linux-amd64:
     runs-on: [self-hosted, Linux, X64]
@@ -29,4 +29,4 @@ jobs:
       - name: fastfetch
         run: |
           curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-linux-amd64.tar.gz" | tar xz
-          ./fastfetch
+          ./fastfetch-linux-amd64/usr/bin/fastfetch
