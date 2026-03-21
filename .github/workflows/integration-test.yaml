@@ -7,23 +7,20 @@ jobs:
   test-macos-arm64:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
-      - name: System Info
-        run: |
-          uname -a
-          sw_vers
+      - uses: mochaaP/neofetch-action@v1
+      - name: neofetch
+        run: neofetch
 
   test-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - name: System Info
-        run: |
-          uname -a
-          cat /etc/os-release
+      - uses: mochaaP/neofetch-action@v1
+      - name: neofetch
+        run: neofetch
 
   test-linux-amd64:
     runs-on: [self-hosted, Linux, X64]
     steps:
-      - name: System Info
-        run: |
-          uname -a
-          cat /etc/os-release
+      - uses: mochaaP/neofetch-action@v1
+      - name: neofetch
+        run: neofetch
