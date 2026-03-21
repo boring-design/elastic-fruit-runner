@@ -41,7 +41,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 
 	for range needed {
 		id := d.vmCounter.Add(1)
-		name := fmt.Sprintf("efr-%d-%d", time.Now().Unix(), id)
+		name := fmt.Sprintf("%s-%d-%d", d.rsCfg.Name, time.Now().Unix(), id)
 		d.runners.addPreparing(name)
 		go d.prepareAndStart(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
 	}
@@ -110,6 +110,7 @@ func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "prepare failed")
 		d.runners.markDone(name)
+		d.backend.Cleanup(context.Background(), name)
 		return
 	}
 

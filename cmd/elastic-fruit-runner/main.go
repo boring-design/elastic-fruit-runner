@@ -8,7 +8,8 @@ import (
 	"syscall"
 
 	"github.com/actions/scaleset"
-	"golang.org/x/sync/errgroup"
+	"sync"
+	"time"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
@@ -78,7 +79,7 @@ func main() {
 
 	runnerSets := config.DefaultRunnerSets(cfg)
 
-	g, gCtx := errgroup.WithContext(ctx)
+	var wg sync.WaitGroup
 	for i := range runnerSets {
 		rs := &runnerSets[i]
 		rsLogger := logger.With("runnerSet", rs.Name)
@@ -104,15 +105,21 @@ func main() {
 			"labels", rs.Labels,
 		)
 
-		g.Go(func() error {
-			return d.Run(gCtx)
-		})
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				err := d.Run(ctx)
+				if ctx.Err() != nil {
+					rsLogger.Info("controller stopped", "err", err)
+					return
+				}
+				rsLogger.Error("controller exited with error, restarting", "err", err)
+				time.Sleep(5 * time.Second)
+			}
+		}()
 	}
 
-	if err := g.Wait(); err != nil {
-		logger.Error("controller exited with error", "err", err)
-		os.Exit(1)
-	}
-
+	wg.Wait()
 	logger.Info("shutdown complete")
 }

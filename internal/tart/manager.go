@@ -26,6 +26,43 @@ func NewManager(logger *slog.Logger) *Manager {
 	return &Manager{logger: logger}
 }
 
+// Pull fetches a remote VM image (e.g. from a registry like ghcr.io).
+func (m *Manager) Pull(ctx context.Context, image string) error {
+	ctx, span := tracer.Start(ctx, "tart.pull",
+		trace.WithAttributes(attribute.String("vm.image", image)),
+	)
+	defer span.End()
+
+	m.logger.Info("pulling VM image", "image", image)
+	if err := m.run(ctx, "pull", image); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+	return nil
+}
+
+// ImageExists checks whether a VM image is available locally.
+func (m *Manager) ImageExists(ctx context.Context, image string) (bool, error) {
+	ctx, span := tracer.Start(ctx, "tart.image_exists",
+		trace.WithAttributes(attribute.String("vm.image", image)),
+	)
+	defer span.End()
+
+	cmd := exec.CommandContext(ctx, "tart", "list", "--source", "local", "--quiet")
+	out, err := cmd.Output()
+	if err != nil {
+		span.RecordError(err)
+		return false, fmt.Errorf("tart list: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if strings.TrimSpace(line) == image {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // Clone creates a new VM by cloning an existing image.
 func (m *Manager) Clone(ctx context.Context, image, name string) error {
 	ctx, span := tracer.Start(ctx, "tart.clone",

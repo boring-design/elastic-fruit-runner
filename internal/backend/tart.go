@@ -40,6 +40,20 @@ func (b *TartBackend) Prepare(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
+	exists, err := b.tart.ImageExists(ctx, b.vmImage)
+	if err != nil {
+		b.logger.Warn("failed to check image existence, proceeding with clone", "err", err)
+	}
+	if !exists {
+		b.logger.Info("VM image not found locally, pulling", "image", b.vmImage)
+		if pullErr := b.tart.Pull(ctx, b.vmImage); pullErr != nil {
+			pullErr = fmt.Errorf("pull VM image: %w", pullErr)
+			span.RecordError(pullErr)
+			span.SetStatus(codes.Error, pullErr.Error())
+			return pullErr
+		}
+	}
+
 	if err := b.tart.Clone(ctx, b.vmImage, name); err != nil {
 		err = fmt.Errorf("clone VM: %w", err)
 		span.RecordError(err)
