@@ -49,6 +49,7 @@ func DefaultRunnerSets(cfg *Config) []RunnerSetConfig {
 			Image:      "ghcr.io/actions/actions-runner:2.322.0",
 			Labels:     []string{"self-hosted", "Linux", "ARM64"},
 			MaxRunners: 4,
+			Platform:   "linux/arm64",
 		},
 		{
 			Name:       "efr-linux-amd64",
