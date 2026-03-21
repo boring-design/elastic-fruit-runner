@@ -20,8 +20,14 @@ jobs:
     steps:
       - name: fastfetch
         run: |
-          curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-linux-aarch64-polyfilled.tar.gz" | tar xz
-          ./fastfetch-linux-aarch64-polyfilled/usr/bin/fastfetch
+          ARCH=$(uname -m)
+          if [ "$ARCH" = "x86_64" ]; then
+            VARIANT="linux-amd64"
+          else
+            VARIANT="linux-aarch64-polyfilled"
+          fi
+          curl -fsSL "https://github.com/fastfetch-cli/fastfetch/releases/download/${FASTFETCH_VERSION}/fastfetch-${VARIANT}.tar.gz" | tar xz
+          ./fastfetch-${VARIANT}/usr/bin/fastfetch
 
   test-linux-amd64:
     runs-on: [self-hosted, Linux, X64]
