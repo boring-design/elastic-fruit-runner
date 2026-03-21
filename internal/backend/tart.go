@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -12,6 +13,13 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/internal/tart"
 )
+
+// isRemoteImage returns true if the image looks like a registry reference
+// (e.g. "ghcr.io/cirruslabs/macos-sequoia-base:latest") rather than a local
+// VM name (e.g. "gha-runner-sequoia-xcode-16").
+func isRemoteImage(image string) bool {
+	return strings.Contains(image, "/")
+}
 
 var tartTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/tart")
 
@@ -44,7 +52,7 @@ func (b *TartBackend) Prepare(ctx context.Context, name string) error {
 	if err != nil {
 		b.logger.Warn("failed to check image existence, proceeding with clone", "err", err)
 	}
-	if !exists {
+	if !exists && isRemoteImage(b.vmImage) {
 		b.logger.Info("VM image not found locally, pulling", "image", b.vmImage)
 		if pullErr := b.tart.Pull(ctx, b.vmImage); pullErr != nil {
 			pullErr = fmt.Errorf("pull VM image: %w", pullErr)
