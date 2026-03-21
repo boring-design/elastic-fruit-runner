@@ -7,20 +7,23 @@ jobs:
   test-macos-arm64:
     runs-on: [self-hosted, macOS, ARM64]
     steps:
-      - uses: mochaaP/neofetch-action@v1
-      - name: neofetch
-        run: neofetch
+      - name: Install and run neofetch
+        run: |
+          brew install --quiet neofetch 2>/dev/null || true
+          neofetch
 
   test-linux-arm64:
     runs-on: [self-hosted, Linux, ARM64]
     steps:
-      - uses: mochaaP/neofetch-action@v1
-      - name: neofetch
-        run: neofetch
+      - name: Install and run neofetch
+        run: |
+          apt-get update -qq && apt-get install -y -qq neofetch > /dev/null 2>&1
+          neofetch
 
   test-linux-amd64:
     runs-on: [self-hosted, Linux, X64]
     steps:
-      - uses: mochaaP/neofetch-action@v1
-      - name: neofetch
-        run: neofetch
+      - name: Install and run neofetch
+        run: |
+          apt-get update -qq && apt-get install -y -qq neofetch > /dev/null 2>&1
+          neofetch
