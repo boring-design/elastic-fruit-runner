@@ -46,14 +46,14 @@ func DefaultRunnerSets(cfg *Config) []RunnerSetConfig {
 		{
 			Name:       "efr-linux-arm64",
 			Backend:    "docker",
-			Image:      "ghcr.io/actions/actions-runner:latest",
+			Image:      "ghcr.io/actions/actions-runner:2.322.0",
 			Labels:     []string{"self-hosted", "Linux", "ARM64"},
 			MaxRunners: 4,
 		},
 		{
 			Name:       "efr-linux-amd64",
 			Backend:    "docker",
-			Image:      "ghcr.io/actions/actions-runner:latest",
+			Image:      "ghcr.io/actions/actions-runner:2.322.0",
 			Labels:     []string{"self-hosted", "Linux", "X64"},
 			MaxRunners: 4,
 			Platform:   "linux/amd64",
