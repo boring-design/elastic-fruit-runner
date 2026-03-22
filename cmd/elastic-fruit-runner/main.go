@@ -22,29 +22,34 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("failed to load configuration", "err", err)
+		os.Exit(1)
+	}
 
 	if err := cfg.Validate(); err != nil {
 		logger.Error("invalid configuration", "err", err)
 		os.Exit(1)
 	}
 
+	logger.Info("configuration loaded", cfg.RedactedSlogAttrs()...)
+
 	var client *scaleset.Client
-	var err error
 
 	switch cfg.AuthMode() {
 	case "app":
-		pemBytes, readErr := os.ReadFile(cfg.AppPrivateKeyPath)
+		pemBytes, readErr := os.ReadFile(cfg.GitHub.App.PrivateKeyPath)
 		if readErr != nil {
-			logger.Error("failed to read GitHub App private key", "path", cfg.AppPrivateKeyPath, "err", readErr)
+			logger.Error("failed to read GitHub App private key", "path", cfg.GitHub.App.PrivateKeyPath, "err", readErr)
 			os.Exit(1)
 		}
-		logger.Info("authenticating with GitHub App", "clientID", cfg.AppClientID, "installationID", cfg.AppInstallationID)
+		logger.Info("authenticating with GitHub App", "clientID", cfg.GitHub.App.ClientID, "installationID", cfg.GitHub.App.InstallationID)
 		client, err = scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
-			GitHubConfigURL: cfg.GitHubURL,
+			GitHubConfigURL: cfg.GitHub.URL,
 			GitHubAppAuth: scaleset.GitHubAppAuth{
-				ClientID:       cfg.AppClientID,
-				InstallationID: cfg.AppInstallationID,
+				ClientID:       cfg.GitHub.App.ClientID,
+				InstallationID: cfg.GitHub.App.InstallationID,
 				PrivateKey:     string(pemBytes),
 			},
 		})
@@ -52,8 +57,8 @@ func main() {
 		logger.Info("authenticating with PAT")
 		client, err = scaleset.NewClientWithPersonalAccessToken(
 			scaleset.NewClientWithPersonalAccessTokenConfig{
-				GitHubConfigURL:     cfg.GitHubURL,
-				PersonalAccessToken: cfg.GitHubToken,
+				GitHubConfigURL:     cfg.GitHub.URL,
+				PersonalAccessToken: cfg.GitHub.Token,
 			},
 		)
 	}
@@ -77,11 +82,9 @@ func main() {
 		}
 	}()
 
-	runnerSets := config.DefaultRunnerSets(cfg)
-
 	var wg sync.WaitGroup
-	for i := range runnerSets {
-		rs := &runnerSets[i]
+	for i := range cfg.RunnerSets {
+		rs := &cfg.RunnerSets[i]
 		rsLogger := logger.With("runnerSet", rs.Name)
 
 		var b backend.Backend
@@ -98,7 +101,7 @@ func main() {
 		d := controller.New(cfg, rs, client, b, rsLogger)
 
 		rsLogger.Info("launching controller",
-			"url", cfg.GitHubURL,
+			"url", cfg.GitHub.URL,
 			"runnerGroup", cfg.RunnerGroup,
 			"maxRunners", rs.MaxRunners,
 			"image", rs.Image,

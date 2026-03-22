@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   goreleaser:
@@ -27,3 +28,87 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+  docker-amd64:
+    runs-on: [self-hosted, Linux, X64]
+    needs: goreleaser
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/elastic-fruit-runner-linux-amd64 ./cmd/elastic-fruit-runner
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push amd64 image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64 \
+            --build-arg TARGETARCH=amd64 .
+          docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64
+
+  docker-arm64:
+    runs-on: [self-hosted, Linux, ARM64]
+    needs: goreleaser
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build binary
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o dist/elastic-fruit-runner-linux-arm64 ./cmd/elastic-fruit-runner
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push arm64 image
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64 \
+            --build-arg TARGETARCH=arm64 .
+          docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64
+
+  docker-manifest:
+    runs-on: [self-hosted, Linux, X64]
+    needs: [docker-amd64, docker-arm64]
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push manifest
+        run: |
+          docker manifest create ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }} \
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64 \
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64
+          docker manifest push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}
+
+          docker manifest create ghcr.io/${{ github.repository }}:latest \
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64 \
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64
+          docker manifest push ghcr.io/${{ github.repository }}:latest

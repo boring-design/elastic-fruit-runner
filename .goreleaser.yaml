@@ -19,21 +19,43 @@ archives:
 checksum:
   name_template: checksums.txt
 
-homebrew_casks:
+brews:
   - repository:
       owner: boring-design
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: https://github.com/boring-design/elastic-fruit-runner
     description: Elastic GitHub Actions self-hosted runner manager for Apple Silicon
     license: AGPL-3.0
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/elastic-fruit-runner"]
-          end
+    install: |
+      bin.install "elastic-fruit-runner"
+    service: |
+      run [opt_bin/"elastic-fruit-runner"]
+      keep_alive true
+      working_dir var/"elastic-fruit-runner"
+      log_path var/"log/elastic-fruit-runner.log"
+      error_log_path var/"log/elastic-fruit-runner.log"
+      environment_variables PATH: std_service_path_env
+    caveats: |
+      Before starting the service, create a config file:
+
+        mkdir -p ~/.elastic-fruit-runner
+        cat > ~/.elastic-fruit-runner/env << 'EOF'
+        GITHUB_TOKEN=ghp_xxx
+        GITHUB_CONFIG_URL=https://github.com/your-org
+        EOF
+
+      Then start (and auto-start on login):
+
+        brew services start elastic-fruit-runner
+
+      View logs:
+
+        tail -f #{var}/log/elastic-fruit-runner.log
+
+    post_install: |
+      (var/"elastic-fruit-runner").mkpath
 
 changelog:
   sort: asc

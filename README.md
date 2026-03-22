@@ -4,144 +4,115 @@ Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 
 - **Host mode** — run the GitHub Actions runner directly on the machine, no VM overhead
 - **Tart mode** — ephemeral macOS VMs via [Tart](https://tart.run), one per job, auto-scaled
-- **Linux arm64 / amd64** via Docker _(planned)_
+- **Linux arm64 / amd64** via Docker (Docker-in-Docker)
 - Powered by the official [GitHub Runner Scale Set Client](https://github.com/actions/scaleset) (Go)
 
 > **Status:** PoC — core flow works, not production-hardened yet.
 
 ---
 
-## Quick Start
+## Installation
 
-### 1. Install elastic-fruit-runner
+| Platform | Method |
+|----------|--------|
+| **macOS** | `brew install boring-design/tap/elastic-fruit-runner` |
+| **Linux** | `docker run ghcr.io/boring-design/elastic-fruit-runner:latest` |
+
+Detailed guides:
+- [macOS Installation & Service Setup](docs/install-macos.md) — Homebrew install, `brew services`, log viewing
+- [Linux Deployment (Docker)](docs/install-linux-docker.md) — Docker / Docker Compose / systemd
+
+## Quick Start (macOS)
 
 ```sh
+# 1. Install
 brew install boring-design/tap/elastic-fruit-runner
+
+# 2. Configure
+mkdir -p ~/.elastic-fruit-runner
+cat > ~/.elastic-fruit-runner/config.yaml << 'EOF'
+github:
+  url: https://github.com/your-org
+  token: ghp_xxx
+
+runner_sets:
+  - name: efr-macos-arm64
+    backend: tart
+    image: ghcr.io/cirruslabs/macos-sequoia-base:latest
+    labels: [self-hosted, macOS, ARM64]
+    max_runners: 2
+EOF
+
+# 3. Start as a service (auto-starts on login)
+brew services start elastic-fruit-runner
+
+# 4. Check logs
+tail -f /opt/homebrew/var/log/elastic-fruit-runner.log
 ```
 
-<details>
-<summary>Build from source</summary>
-
-```sh
-git clone https://github.com/boring-design/elastic-fruit-runner
-cd elastic-fruit-runner
-go build ./cmd/elastic-fruit-runner
-```
-
-</details>
-
-### 2. Install Tart (for Tart mode)
-
-```sh
-brew install cirruslabs/cli/tart
-```
-
-### 3. Pull a VM image
-
-```sh
-tart pull ghcr.io/cirruslabs/macos-sequoia-base:latest
-```
-
-### 4. Create a GitHub PAT
-
-Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with the following scope:
-
-- **Organization > Self-hosted runners: Read and write** (org-level), or
-- **Repository > Administration: Read and write** (repo-level)
-
-### 5. Start
-
-```sh
-export GITHUB_TOKEN=ghp_xxx
-export GITHUB_CONFIG_URL=https://github.com/your-org
-elastic-fruit-runner
-```
-
-### 6. Use in a workflow
+### Use in a workflow
 
 ```yaml
 jobs:
   build:
-    runs-on: elastic-fruit-runner   # matches --scale-set-name
+    runs-on: efr-macos-arm64
     steps:
       - uses: actions/checkout@v4
-      - run: sw_vers   # runs inside ephemeral macOS VM
+      - run: sw_vers
 ```
 
 ---
 
-## Detailed Configuration
+## Configuration
 
-### Host mode (simplest — no VM, runner runs directly on your machine)
+Configuration is loaded from (lowest to highest priority):
 
-```sh
-GITHUB_TOKEN=ghp_xxx \
-GITHUB_CONFIG_URL=https://github.com/your-org \
-elastic-fruit-runner --mode host
-```
+1. **Built-in defaults** — sensible out-of-the-box values
+2. **Config file** — `~/.elastic-fruit-runner/config.yaml` (or `--config /path/to/file.yaml`)
+3. **Env file** — `~/.elastic-fruit-runner/env` (KEY=VALUE, one per line)
+4. **Environment variables** — `GITHUB_TOKEN`, `GITHUB_CONFIG_URL`, etc.
+5. **CLI flags** — `--url`, `--token`
 
-Each job gets an isolated work directory under `~/.elastic-fruit-runner/work/`, which is cleaned up after the job completes. The runner binary is cached in `~/.elastic-fruit-runner/runner/`.
-
-### Tart mode (ephemeral VMs — full isolation)
-
-```sh
-GITHUB_TOKEN=ghp_xxx \
-GITHUB_CONFIG_URL=https://github.com/your-org \
-elastic-fruit-runner --mode tart
-```
-
-Each job runs in a fresh Tart VM cloned from the base image, destroyed after completion.
+See [config.example.yaml](config.example.yaml) for a full annotated example.
 
 ### Auth — GitHub App (recommended for org deployments)
 
-Create a GitHub App with **Organization > Self-hosted runners: Read and write** permission, install it on your org, then:
-
-```sh
-GITHUB_APP_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx \
-GITHUB_APP_INSTALLATION_ID=12345678 \
-GITHUB_APP_PRIVATE_KEY_PATH=/path/to/private-key.pem \
-GITHUB_CONFIG_URL=https://github.com/your-org \
-elastic-fruit-runner --mode host
+```yaml
+github:
+  url: https://github.com/your-org
+  app:
+    client_id: Iv1.xxxxxxxxxxxxxxxx
+    installation_id: 12345678
+    private_key_path: /path/to/private-key.pem
 ```
 
 ### Auth — Personal Access Token
 
-```sh
-GITHUB_TOKEN=ghp_xxx \
-GITHUB_CONFIG_URL=https://github.com/your-org \
-elastic-fruit-runner --mode host
+```yaml
+github:
+  url: https://github.com/your-org
+  token: ghp_xxx
 ```
 
-> Scope required: `manage_runners:org` (org-level) or `repo` (repo-level).
+> Scope required: **Organization > Self-hosted runners: Read and write** (org-level), or **Repository > Administration: Read and write** (repo-level).
 
-**Repo-level runner** (only one repo):
-```sh
-GITHUB_TOKEN=ghp_xxx \
-GITHUB_CONFIG_URL=https://github.com/your-org/your-repo \
-elastic-fruit-runner --mode host
+### Environment variables
+
+| Env var | Config file equivalent |
+|---------|----------------------|
+| `GITHUB_CONFIG_URL` | `github.url` |
+| `GITHUB_TOKEN` | `github.token` |
+| `GITHUB_APP_CLIENT_ID` | `github.app.client_id` |
+| `GITHUB_APP_INSTALLATION_ID` | `github.app.installation_id` |
+| `GITHUB_APP_PRIVATE_KEY_PATH` | `github.app.private_key_path` |
+| `GITHUB_RUNNER_GROUP` | `runner_group` |
+
+### CLI flags
+
 ```
-
-**All flags:**
-```
-  # Backend mode
-  --mode                  'host' (run on host directly) or 'tart' (ephemeral VMs) (default: tart)
-
-  # Auth — GitHub App (takes precedence over PAT if set)
-  --app-client-id         GitHub App Client ID (or GITHUB_APP_CLIENT_ID env)
-  --app-installation-id   GitHub App Installation ID (or GITHUB_APP_INSTALLATION_ID env)
-  --app-private-key       Path to PEM private key file (or GITHUB_APP_PRIVATE_KEY_PATH env)
-
-  # Auth — PAT (fallback)
-  --token                 GitHub PAT (or GITHUB_TOKEN env)
-
-  # Common
-  --url                   GitHub config URL — org or repo (or GITHUB_CONFIG_URL env)
-  --runner-group          Runner group name (default: Default)
-  --scale-set-name        Name shown in GitHub Actions UI (default: elastic-fruit-runner)
-  --max-runners           Max concurrent runners (default: 2)
-
-  # Tart mode only
-  --vm-image              Tart base image to clone per job (default: ghcr.io/cirruslabs/macos-sequoia-base:latest)
+  --config    Path to config file (default: ~/.elastic-fruit-runner/config.yaml)
+  --url       GitHub config URL (overrides config file)
+  --token     GitHub PAT (overrides config file)
 ```
 
 ---
@@ -162,8 +133,8 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ## Roadmap
 
-- [ ] Linux arm64 runner (Docker / OrbStack)
-- [ ] Linux amd64 runner (Docker + Rosetta 2)
-- [ ] GitHub App auth (preferred over PAT for org deployments)
+- [x] Linux arm64 runner (Docker)
+- [x] Linux amd64 runner (Docker + Rosetta 2)
+- [x] GitHub App auth
 - [ ] Warm pool (pre-clone VMs to reduce job start latency)
 - [ ] Wails GUI dashboard
