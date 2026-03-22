@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -81,5 +82,36 @@ func (b *DockerBackend) Cleanup(ctx context.Context, name string) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		b.logger.Warn("docker rm", "container", name, "err", err, "output", string(out))
 		span.RecordError(err)
+	}
+}
+
+func (b *DockerBackend) CleanupAll(ctx context.Context, prefix string) {
+	_, span := dockerTracer.Start(ctx, "backend.docker.cleanup_all",
+		trace.WithAttributes(attribute.String("prefix", prefix)),
+	)
+	defer span.End()
+
+	cmd := exec.CommandContext(ctx, "docker", "ps", "-a",
+		"--filter", fmt.Sprintf("name=^%s-", prefix),
+		"--format", "{{.Names}}",
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		b.logger.Warn("docker ps for cleanup", "prefix", prefix, "err", err)
+		return
+	}
+
+	names := strings.TrimSpace(string(out))
+	if names == "" {
+		return
+	}
+
+	for _, name := range strings.Split(names, "\n") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		b.logger.Info("removing orphaned container", "container", name)
+		b.Cleanup(ctx, name)
 	}
 }

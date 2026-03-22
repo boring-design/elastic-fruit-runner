@@ -143,3 +143,23 @@ func (b *TartBackend) Cleanup(ctx context.Context, name string) {
 		span.RecordError(err)
 	}
 }
+
+func (b *TartBackend) CleanupAll(ctx context.Context, prefix string) {
+	_, span := tartTracer.Start(ctx, "backend.tart.cleanup_all",
+		trace.WithAttributes(attribute.String("prefix", prefix)),
+	)
+	defer span.End()
+
+	vms, err := b.tart.List(ctx)
+	if err != nil {
+		b.logger.Warn("list VMs for cleanup", "prefix", prefix, "err", err)
+		return
+	}
+
+	for _, name := range vms {
+		if strings.HasPrefix(name, prefix+"-") {
+			b.logger.Info("removing orphaned VM", "vm", name)
+			b.Cleanup(ctx, name)
+		}
+	}
+}

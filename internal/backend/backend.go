@@ -18,4 +18,8 @@ type Backend interface {
 	// Cleanup tears down the execution environment.
 	// Must be safe to call even if Prepare or StartRunner failed.
 	Cleanup(ctx context.Context, name string)
+
+	// CleanupAll removes all resources whose name starts with prefix.
+	// Called once at controller startup to ensure a clean slate.
+	CleanupAll(ctx context.Context, prefix string)
 }

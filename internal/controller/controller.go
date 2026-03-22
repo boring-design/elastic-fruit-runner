@@ -62,6 +62,9 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	runnerCtx, runnerCancel := context.WithCancel(ctx)
 	d.runnerCancel = runnerCancel
 
+	d.logger.Info("cleaning up resources from previous runs")
+	d.backend.CleanupAll(ctx, d.rsCfg.Name)
+
 	group, err := d.client.GetRunnerGroupByName(ctx, d.cfg.RunnerGroup)
 	if err != nil {
 		runnerCancel()

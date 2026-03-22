@@ -26,6 +26,23 @@ func NewManager(logger *slog.Logger) *Manager {
 	return &Manager{logger: logger}
 }
 
+// List returns the names of all local VMs.
+func (m *Manager) List(ctx context.Context) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "tart", "list", "--source", "local", "--quiet")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("tart list: %w", err)
+	}
+	var names []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			names = append(names, line)
+		}
+	}
+	return names, nil
+}
+
 // Pull fetches a remote VM image (e.g. from a registry like ghcr.io).
 func (m *Manager) Pull(ctx context.Context, image string) error {
 	ctx, span := tracer.Start(ctx, "tart.pull",
