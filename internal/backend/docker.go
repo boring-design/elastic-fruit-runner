@@ -36,6 +36,34 @@ func NewDockerBackend(image, platform string, logger *slog.Logger) *DockerBacken
 	}
 }
 
+// initScript is the container entrypoint that mirrors ARC's entrypoint-dind.sh:
+// 1. Start dockerd under root (with proper redirect permissions)
+// 2. Wait up to 30s for dockerd to be ready (like ARC's wait.sh)
+// 3. Sleep forever — runner is started later via docker exec
+const initScript = `
+sudo /usr/bin/dockerd &
+for i in $(seq 1 30); do
+  if pgrep -x dockerd > /dev/null 2>&1; then break; fi
+  sleep 1
+done
+sleep infinity
+`
+
+// startRunnerScript mirrors ARC's startup.sh:
+// 1. Copy runner assets from /runnertmp to /home/runner (like startup.sh copies to RUNNER_HOME)
+// 2. Wait for Docker socket to be ready (like startup.sh's docker wait loop)
+// 3. Start the runner with JIT config
+const startRunnerScript = `
+set -e
+cp -a /runnertmp/. /home/runner/
+cd /home/runner
+for i in $(seq 1 30); do
+  if docker info &>/dev/null; then break; fi
+  sleep 1
+done
+exec ./run.sh --jitconfig "$1"
+`
+
 func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 	ctx, span := dockerTracer.Start(ctx, "backend.docker.prepare",
 		trace.WithAttributes(attribute.String("container.name", name)),
@@ -46,9 +74,7 @@ func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform)
 	}
-	args = append(args, "--entrypoint", "bash", b.image, "-c",
-		"sudo bash -c 'dockerd &>/var/log/dockerd.log' & sleep infinity",
-	)
+	args = append(args, "--entrypoint", "bash", b.image, "-c", initScript)
 
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), args...)
 	out, err := cmd.CombinedOutput()
@@ -67,17 +93,8 @@ func (b *DockerBackend) StartRunner(ctx context.Context, name, jitConfig string)
 	)
 	defer span.End()
 
-	// Wait for dockerd to be ready (up to 30s)
-	waitCmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", name,
-		"bash", "-c",
-		"for i in $(seq 1 30); do docker info &>/dev/null && exit 0; sleep 1; done; exit 1",
-	)
-	if out, err := waitCmd.CombinedOutput(); err != nil {
-		b.logger.Warn("dockerd not ready in container", "container", name, "err", err, "output", string(out))
-	}
-
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", "-d", name,
-		"/runnertmp/run.sh", "--jitconfig", jitConfig,
+		"bash", "-c", startRunnerScript, "bash", jitConfig,
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
