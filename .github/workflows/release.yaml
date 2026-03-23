@@ -57,7 +57,8 @@ jobs:
 
       - name: Build and push amd64 image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64 \
+          docker build --provenance=false \
+            -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64 \
             --build-arg TARGETARCH=amd64 .
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-amd64
 
@@ -85,7 +86,8 @@ jobs:
 
       - name: Build and push arm64 image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64 \
+          docker build --provenance=false \
+            -t ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64 \
             --build-arg TARGETARCH=arm64 .
           docker push ghcr.io/${{ github.repository }}:${{ steps.version.outputs.tag }}-arm64
 
