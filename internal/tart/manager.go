@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"go.opentelemetry.io/otel"
@@ -144,6 +146,7 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 
 // Exec runs a command inside the VM via SSH (using `tart ip` to discover the address).
 // The default Cirrus Labs macOS base images use admin:admin credentials.
+// It waits for SSH to become reachable with exponential backoff before executing.
 func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	ctx, span := tracer.Start(ctx, "tart.ssh_exec",
 		trace.WithAttributes(attribute.String("vm.name", name)),
@@ -152,6 +155,12 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 
 	ip, err := m.IPAddress(ctx, name)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	if err := m.waitForSSH(ctx, name, ip); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
@@ -170,6 +179,37 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 		return err
 	}
 	return nil
+}
+
+// waitForSSH probes TCP port 22 with exponential backoff until SSH is reachable
+// or the context is cancelled. Backoff: 1s, 2s, 4s, 8s, 16s... capped at 120s total.
+func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
+	const maxWait = 120 * time.Second
+	deadline := time.Now().Add(maxWait)
+	backoff := 1 * time.Second
+
+	for {
+		conn, err := net.DialTimeout("tcp", ip+":22", 2*time.Second)
+		if err == nil {
+			conn.Close()
+			return nil
+		}
+
+		if time.Now().After(deadline) {
+			return fmt.Errorf("SSH not reachable on %s (%s:22) after %s", name, ip, maxWait)
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		m.logger.Info("waiting for SSH", "name", name, "ip", ip, "retry_in", backoff)
+		select {
+		case <-time.After(backoff):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		backoff = min(backoff*2, 16*time.Second)
+	}
 }
 
 // Stop halts a running VM.
