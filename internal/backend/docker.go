@@ -47,7 +47,7 @@ func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 		args = append(args, "--platform", b.platform)
 	}
 	args = append(args, "--entrypoint", "bash", b.image, "-c",
-		"sudo dockerd &>/var/log/dockerd.log & sleep infinity",
+		"sudo bash -c 'dockerd &>/var/log/dockerd.log' & sleep infinity",
 	)
 
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), args...)
