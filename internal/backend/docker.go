@@ -16,7 +16,7 @@ import (
 
 var dockerTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/docker")
 
-const defaultDockerRunnerImage = "ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest"
+const defaultDockerRunnerImage = "ghcr.io/quipper/actions-runner:latest"
 
 // DockerBackend runs each job inside an ephemeral Docker container.
 type DockerBackend struct {
@@ -36,10 +36,12 @@ func NewDockerBackend(image, platform string, logger *slog.Logger) *DockerBacken
 	}
 }
 
-// Run starts a DinD container with the native entrypoint-dind.sh.
-// The JIT config is passed via ACTIONS_RUNNER_INPUT_JITCONFIG env var,
-// which the GitHub Actions runner picks up automatically — mirroring
-// how ARC passes JIT config to runner pods in Kubernetes.
+// Run starts a DinD container and launches the GitHub Actions runner.
+//
+// Uses the quipper/actions-runner image (github.com/quipper/actions-runner)
+// which has a built-in entrypoint that:
+//   1. Starts dockerd when RUN_DOCKERD=true (for Docker-in-Docker)
+//   2. Execs CMD (/home/runner/run.sh) which reads ACTIONS_RUNNER_INPUT_JITCONFIG
 func (b *DockerBackend) Run(ctx context.Context, name, jitConfig string) error {
 	ctx, span := dockerTracer.Start(ctx, "backend.docker.run",
 		trace.WithAttributes(attribute.String("container.name", name)),
@@ -50,6 +52,7 @@ func (b *DockerBackend) Run(ctx context.Context, name, jitConfig string) error {
 		"run", "-d", "--privileged",
 		"--name", name,
 		"-e", "ACTIONS_RUNNER_INPUT_JITCONFIG=" + jitConfig,
+		"-e", "RUN_DOCKERD=true",
 	}
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform)
