@@ -67,6 +67,15 @@ func (b *DockerBackend) StartRunner(ctx context.Context, name, jitConfig string)
 	)
 	defer span.End()
 
+	// Wait for dockerd to be ready (up to 30s)
+	waitCmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", name,
+		"bash", "-c",
+		"for i in $(seq 1 30); do docker info &>/dev/null && exit 0; sleep 1; done; exit 1",
+	)
+	if out, err := waitCmd.CombinedOutput(); err != nil {
+		b.logger.Warn("dockerd not ready in container", "container", name, "err", err, "output", string(out))
+	}
+
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", "-d", name,
 		"/runnertmp/run.sh", "--jitconfig", jitConfig,
 	)
