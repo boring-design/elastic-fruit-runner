@@ -35,7 +35,6 @@ jobs:
 
   docker-amd64:
     runs-on: [self-hosted, Linux, X64]
-    needs: goreleaser
     steps:
       - uses: actions/checkout@v4
 
@@ -64,7 +63,6 @@ jobs:
 
   docker-arm64:
     runs-on: [self-hosted, Linux, ARM64]
-    needs: goreleaser
     steps:
       - uses: actions/checkout@v4
 
