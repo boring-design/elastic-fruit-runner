@@ -2,8 +2,9 @@ package controller
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,8 +42,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	d.logger.Info("scaling", "desired", count, "current", current, "spawning", needed)
 
 	for range needed {
-		id := d.runners.allocSlot(d.rsCfg.MaxRunners)
-		name := fmt.Sprintf("%s-%d", d.rsCfg.Name, id)
+		name := fmt.Sprintf("%s-%s", d.rsCfg.Name, randSuffix())
 		d.runners.addPreparing(name)
 		go d.startRunner(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
 	}
@@ -224,7 +224,6 @@ type runnerState struct {
 	preparing map[string]struct{}
 	idle      map[string]time.Time
 	busy      map[string]struct{}
-	usedSlots map[int]struct{}
 }
 
 func (r *runnerState) setRunnerCtx(ctx context.Context) {
@@ -239,36 +238,12 @@ func (r *runnerState) count() int {
 	return len(r.preparing) + len(r.idle) + len(r.busy)
 }
 
-// allocSlot finds the smallest available slot in [1, maxSlots] and marks it used.
-func (r *runnerState) allocSlot(maxSlots int) int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.usedSlots == nil {
-		r.usedSlots = make(map[int]struct{})
-	}
-	for i := 1; i <= maxSlots; i++ {
-		if _, ok := r.usedSlots[i]; !ok {
-			r.usedSlots[i] = struct{}{}
-			return i
-		}
-	}
-	// fallback: all slots occupied, use maxSlots+len as overflow
-	id := maxSlots + len(r.usedSlots)
-	r.usedSlots[id] = struct{}{}
-	return id
-}
-
-// freeSlot extracts the trailing integer from a runner name (e.g. "efr-linux-arm64-2" → 2)
-// and returns the slot to the available pool. Must be called with mu held.
-func (r *runnerState) freeSlot(name string) {
-	lastDash := strings.LastIndex(name, "-")
-	if lastDash < 0 {
-		return
-	}
-	var id int
-	if _, err := fmt.Sscanf(name[lastDash+1:], "%d", &id); err == nil {
-		delete(r.usedSlots, id)
-	}
+// randSuffix returns a short random hex string (5 chars), similar to
+// Kubernetes Deployment pod suffixes.
+func randSuffix() string {
+	var b [3]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])[:5]
 }
 
 func (r *runnerState) addPreparing(name string) {
@@ -300,7 +275,7 @@ func (r *runnerState) markBusy(name string) {
 	r.busy[name] = struct{}{}
 }
 
-// markDone removes the runner from whichever set it is in and frees its slot.
+// markDone removes the runner from whichever set it is in.
 // Safe to call multiple times (idempotent).
 func (r *runnerState) markDone(name string) {
 	r.mu.Lock()
@@ -308,5 +283,4 @@ func (r *runnerState) markDone(name string) {
 	delete(r.preparing, name)
 	delete(r.idle, name)
 	delete(r.busy, name)
-	r.freeSlot(name)
 }
