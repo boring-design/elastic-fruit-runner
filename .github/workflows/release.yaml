@@ -25,10 +25,10 @@ jobs:
         run: |
           curl -fsSL -o /tmp/goreleaser.tar.gz "https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Darwin_arm64.tar.gz"
           sudo tar xzf /tmp/goreleaser.tar.gz -C /usr/local/bin goreleaser
-          goreleaser --version
+          /usr/local/bin/goreleaser --version
 
       - name: Run goreleaser
-        run: goreleaser release --clean
+        run: /usr/local/bin/goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
