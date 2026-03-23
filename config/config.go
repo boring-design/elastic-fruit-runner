@@ -15,16 +15,16 @@ import (
 
 // Config holds all runtime configuration for the daemon.
 type Config struct {
-	GitHub      GitHubConfig    `yaml:"github"`
-	RunnerGroup string          `yaml:"runner_group"`
-	IdleTimeout time.Duration   `yaml:"idle_timeout"`
+	GitHub      GitHubConfig      `yaml:"github"`
+	RunnerGroup string            `yaml:"runner_group"`
+	IdleTimeout time.Duration     `yaml:"idle_timeout"`
 	RunnerSets  []RunnerSetConfig `yaml:"runner_sets"`
 }
 
 // GitHubConfig holds GitHub authentication and connection settings.
 type GitHubConfig struct {
-	URL   string        `yaml:"url"`
-	Token string        `yaml:"token"`
+	URL   string          `yaml:"url"`
+	Token string          `yaml:"token"`
 	App   GitHubAppConfig `yaml:"app"`
 }
 
