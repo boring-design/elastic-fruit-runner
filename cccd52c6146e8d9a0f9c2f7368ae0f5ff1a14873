@@ -1,0 +1,23 @@
+.github/workflows/release.yaml
+  a960109c33d2d6a0 24-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "cccd52c6146e8d9a0f9c2f7368ae0f5ff1a14873",
+  "prompts": {
+    "a960109c33d2d6a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7efbb3c-0a60-4398-b4ef-76ddcdf656bb",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 4,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
