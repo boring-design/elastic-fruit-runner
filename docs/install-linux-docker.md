@@ -47,7 +47,7 @@ github:
 runner_sets:
   - name: efr-linux-arm64
     backend: docker
-    image: ghcr.io/actions/actions-runner:2.322.0
+    image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
     labels: [self-hosted, Linux, ARM64]
     max_runners: 4
     platform: linux/arm64

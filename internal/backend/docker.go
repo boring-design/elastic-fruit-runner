@@ -15,6 +15,8 @@ import (
 
 var dockerTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/docker")
 
+const defaultDockerRunnerImage = "ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest"
+
 // DockerBackend runs each job inside an ephemeral Docker container.
 type DockerBackend struct {
 	image    string
@@ -23,6 +25,9 @@ type DockerBackend struct {
 }
 
 func NewDockerBackend(image, platform string, logger *slog.Logger) *DockerBackend {
+	if image == "" {
+		image = defaultDockerRunnerImage
+	}
 	return &DockerBackend{
 		image:    image,
 		platform: platform,
@@ -36,7 +41,7 @@ func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
-	args := []string{"run", "-d", "--name", name}
+	args := []string{"run", "-d", "--privileged", "--name", name, "-e", "RUN_DOCKERD=true"}
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform)
 	}
