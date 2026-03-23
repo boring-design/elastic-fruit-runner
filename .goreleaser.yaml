@@ -20,7 +20,8 @@ checksum:
   name_template: checksums.txt
 
 brews:
-  - repository:
+  - skip_upload: auto
+    repository:
       owner: boring-design
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
