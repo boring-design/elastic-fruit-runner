@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"sync/atomic"
 
 	"github.com/actions/scaleset"
 	"github.com/actions/scaleset/listener"
@@ -37,8 +36,7 @@ type ScaleSetController struct {
 	backend backend.Backend
 	logger  *slog.Logger
 
-	vmCounter atomic.Int64
-	runners   runnerState
+	runners runnerState
 
 	// runnerCancel cancels the context used by startRunner goroutines,
 	// allowing in-flight VM preparations to be aborted on shutdown.
