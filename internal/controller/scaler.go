@@ -43,7 +43,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 		id := d.vmCounter.Add(1)
 		name := fmt.Sprintf("%s-%d", d.rsCfg.Name, id)
 		d.runners.addPreparing(name)
-		go d.prepareAndStart(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
+		go d.startRunner(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
 	}
 	return d.runners.count(), nil
 }
@@ -90,29 +90,21 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 	return nil
 }
 
-// prepareAndStart is launched as a goroutine for each new runner.
-// It clones and starts the VM, generates a JIT config, and starts the runner
-// process inside the VM. Once the runner is up it moves to idle state and
-// the goroutine exits — the runner's lifecycle is then driven by job events.
+// startRunner is launched as a goroutine for each new runner.
+// It generates a JIT config, then calls backend.Run which sets up the
+// execution environment and starts the runner process. Once the runner is up
+// it moves to idle state and the goroutine exits — the runner's lifecycle
+// is then driven by job events.
 // The caller must call runners.addPreparing(name) before launching this goroutine.
-func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
+func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 	log := d.logger.With("runner", name)
 
-	ctx, span := tracer.Start(ctx, "controller.runner.prepare_and_start",
+	ctx, span := tracer.Start(ctx, "controller.runner.start",
 		trace.WithAttributes(attribute.String("runner.name", name)),
 	)
 	defer span.End()
 
 	log.Info("preparing runner")
-
-	if err := d.backend.Prepare(ctx, name); err != nil {
-		log.Error("prepare failed", "err", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "prepare failed")
-		d.runners.markDone(name)
-		d.backend.Cleanup(context.Background(), name)
-		return
-	}
 
 	jitCtx, jitSpan := tracer.Start(ctx, "controller.generate_jit_config")
 	jitCfg, err := d.client.GenerateJitRunnerConfig(jitCtx,
@@ -126,11 +118,10 @@ func (d *ScaleSetController) prepareAndStart(ctx context.Context, name string) {
 		jitSpan.SetStatus(codes.Error, "generate JIT config failed")
 		span.SetStatus(codes.Error, "generate JIT config failed")
 		d.runners.markDone(name)
-		d.backend.Cleanup(context.Background(), name)
 		return
 	}
 
-	if err := d.backend.StartRunner(ctx, name, jitCfg.EncodedJITConfig); err != nil {
+	if err := d.backend.Run(ctx, name, jitCfg.EncodedJITConfig); err != nil {
 		log.Error("start runner failed", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "start runner failed")

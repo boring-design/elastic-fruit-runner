@@ -42,8 +42,11 @@ func NewTartBackend(vmImage string, logger *slog.Logger) *TartBackend {
 	}
 }
 
-func (b *TartBackend) Prepare(ctx context.Context, name string) error {
-	ctx, span := tartTracer.Start(ctx, "backend.tart.prepare",
+// Run sets up a Tart VM and starts the GitHub Actions runner inside it.
+// It pulls the image if needed, clones, starts the VM, waits for IP,
+// downloads the runner binary, and launches it with the JIT config.
+func (b *TartBackend) Run(ctx context.Context, name, jitConfig string) error {
+	ctx, span := tartTracer.Start(ctx, "backend.tart.run",
 		trace.WithAttributes(attribute.String("vm.name", name)),
 	)
 	defer span.End()
@@ -80,17 +83,6 @@ func (b *TartBackend) Prepare(ctx context.Context, name string) error {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
-	return nil
-}
-
-// StartRunner downloads (if needed) and starts the GitHub Actions runner inside
-// the VM with the given JIT config. The runner process is started in the
-// background via nohup, so this call returns as soon as the process is launched.
-func (b *TartBackend) StartRunner(ctx context.Context, name, jitConfig string) error {
-	ctx, span := tartTracer.Start(ctx, "backend.tart.start_runner",
-		trace.WithAttributes(attribute.String("vm.name", name)),
-	)
-	defer span.End()
 
 	version, err := ResolveRunnerVersion(ctx)
 	if err != nil {

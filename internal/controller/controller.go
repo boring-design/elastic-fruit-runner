@@ -40,7 +40,7 @@ type ScaleSetController struct {
 	vmCounter atomic.Int64
 	runners   runnerState
 
-	// runnerCancel cancels the context used by prepareAndStart goroutines,
+	// runnerCancel cancels the context used by startRunner goroutines,
 	// allowing in-flight VM preparations to be aborted on shutdown.
 	runnerCancel context.CancelFunc
 }
@@ -146,7 +146,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		return fmt.Errorf("create listener: %w", err)
 	}
 
-	// runnerCtx is stored so that prepareAndStart goroutines can use it.
+	// runnerCtx is stored so that startRunner goroutines can use it.
 	// We embed it as a closure rather than a field to keep Run re-entrant.
 	d.runners.setRunnerCtx(runnerCtx)
 	go d.runIdleReaper(runnerCtx)
