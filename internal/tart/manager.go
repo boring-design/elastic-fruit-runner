@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -28,7 +29,7 @@ func NewManager(logger *slog.Logger) *Manager {
 
 // List returns the names of all local VMs.
 func (m *Manager) List(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "tart", "list", "--source", "local", "--quiet")
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "list", "--source", "local", "--quiet")
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("tart list: %w", err)
@@ -66,7 +67,7 @@ func (m *Manager) ImageExists(ctx context.Context, image string) (bool, error) {
 	)
 	defer span.End()
 
-	cmd := exec.CommandContext(ctx, "tart", "list", "--source", "local", "--quiet")
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "list", "--source", "local", "--quiet")
 	out, err := cmd.Output()
 	if err != nil {
 		span.RecordError(err)
@@ -108,7 +109,7 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 	defer span.End()
 
 	m.logger.Info("starting VM", "name", name)
-	cmd := exec.CommandContext(ctx, "tart", "run", name, "--no-graphics")
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "run", name, "--no-graphics")
 	if err := cmd.Start(); err != nil {
 		err = fmt.Errorf("start VM %s: %w", name, err)
 		span.RecordError(err)
@@ -128,7 +129,7 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	defer span.End()
 
 	m.logger.Info("waiting for VM IP", "name", name)
-	cmd := exec.CommandContext(ctx, "tart", "ip", name, "--wait", "60")
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", "60")
 	out, err := cmd.Output()
 	if err != nil {
 		err = fmt.Errorf("tart ip %s: %w", name, err)
@@ -159,7 +160,7 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	sshArgs := m.buildSSHArgs(ip, args...)
 	m.logger.Info("ssh exec in VM", "name", name, "ip", ip, "args", args)
 	var buf bytes.Buffer
-	cmd := exec.CommandContext(ctx, "sshpass", sshArgs...)
+	cmd := exec.CommandContext(ctx, binpath.Lookup("sshpass"), sshArgs...)
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 	if err := cmd.Run(); err != nil {
@@ -219,7 +220,7 @@ func (m *Manager) buildSSHArgs(ip string, args ...string) []string {
 
 func (m *Manager) run(ctx context.Context, args ...string) error {
 	var buf bytes.Buffer
-	cmd := exec.CommandContext(ctx, "tart", args...)
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), args...)
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
 	if err := cmd.Run(); err != nil {

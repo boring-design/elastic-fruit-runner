@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -47,7 +48,7 @@ func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 	}
 	args = append(args, b.image, "sleep", "infinity")
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		err = fmt.Errorf("docker run: %s: %w", string(out), err)
@@ -64,7 +65,7 @@ func (b *DockerBackend) StartRunner(ctx context.Context, name, jitConfig string)
 	)
 	defer span.End()
 
-	cmd := exec.CommandContext(ctx, "docker", "exec", "-d", name,
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", "-d", name,
 		"/home/runner/run.sh", "--jitconfig", jitConfig,
 	)
 	out, err := cmd.CombinedOutput()
@@ -83,7 +84,7 @@ func (b *DockerBackend) Cleanup(ctx context.Context, name string) {
 	)
 	defer span.End()
 
-	cmd := exec.CommandContext(ctx, "docker", "rm", "-f", name)
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "rm", "-f", name)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		b.logger.Warn("docker rm", "container", name, "err", err, "output", string(out))
 		span.RecordError(err)
@@ -96,7 +97,7 @@ func (b *DockerBackend) CleanupAll(ctx context.Context, prefix string) {
 	)
 	defer span.End()
 
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a",
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "ps", "-a",
 		"--filter", fmt.Sprintf("name=^%s-", prefix),
 		"--format", "{{.Names}}",
 	)
