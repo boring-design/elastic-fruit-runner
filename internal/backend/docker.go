@@ -42,11 +42,13 @@ func (b *DockerBackend) Prepare(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
-	args := []string{"run", "-d", "--privileged", "--name", name, "-e", "RUN_DOCKERD=true"}
+	args := []string{"run", "-d", "--privileged", "--name", name}
 	if b.platform != "" {
 		args = append(args, "--platform", b.platform)
 	}
-	args = append(args, b.image, "sleep", "infinity")
+	args = append(args, "--entrypoint", "bash", b.image, "-c",
+		"sudo dockerd &>/var/log/dockerd.log & sleep infinity",
+	)
 
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), args...)
 	out, err := cmd.CombinedOutput()
@@ -66,7 +68,7 @@ func (b *DockerBackend) StartRunner(ctx context.Context, name, jitConfig string)
 	defer span.End()
 
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "exec", "-d", name,
-		"/home/runner/run.sh", "--jitconfig", jitConfig,
+		"/runnertmp/run.sh", "--jitconfig", jitConfig,
 	)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
