@@ -21,10 +21,13 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
+      - name: Install goreleaser
+        run: |
+          curl -fsSL https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Darwin_arm64.tar.gz | tar xz -C /usr/local/bin goreleaser
+          goreleaser --version
+
+      - name: Run goreleaser
+        run: goreleaser release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
