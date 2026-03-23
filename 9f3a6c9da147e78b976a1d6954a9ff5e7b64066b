@@ -1,0 +1,23 @@
+internal/backend/docker.go
+  a960109c33d2d6a0 39-66,77,97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "9f3a6c9da147e78b976a1d6954a9ff5e7b64066b",
+  "prompts": {
+    "a960109c33d2d6a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7efbb3c-0a60-4398-b4ef-76ddcdf656bb",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 31,
+      "total_deletions": 14,
+      "accepted_lines": 30,
+      "overriden_lines": 0
+    }
+  }
+}
