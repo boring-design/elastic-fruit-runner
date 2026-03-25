@@ -128,6 +128,7 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		span.SetStatus(codes.Error, "start runner failed")
 		d.runners.markDone(name)
 		d.backend.Cleanup(context.Background(), name)
+		d.removeGitHubRunner(context.Background(), name)
 		return
 	}
 
@@ -160,6 +161,7 @@ func (d *ScaleSetController) shutdown(ctx context.Context) {
 	for _, name := range toCleanup {
 		d.logger.Info("cleaning up runner on shutdown", "runner", name)
 		d.backend.Cleanup(ctx, name)
+		d.removeGitHubRunner(ctx, name)
 	}
 }
 
@@ -206,7 +208,21 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 			)
 			defer cleanSpan.End()
 			d.backend.Cleanup(cleanCtx, n)
+			d.removeGitHubRunner(cleanCtx, n)
 		}(name)
+	}
+}
+
+// removeGitHubRunner deregisters a runner from GitHub by name.
+// Best-effort: logs errors but does not propagate them, since the
+// backend resource is already being cleaned up.
+func (d *ScaleSetController) removeGitHubRunner(ctx context.Context, name string) {
+	runner, err := d.client.GetRunnerByName(ctx, name)
+	if err != nil || runner == nil {
+		return
+	}
+	if err := d.client.RemoveRunner(ctx, int64(runner.ID)); err != nil {
+		d.logger.Warn("failed to remove runner from GitHub", "runner", name, "err", err)
 	}
 }
 
