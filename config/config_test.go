@@ -1,8 +1,10 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -221,6 +223,105 @@ func TestLoad_GitHubAppConfig(t *testing.T) {
 	}
 	if cfg.GitHub.App.PrivateKeyPath != "/path/to/key.pem" {
 		t.Errorf("GitHub.App.PrivateKeyPath = %q, want %q", cfg.GitHub.App.PrivateKeyPath, "/path/to/key.pem")
+	}
+}
+
+func TestParsedLogLevel(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    slog.Level
+		wantErr bool
+	}{
+		{"debug", slog.LevelDebug, false},
+		{"DEBUG", slog.LevelDebug, false},
+		{"info", slog.LevelInfo, false},
+		{"INFO", slog.LevelInfo, false},
+		{"warn", slog.LevelWarn, false},
+		{"warning", slog.LevelInfo, true},
+		{"error", slog.LevelError, false},
+		{"ERROR", slog.LevelError, false},
+		{"", slog.LevelInfo, false},
+		{"unknown", slog.LevelInfo, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			cfg := &Config{LogLevel: tt.input}
+			got, err := cfg.ParsedLogLevel()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParsedLogLevel(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("ParsedLogLevel(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidate_InvalidLogLevel(t *testing.T) {
+	cfg := &Config{
+		GitHub:      GitHubConfig{URL: "https://github.com/test", Token: "ghp_test"},
+		RunnerGroup: "Default",
+		IdleTimeout: 15 * time.Minute,
+		LogLevel:    "trace",
+		RunnerSets: []RunnerSetConfig{
+			{Name: "test", Backend: "docker", MaxRunners: 1},
+		},
+	}
+	err := cfg.Validate()
+	if err == nil {
+		t.Fatal("expected validation error for invalid log_level")
+	}
+	if !strings.Contains(err.Error(), "log_level") {
+		t.Errorf("error should mention log_level, got: %v", err)
+	}
+}
+
+func TestLoad_LogLevelFromConfigFile(t *testing.T) {
+	dir := t.TempDir()
+	cfgFile := filepath.Join(dir, "config.yaml")
+	content := `log_level: debug`
+	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+		t.Fatalf("write config file: %v", err)
+	}
+
+	cfg, err := loadWithArgs([]string{"--config", cfgFile})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.LogLevel != "debug" {
+		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "debug")
+	}
+	level, err := cfg.ParsedLogLevel()
+	if err != nil {
+		t.Fatalf("ParsedLogLevel() unexpected error: %v", err)
+	}
+	if level != slog.LevelDebug {
+		t.Errorf("ParsedLogLevel() = %v, want %v", level, slog.LevelDebug)
+	}
+}
+
+func TestLoad_LogLevelEnvOverride(t *testing.T) {
+	t.Setenv("LOG_LEVEL", "warn")
+
+	cfg, err := loadWithArgs(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.LogLevel != "warn" {
+		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "warn")
+	}
+}
+
+func TestLoad_LogLevelDefault(t *testing.T) {
+	cfg, err := loadWithArgs(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if cfg.LogLevel != "info" {
+		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "info")
 	}
 }
 
