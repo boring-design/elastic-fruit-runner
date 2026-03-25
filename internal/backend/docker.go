@@ -22,15 +22,21 @@ const defaultDockerRunnerImage = "ghcr.io/quipper/actions-runner:2.332.0"
 type DockerBackend struct {
 	image    string
 	platform string
+	logger   *slog.Logger
 }
 
 func NewDockerBackend(image, platform string) *DockerBackend {
 	if image == "" {
 		image = defaultDockerRunnerImage
 	}
+	logger := slog.Default().With("image", image)
+	if platform != "" {
+		logger = logger.With("platform", platform)
+	}
 	return &DockerBackend{
 		image:    image,
 		platform: platform,
+		logger:   logger,
 	}
 }
 
@@ -74,7 +80,7 @@ func (b *DockerBackend) Cleanup(ctx context.Context, name string) {
 
 	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "rm", "-f", name)
 	if out, err := cmd.CombinedOutput(); err != nil {
-		slog.Warn("docker rm", "container", name, "err", err, "output", string(out))
+		b.logger.Warn("docker rm", "container", name, "err", err, "output", string(out))
 		span.RecordError(err)
 	}
 }
@@ -91,7 +97,7 @@ func (b *DockerBackend) CleanupAll(ctx context.Context, prefix string) {
 	)
 	out, err := cmd.Output()
 	if err != nil {
-		slog.Warn("docker ps for cleanup", "prefix", prefix, "err", err)
+		b.logger.Warn("docker ps for cleanup", "prefix", prefix, "err", err)
 		return
 	}
 
@@ -105,7 +111,7 @@ func (b *DockerBackend) CleanupAll(ctx context.Context, prefix string) {
 		if name == "" {
 			continue
 		}
-		slog.Info("removing orphaned container", "container", name)
+		b.logger.Info("removing orphaned container", "container", name)
 		b.Cleanup(ctx, name)
 	}
 }

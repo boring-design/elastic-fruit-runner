@@ -31,12 +31,14 @@ const (
 type TartBackend struct {
 	tart    *tart.Manager
 	vmImage string
+	logger  *slog.Logger
 }
 
 func NewTartBackend(vmImage string) *TartBackend {
 	return &TartBackend{
 		tart:    tart.NewManager(),
 		vmImage: vmImage,
+		logger:  slog.Default().With("image", vmImage),
 	}
 }
 
@@ -51,10 +53,10 @@ func (b *TartBackend) Run(ctx context.Context, name, jitConfig string) error {
 
 	exists, err := b.tart.ImageExists(ctx, b.vmImage)
 	if err != nil {
-		slog.Warn("failed to check image existence, proceeding with clone", "err", err)
+		b.logger.Warn("failed to check image existence, proceeding with clone", "err", err)
 	}
 	if !exists && isRemoteImage(b.vmImage) {
-		slog.Info("VM image not found locally, pulling", "image", b.vmImage)
+		b.logger.Info("VM image not found locally, pulling", "image", b.vmImage)
 		if pullErr := b.tart.Pull(ctx, b.vmImage); pullErr != nil {
 			pullErr = fmt.Errorf("pull VM image: %w", pullErr)
 			span.RecordError(pullErr)
@@ -125,11 +127,11 @@ func (b *TartBackend) Cleanup(ctx context.Context, name string) {
 	defer span.End()
 
 	if err := b.tart.Stop(ctx, name); err != nil {
-		slog.Warn("stop VM", "vm", name, "err", err)
+		b.logger.Warn("stop VM", "vm", name, "err", err)
 		span.RecordError(err)
 	}
 	if err := b.tart.Delete(ctx, name); err != nil {
-		slog.Warn("delete VM", "vm", name, "err", err)
+		b.logger.Warn("delete VM", "vm", name, "err", err)
 		span.RecordError(err)
 	}
 }
@@ -142,13 +144,13 @@ func (b *TartBackend) CleanupAll(ctx context.Context, prefix string) {
 
 	vms, err := b.tart.List(ctx)
 	if err != nil {
-		slog.Warn("list VMs for cleanup", "prefix", prefix, "err", err)
+		b.logger.Warn("list VMs for cleanup", "prefix", prefix, "err", err)
 		return
 	}
 
 	for _, name := range vms {
 		if strings.HasPrefix(name, prefix+"-") {
-			slog.Info("removing orphaned VM", "vm", name)
+			b.logger.Info("removing orphaned VM", "vm", name)
 			b.Cleanup(ctx, name)
 		}
 	}

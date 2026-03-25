@@ -36,6 +36,7 @@ type ScaleSetController struct {
 	scaleSetID int
 
 	backend backend.Backend
+	logger  *slog.Logger
 
 	runners runnerState
 
@@ -52,6 +53,7 @@ func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Dur
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
+		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }
 
@@ -61,7 +63,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	runnerCtx, runnerCancel := context.WithCancel(ctx)
 	d.runnerCancel = runnerCancel
 
-	slog.Info("cleaning up resources from previous runs", "runnerSet", d.rsCfg.Name)
+	d.logger.Info("cleaning up resources from previous runs")
 	d.backend.CleanupAll(ctx, d.rsCfg.Name)
 
 	group, err := d.client.GetRunnerGroupByName(ctx, d.runnerGroup)
@@ -69,7 +71,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		runnerCancel()
 		return fmt.Errorf("get runner group %q: %w", d.runnerGroup, err)
 	}
-	slog.Info("runner group resolved", "id", group.ID, "name", group.Name)
+	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
 
 	desiredLabels := make([]scaleset.Label, 0, len(d.rsCfg.Labels)+1)
 	desiredLabels = append(desiredLabels, scaleset.Label{Name: d.rsCfg.Name})
@@ -80,7 +82,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.rsCfg.Name)
 	switch {
 	case err != nil || ss == nil:
-		slog.Info("creating scale set", "name", d.rsCfg.Name)
+		d.logger.Info("creating scale set", "name", d.rsCfg.Name)
 		ss, err = d.client.CreateRunnerScaleSet(ctx, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
@@ -91,7 +93,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			return fmt.Errorf("create runner scale set: %w", err)
 		}
 	case !labelsMatch(ss.Labels, desiredLabels):
-		slog.Info("updating scale set labels", "id", ss.ID)
+		d.logger.Info("updating scale set labels", "id", ss.ID)
 		ss, err = d.client.UpdateRunnerScaleSet(ctx, ss.ID, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
@@ -102,10 +104,10 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			return fmt.Errorf("update runner scale set: %w", err)
 		}
 	default:
-		slog.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
+		d.logger.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
 	}
 	d.scaleSetID = ss.ID
-	slog.Info("scale set ready", "id", ss.ID, "name", ss.Name)
+	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
 	d.client.SetSystemInfo(scaleset.SystemInfo{
 		System:     "elastic-fruit-runner",
@@ -116,16 +118,16 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	})
 
 	defer func() {
-		slog.Info("deleting runner scale set", "id", ss.ID)
+		d.logger.Info("deleting runner scale set", "id", ss.ID)
 		if err := d.client.DeleteRunnerScaleSet(context.WithoutCancel(ctx), ss.ID); err != nil {
-			slog.Error("failed to delete runner scale set", "id", ss.ID, "err", err)
+			d.logger.Error("failed to delete runner scale set", "id", ss.ID, "err", err)
 		}
 	}()
 
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = uuid.NewString()
-		slog.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
+		d.logger.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
 	}
 	hostname = fmt.Sprintf("%s-%s", hostname, d.rsCfg.Name)
 
@@ -139,7 +141,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	l, err := listener.New(msgClient, listener.Config{
 		ScaleSetID: ss.ID,
 		MaxRunners: d.rsCfg.MaxRunners,
-		Logger:     slog.Default(),
+		Logger:     d.logger,
 	})
 	if err != nil {
 		runnerCancel()
@@ -151,7 +153,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.runners.setRunnerCtx(runnerCtx)
 	go d.runIdleReaper(runnerCtx)
 
-	slog.Info("listening for jobs",
+	d.logger.Info("listening for jobs",
 		"scaleSet", d.rsCfg.Name,
 		"maxRunners", d.rsCfg.MaxRunners,
 	)
