@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 		attribute.Int("runner.current", current),
 		attribute.Int("runner.spawning", needed),
 	)
-	d.logger.Info("scaling", "desired", count, "current", current, "spawning", needed)
+	slog.Info("scaling", "desired", count, "current", current, "spawning", needed)
 
 	for range needed {
 		name := fmt.Sprintf("%s-%s", d.rsCfg.Name, randSuffix())
@@ -61,7 +62,7 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	defer span.End()
 
 	d.runners.markBusy(job.RunnerName)
-	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
+	slog.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
 	return nil
 }
 
@@ -78,7 +79,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 
 	name := job.RunnerName
 	d.runners.markDone(name)
-	d.logger.Info("job completed", "runner", name, "result", job.Result)
+	slog.Info("job completed", "runner", name, "result", job.Result)
 
 	go func() {
 		cleanCtx, cleanSpan := tracer.Start(context.Background(), "controller.runner.cleanup",
@@ -98,7 +99,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 // is then driven by job events.
 // The caller must call runners.addPreparing(name) before launching this goroutine.
 func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
-	log := d.logger.With("runner", name)
+	log := slog.With("runner", name)
 
 	ctx, span := tracer.Start(ctx, "controller.runner.start",
 		trace.WithAttributes(attribute.String("runner.name", name)),
@@ -139,7 +140,7 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 // shutdown cleans up all idle and busy runners. Called after the listener
 // exits. Preparing runners are cancelled via runnerCtx and clean up themselves.
 func (d *ScaleSetController) shutdown(ctx context.Context) {
-	d.logger.Info("shutting down, cleaning up runners")
+	slog.Info("shutting down, cleaning up runners")
 
 	d.runners.mu.Lock()
 	toCleanup := make([]string, 0, len(d.runners.idle)+len(d.runners.busy))
@@ -155,11 +156,11 @@ func (d *ScaleSetController) shutdown(ctx context.Context) {
 	d.runners.mu.Unlock()
 
 	if preparingCount > 0 {
-		d.logger.Info("aborting in-flight preparations", "count", preparingCount)
+		slog.Info("aborting in-flight preparations", "count", preparingCount)
 	}
 
 	for _, name := range toCleanup {
-		d.logger.Info("cleaning up runner on shutdown", "runner", name)
+		slog.Info("cleaning up runner on shutdown", "runner", name)
 		d.backend.Cleanup(ctx, name)
 		d.removeGitHubRunner(ctx, name)
 	}
@@ -198,7 +199,7 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 	d.runners.mu.Unlock()
 
 	for _, name := range expired {
-		d.logger.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
+		slog.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
 		go func(n string) {
 			cleanCtx, cleanSpan := tracer.Start(context.Background(), "controller.runner.cleanup",
 				trace.WithAttributes(
@@ -222,7 +223,7 @@ func (d *ScaleSetController) removeGitHubRunner(ctx context.Context, name string
 		return
 	}
 	if err := d.client.RemoveRunner(ctx, int64(runner.ID)); err != nil {
-		d.logger.Warn("failed to remove runner from GitHub", "runner", name, "err", err)
+		slog.Warn("failed to remove runner from GitHub", "runner", name, "err", err)
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-
 	"time"
 
 	"github.com/actions/scaleset"
@@ -37,7 +36,6 @@ type ScaleSetController struct {
 	scaleSetID int
 
 	backend backend.Backend
-	logger  *slog.Logger
 
 	runners runnerState
 
@@ -47,14 +45,13 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
-		logger:      logger,
 	}
 }
 
@@ -64,7 +61,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	runnerCtx, runnerCancel := context.WithCancel(ctx)
 	d.runnerCancel = runnerCancel
 
-	d.logger.Info("cleaning up resources from previous runs")
+	slog.Info("cleaning up resources from previous runs", "runnerSet", d.rsCfg.Name)
 	d.backend.CleanupAll(ctx, d.rsCfg.Name)
 
 	group, err := d.client.GetRunnerGroupByName(ctx, d.runnerGroup)
@@ -72,7 +69,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		runnerCancel()
 		return fmt.Errorf("get runner group %q: %w", d.runnerGroup, err)
 	}
-	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
+	slog.Info("runner group resolved", "id", group.ID, "name", group.Name)
 
 	desiredLabels := make([]scaleset.Label, 0, len(d.rsCfg.Labels)+1)
 	desiredLabels = append(desiredLabels, scaleset.Label{Name: d.rsCfg.Name})
@@ -83,7 +80,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.rsCfg.Name)
 	switch {
 	case err != nil || ss == nil:
-		d.logger.Info("creating scale set", "name", d.rsCfg.Name)
+		slog.Info("creating scale set", "name", d.rsCfg.Name)
 		ss, err = d.client.CreateRunnerScaleSet(ctx, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
@@ -94,7 +91,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			return fmt.Errorf("create runner scale set: %w", err)
 		}
 	case !labelsMatch(ss.Labels, desiredLabels):
-		d.logger.Info("updating scale set labels", "id", ss.ID)
+		slog.Info("updating scale set labels", "id", ss.ID)
 		ss, err = d.client.UpdateRunnerScaleSet(ctx, ss.ID, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
 			RunnerGroupID: group.ID,
@@ -105,10 +102,10 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			return fmt.Errorf("update runner scale set: %w", err)
 		}
 	default:
-		d.logger.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
+		slog.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
 	}
 	d.scaleSetID = ss.ID
-	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
+	slog.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
 	d.client.SetSystemInfo(scaleset.SystemInfo{
 		System:     "elastic-fruit-runner",
@@ -119,16 +116,16 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	})
 
 	defer func() {
-		d.logger.Info("deleting runner scale set", "id", ss.ID)
+		slog.Info("deleting runner scale set", "id", ss.ID)
 		if err := d.client.DeleteRunnerScaleSet(context.WithoutCancel(ctx), ss.ID); err != nil {
-			d.logger.Error("failed to delete runner scale set", "id", ss.ID, "err", err)
+			slog.Error("failed to delete runner scale set", "id", ss.ID, "err", err)
 		}
 	}()
 
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = uuid.NewString()
-		d.logger.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
+		slog.Info("failed to get hostname, using uuid fallback", "uuid", hostname, "err", err)
 	}
 	hostname = fmt.Sprintf("%s-%s", hostname, d.rsCfg.Name)
 
@@ -142,7 +139,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	l, err := listener.New(msgClient, listener.Config{
 		ScaleSetID: ss.ID,
 		MaxRunners: d.rsCfg.MaxRunners,
-		Logger:     d.logger,
+		Logger:     slog.Default(),
 	})
 	if err != nil {
 		runnerCancel()
@@ -154,7 +151,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.runners.setRunnerCtx(runnerCtx)
 	go d.runIdleReaper(runnerCtx)
 
-	d.logger.Info("listening for jobs",
+	slog.Info("listening for jobs",
 		"scaleSet", d.rsCfg.Name,
 		"maxRunners", d.rsCfg.MaxRunners,
 	)

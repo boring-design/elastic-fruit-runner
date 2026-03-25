@@ -19,16 +19,16 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
-	}))
-	if err := run(logger); err != nil {
-		logger.Error("fatal", "err", err)
+	})))
+	if err := run(); err != nil {
+		slog.Error("fatal", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run(bootstrapLogger *slog.Logger) error {
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("load configuration: %w", err)
@@ -40,13 +40,13 @@ func run(bootstrapLogger *slog.Logger) error {
 
 	logLevel, err := cfg.ParsedLogLevel()
 	if err != nil {
-		bootstrapLogger.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
+		slog.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
 		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
 	}
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: logLevel,
-	}))
+	})))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -57,7 +57,7 @@ func run(bootstrapLogger *slog.Logger) error {
 	}
 	defer func() {
 		if shutdownErr := tracingShutdown(context.Background()); shutdownErr != nil {
-			logger.Warn("tracing shutdown error", "err", shutdownErr)
+			slog.Warn("tracing shutdown error", "err", shutdownErr)
 		}
 	}()
 
@@ -65,14 +65,14 @@ func run(bootstrapLogger *slog.Logger) error {
 
 	for i := range cfg.Orgs {
 		org := &cfg.Orgs[i]
-		client, clientErr := createClient(org.ConfigURL(), &org.Auth, logger)
+		client, clientErr := createClient(org.ConfigURL(), &org.Auth)
 		if clientErr != nil {
 			return fmt.Errorf("create client for org %s: %w", org.Org, clientErr)
 		}
 
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
-			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, logger); err != nil {
+			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -80,32 +80,32 @@ func run(bootstrapLogger *slog.Logger) error {
 
 	for i := range cfg.Repos {
 		repo := &cfg.Repos[i]
-		client, clientErr := createClient(repo.ConfigURL(), &repo.Auth, logger)
+		client, clientErr := createClient(repo.ConfigURL(), &repo.Auth)
 		if clientErr != nil {
 			return fmt.Errorf("create client for repo %s: %w", repo.Repo, clientErr)
 		}
 
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
-			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client, logger); err != nil {
+			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
 
 	wg.Wait()
-	logger.Info("shutdown complete")
+	slog.Info("shutdown complete")
 	return nil
 }
 
-func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger) (*scaleset.Client, error) {
+func createClient(configURL string, auth *config.AuthConfig) (*scaleset.Client, error) {
 	switch auth.Mode() {
 	case config.AuthModeGitHubApp:
 		pemBytes, readErr := os.ReadFile(auth.GitHubApp.PrivateKeyPath)
 		if readErr != nil {
 			return nil, fmt.Errorf("read GitHub App private key %s: %w", auth.GitHubApp.PrivateKeyPath, readErr)
 		}
-		logger.Info("authenticating with GitHub App",
+		slog.Info("authenticating with GitHub App",
 			"configURL", configURL,
 			"clientID", auth.GitHubApp.ClientID,
 			"installationID", auth.GitHubApp.InstallationID,
@@ -119,7 +119,7 @@ func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger
 			},
 		})
 	case config.AuthModePAT:
-		logger.Info("authenticating with PAT", "configURL", configURL)
+		slog.Info("authenticating with PAT", "configURL", configURL)
 		return scaleset.NewClientWithPersonalAccessToken(
 			scaleset.NewClientWithPersonalAccessTokenConfig{
 				GitHubConfigURL:     configURL,
@@ -131,22 +131,21 @@ func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger
 	}
 }
 
-func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, logger *slog.Logger) error {
-	rsLogger := logger.With("runnerSet", rs.Name)
-
+func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client) error {
 	var b backend.Backend
 	switch rs.Backend {
 	case "tart":
-		b = backend.NewTartBackend(rs.Image, rsLogger)
+		b = backend.NewTartBackend(rs.Image)
 	case "docker":
-		b = backend.NewDockerBackend(rs.Image, rs.Platform, rsLogger)
+		b = backend.NewDockerBackend(rs.Image, rs.Platform)
 	default:
 		return fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
 	}
 
-	d := controller.New(rs, runnerGroup, idleTimeout, client, b, rsLogger)
+	d := controller.New(rs, runnerGroup, idleTimeout, client, b)
 
-	rsLogger.Info("launching controller",
+	slog.Info("launching controller",
+		"runnerSet", rs.Name,
 		"runnerGroup", runnerGroup,
 		"maxRunners", rs.MaxRunners,
 		"image", rs.Image,
@@ -159,10 +158,10 @@ func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.Runner
 		for {
 			err := d.Run(ctx)
 			if ctx.Err() != nil {
-				rsLogger.Info("controller stopped", "err", err)
+				slog.Info("controller stopped", "runnerSet", rs.Name, "err", err)
 				return
 			}
-			rsLogger.Error("controller exited with error, restarting", "err", err)
+			slog.Error("controller exited with error, restarting", "runnerSet", rs.Name, "err", err)
 			time.Sleep(5 * time.Second)
 		}
 	}()
