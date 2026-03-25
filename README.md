@@ -131,6 +131,27 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ---
 
+## Development
+
+```sh
+# Show all available targets
+make help
+
+# Build the binary (output in output/)
+make build
+
+# Run tests
+make test
+
+# Quick local check before committing (format, vet, build)
+make check
+
+# Run full CI checks (format-check, vet, build, lint, tests)
+make ci
+```
+
+---
+
 ## Roadmap
 
 - [x] Linux arm64 runner (Docker)
