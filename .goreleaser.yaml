@@ -29,6 +29,9 @@ brews:
     homepage: https://github.com/boring-design/elastic-fruit-runner
     description: Elastic GitHub Actions self-hosted runner manager for Apple Silicon
     license: AGPL-3.0
+    dependencies:
+      - name: cirruslabs/cli/tart
+      - name: sshpass
     install: |
       bin.install "elastic-fruit-runner"
     service: |
@@ -39,6 +42,9 @@ brews:
       error_log_path var/"log/elastic-fruit-runner.log"
       environment_variables PATH: std_service_path_env
     caveats: |
+      For the Docker backend, install a Docker-compatible runtime separately
+      (e.g. Docker Desktop, OrbStack, Colima).
+
       Before starting the service, create a config file:
 
         mkdir -p ~/.elastic-fruit-runner
