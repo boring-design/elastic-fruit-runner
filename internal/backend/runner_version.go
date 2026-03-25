@@ -20,7 +20,7 @@ func ResolveRunnerVersion(ctx context.Context) (string, error) {
 	var resolveErr error
 	versionOnce.Do(func() {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-			"https://api.github.com/repos/actions/runner/releases/latest", nil)
+			"https://api.github.com/repos/actions/runner/releases/latest", http.NoBody)
 		if err != nil {
 			resolveErr = err
 			return

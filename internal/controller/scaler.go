@@ -25,7 +25,7 @@ var _ listener.Scaler = (*ScaleSetController)(nil)
 // Runner names are registered as "preparing" before goroutines are launched,
 // so a subsequent call observes the correct count immediately.
 func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count int) (int, error) {
-	ctx, span := tracer.Start(ctx, "controller.HandleDesiredRunnerCount")
+	_, span := tracer.Start(ctx, "controller.HandleDesiredRunnerCount")
 	defer span.End()
 
 	current := d.runners.count()

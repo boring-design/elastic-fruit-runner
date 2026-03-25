@@ -81,7 +81,8 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	}
 
 	ss, err := d.client.GetRunnerScaleSet(ctx, group.ID, d.rsCfg.Name)
-	if err != nil || ss == nil {
+	switch {
+	case err != nil || ss == nil:
 		d.logger.Info("creating scale set", "name", d.rsCfg.Name)
 		ss, err = d.client.CreateRunnerScaleSet(ctx, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
@@ -92,7 +93,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			runnerCancel()
 			return fmt.Errorf("create runner scale set: %w", err)
 		}
-	} else if !labelsMatch(ss.Labels, desiredLabels) {
+	case !labelsMatch(ss.Labels, desiredLabels):
 		d.logger.Info("updating scale set labels", "id", ss.ID)
 		ss, err = d.client.UpdateRunnerScaleSet(ctx, ss.ID, &scaleset.RunnerScaleSet{
 			Name:          d.rsCfg.Name,
@@ -103,7 +104,7 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 			runnerCancel()
 			return fmt.Errorf("update runner scale set: %w", err)
 		}
-	} else {
+	default:
 		d.logger.Info("reusing existing scale set", "id", ss.ID, "name", ss.Name)
 	}
 	d.scaleSetID = ss.ID

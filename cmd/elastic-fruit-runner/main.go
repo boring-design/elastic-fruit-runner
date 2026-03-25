@@ -19,37 +19,41 @@ import (
 )
 
 func main() {
-	bootstrapLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
+	if err := run(logger); err != nil {
+		logger.Error("fatal", "err", err)
+		os.Exit(1)
+	}
+}
 
+func run(bootstrapLogger *slog.Logger) error {
 	cfg, err := config.Load()
 	if err != nil {
-		bootstrapLogger.Error("failed to load configuration", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
-		bootstrapLogger.Error("invalid configuration", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	logLevel, err := cfg.ParsedLogLevel()
 	if err != nil {
 		bootstrapLogger.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
 	}
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: logLevel,
 	}))
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	tracingShutdown, err := tracing.Setup(ctx)
 	if err != nil {
-		logger.Error("failed to initialize tracing", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize tracing: %w", err)
 	}
 	defer func() {
 		if shutdownErr := tracingShutdown(context.Background()); shutdownErr != nil {
@@ -63,15 +67,13 @@ func main() {
 		org := &cfg.Orgs[i]
 		client, clientErr := createClient(org.ConfigURL(), &org.Auth, logger)
 		if clientErr != nil {
-			logger.Error("failed to create client for org", "org", org.Org, "err", clientErr)
-			os.Exit(1)
+			return fmt.Errorf("create client for org %s: %w", org.Org, clientErr)
 		}
 
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
 			if err := launchController(&wg, ctx, rs, org.RunnerGroup, cfg.IdleTimeout, client, logger); err != nil {
-				logger.Error("failed to launch controller", "runnerSet", rs.Name, "err", err)
-				os.Exit(1)
+				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
@@ -80,21 +82,20 @@ func main() {
 		repo := &cfg.Repos[i]
 		client, clientErr := createClient(repo.ConfigURL(), &repo.Auth, logger)
 		if clientErr != nil {
-			logger.Error("failed to create client for repo", "repo", repo.Repo, "err", clientErr)
-			os.Exit(1)
+			return fmt.Errorf("create client for repo %s: %w", repo.Repo, clientErr)
 		}
 
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
 			if err := launchController(&wg, ctx, rs, "Default", cfg.IdleTimeout, client, logger); err != nil {
-				logger.Error("failed to launch controller", "runnerSet", rs.Name, "err", err)
-				os.Exit(1)
+				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
 
 	wg.Wait()
 	logger.Info("shutdown complete")
+	return nil
 }
 
 func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger) (*scaleset.Client, error) {

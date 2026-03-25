@@ -55,7 +55,7 @@ repos:
 
 idle_timeout: 30m
 `
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -133,7 +133,7 @@ func TestLoad_DurationParsing(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
 	content := `idle_timeout: 45m`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -244,7 +244,7 @@ func TestLoad_LogLevelFromConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
 	content := `log_level: debug`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
