@@ -1,0 +1,25 @@
+Makefile
+  4a3a164d6275f042 1-39
+CLAUDE.md
+  4a3a164d6275f042 5-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "007fc58602b97942f5d919ab5f0781fec798d6e0",
+  "prompts": {
+    "4a3a164d6275f042": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59452287-3de3-4758-84d6-020b1b9ae58e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 43,
+      "total_deletions": 1,
+      "accepted_lines": 43,
+      "overriden_lines": 0
+    }
+  }
+}
