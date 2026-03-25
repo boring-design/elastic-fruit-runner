@@ -77,9 +77,9 @@ func (c *Config) Validate() error {
 	}
 
 	switch strings.ToLower(c.LogLevel) {
-	case "debug", "info", "warn", "warning", "error", "":
+	case "debug", "info", "warn", "error", "":
 	default:
-		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, warning, error", c.LogLevel)
+		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, error", c.LogLevel)
 	}
 
 	if len(c.RunnerSets) == 0 {
@@ -104,7 +104,7 @@ func (c *Config) Validate() error {
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.
-// Recognized values: debug, info, warn, warning, error (case-insensitive).
+// Recognized values: debug, info, warn, error (case-insensitive).
 // Empty string defaults to slog.LevelInfo. Unrecognized values return an error.
 func (c *Config) ParsedLogLevel() (slog.Level, error) {
 	switch strings.ToLower(c.LogLevel) {
@@ -112,7 +112,7 @@ func (c *Config) ParsedLogLevel() (slog.Level, error) {
 		return slog.LevelDebug, nil
 	case "info", "":
 		return slog.LevelInfo, nil
-	case "warn", "warning":
+	case "warn":
 		return slog.LevelWarn, nil
 	case "error":
 		return slog.LevelError, nil

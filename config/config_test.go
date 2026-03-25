@@ -237,7 +237,7 @@ func TestParsedLogLevel(t *testing.T) {
 		{"info", slog.LevelInfo, false},
 		{"INFO", slog.LevelInfo, false},
 		{"warn", slog.LevelWarn, false},
-		{"warning", slog.LevelWarn, false},
+		{"warning", slog.LevelInfo, true},
 		{"error", slog.LevelError, false},
 		{"ERROR", slog.LevelError, false},
 		{"", slog.LevelInfo, false},

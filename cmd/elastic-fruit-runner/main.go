@@ -36,7 +36,7 @@ func main() {
 
 	logLevel, err := cfg.ParsedLogLevel()
 	if err != nil {
-		bootstrapLogger.Error("invalid log level", "err", err)
+		bootstrapLogger.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
 		os.Exit(1)
 	}
 
