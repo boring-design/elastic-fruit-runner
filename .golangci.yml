@@ -1,0 +1,74 @@
+version: "2"
+linters:
+  enable:
+    - bodyclose
+    - errorlint
+    - exhaustive
+    - gocritic
+    - gocyclo
+    - misspell
+    - nilerr
+    - noctx
+    - perfsprint
+    - revive
+    - unconvert
+    - unparam
+    - usestdlibvars
+  settings:
+    errcheck:
+      check-type-assertions: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    gocyclo:
+      min-complexity: 15
+    perfsprint:
+      errorf: false
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-strings
+        - name: increment-decrement
+        - name: var-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: range
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - bodyclose
+          - errcheck
+          - gocyclo
+          - noctx
+        path: _test\.go
+      - linters:
+          - revive
+        text: "var-naming.*package names"
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
