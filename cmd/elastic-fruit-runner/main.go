@@ -34,8 +34,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	logLevel, err := cfg.ParsedLogLevel()
+	if err != nil {
+		bootstrapLogger.Error("invalid log level", "err", err)
+		os.Exit(1)
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: cfg.ParsedLogLevel(),
+		Level: logLevel,
 	}))
 
 	logger.Info("configuration loaded", cfg.RedactedSlogAttrs()...)

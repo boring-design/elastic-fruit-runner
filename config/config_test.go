@@ -228,24 +228,29 @@ func TestLoad_GitHubAppConfig(t *testing.T) {
 
 func TestParsedLogLevel(t *testing.T) {
 	tests := []struct {
-		input string
-		want  slog.Level
+		input   string
+		want    slog.Level
+		wantErr bool
 	}{
-		{"debug", slog.LevelDebug},
-		{"DEBUG", slog.LevelDebug},
-		{"info", slog.LevelInfo},
-		{"INFO", slog.LevelInfo},
-		{"warn", slog.LevelWarn},
-		{"warning", slog.LevelWarn},
-		{"error", slog.LevelError},
-		{"ERROR", slog.LevelError},
-		{"", slog.LevelInfo},
-		{"unknown", slog.LevelInfo},
+		{"debug", slog.LevelDebug, false},
+		{"DEBUG", slog.LevelDebug, false},
+		{"info", slog.LevelInfo, false},
+		{"INFO", slog.LevelInfo, false},
+		{"warn", slog.LevelWarn, false},
+		{"warning", slog.LevelWarn, false},
+		{"error", slog.LevelError, false},
+		{"ERROR", slog.LevelError, false},
+		{"", slog.LevelInfo, false},
+		{"unknown", slog.LevelInfo, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			cfg := &Config{LogLevel: tt.input}
-			if got := cfg.ParsedLogLevel(); got != tt.want {
+			got, err := cfg.ParsedLogLevel()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParsedLogLevel(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if got != tt.want {
 				t.Errorf("ParsedLogLevel(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})
@@ -287,8 +292,12 @@ func TestLoad_LogLevelFromConfigFile(t *testing.T) {
 	if cfg.LogLevel != "debug" {
 		t.Errorf("LogLevel = %q, want %q", cfg.LogLevel, "debug")
 	}
-	if cfg.ParsedLogLevel() != slog.LevelDebug {
-		t.Errorf("ParsedLogLevel() = %v, want %v", cfg.ParsedLogLevel(), slog.LevelDebug)
+	level, err := cfg.ParsedLogLevel()
+	if err != nil {
+		t.Fatalf("ParsedLogLevel() unexpected error: %v", err)
+	}
+	if level != slog.LevelDebug {
+		t.Errorf("ParsedLogLevel() = %v, want %v", level, slog.LevelDebug)
 	}
 }
 

@@ -104,20 +104,20 @@ func (c *Config) Validate() error {
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.
-// Recognized values: debug, info, warn, error (case-insensitive).
-// Defaults to slog.LevelInfo for unrecognized or empty values.
-func (c *Config) ParsedLogLevel() slog.Level {
+// Recognized values: debug, info, warn, warning, error (case-insensitive).
+// Empty string defaults to slog.LevelInfo. Unrecognized values return an error.
+func (c *Config) ParsedLogLevel() (slog.Level, error) {
 	switch strings.ToLower(c.LogLevel) {
 	case "debug":
-		return slog.LevelDebug
-	case "info":
-		return slog.LevelInfo
+		return slog.LevelDebug, nil
+	case "info", "":
+		return slog.LevelInfo, nil
 	case "warn", "warning":
-		return slog.LevelWarn
+		return slog.LevelWarn, nil
 	case "error":
-		return slog.LevelError
+		return slog.LevelError, nil
 	default:
-		return slog.LevelInfo
+		return slog.LevelInfo, fmt.Errorf("unrecognized log level %q", c.LogLevel)
 	}
 }
 
