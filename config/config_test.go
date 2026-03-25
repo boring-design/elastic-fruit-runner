@@ -3,9 +3,12 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func strPtr(s string) *string { return &s }
 
 func TestLoad_Defaults(t *testing.T) {
 	cfg, err := loadWithArgs(nil)
@@ -13,30 +16,43 @@ func TestLoad_Defaults(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.RunnerGroup != "Default" {
-		t.Errorf("RunnerGroup = %q, want %q", cfg.RunnerGroup, "Default")
-	}
 	if cfg.IdleTimeout != 15*time.Minute {
 		t.Errorf("IdleTimeout = %v, want %v", cfg.IdleTimeout, 15*time.Minute)
 	}
 }
 
-func TestLoad_ConfigFile(t *testing.T) {
+func TestLoad_MultiOrgRepoConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
 	content := `
-github:
-  url: https://github.com/test-org
-  token: ghp_testtoken123
-runner_group: MyGroup
+orgs:
+  - org: boring-design
+    auth:
+      github_app:
+        client_id: Iv23li_test
+        installation_id: 116416405
+        private_key_path: /path/to/key.pem
+    runner_group: MyGroup
+    runner_sets:
+      - name: efr-linux-arm64
+        backend: docker
+        image: test-image:latest
+        labels: [self-hosted, Linux, ARM64]
+        max_runners: 4
+        platform: linux/arm64
+
+repos:
+  - repo: boring-design/special-repo
+    auth:
+      token: ghp_testtoken123
+    runner_sets:
+      - name: repo-runner
+        backend: docker
+        image: repo-image:latest
+        labels: [self-hosted, Linux]
+        max_runners: 2
+
 idle_timeout: 30m
-runner_sets:
-  - name: test-runner
-    backend: docker
-    image: test-image:latest
-    labels: [self-hosted, Linux]
-    max_runners: 3
-    platform: linux/amd64
 `
 	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 		t.Fatalf("write config file: %v", err)
@@ -47,111 +63,75 @@ runner_sets:
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.GitHub.URL != "https://github.com/test-org" {
-		t.Errorf("GitHub.URL = %q, want %q", cfg.GitHub.URL, "https://github.com/test-org")
-	}
-	if cfg.GitHub.Token != "ghp_testtoken123" {
-		t.Errorf("GitHub.Token = %q, want %q", cfg.GitHub.Token, "ghp_testtoken123")
-	}
-	if cfg.RunnerGroup != "MyGroup" {
-		t.Errorf("RunnerGroup = %q, want %q", cfg.RunnerGroup, "MyGroup")
-	}
 	if cfg.IdleTimeout != 30*time.Minute {
 		t.Errorf("IdleTimeout = %v, want %v", cfg.IdleTimeout, 30*time.Minute)
 	}
-	if len(cfg.RunnerSets) != 1 {
-		t.Fatalf("len(RunnerSets) = %d, want 1", len(cfg.RunnerSets))
+
+	if len(cfg.Orgs) != 1 {
+		t.Fatalf("len(Orgs) = %d, want 1", len(cfg.Orgs))
 	}
-	rs := cfg.RunnerSets[0]
-	if rs.Name != "test-runner" {
-		t.Errorf("RunnerSets[0].Name = %q, want %q", rs.Name, "test-runner")
+	org := cfg.Orgs[0]
+	if org.Org != "boring-design" {
+		t.Errorf("Orgs[0].Org = %q, want %q", org.Org, "boring-design")
+	}
+	if org.RunnerGroup != "MyGroup" {
+		t.Errorf("Orgs[0].RunnerGroup = %q, want %q", org.RunnerGroup, "MyGroup")
+	}
+	if org.Auth.GitHubApp == nil {
+		t.Fatal("Orgs[0].Auth.GitHubApp is nil")
+	}
+	if org.Auth.GitHubApp.ClientID != "Iv23li_test" {
+		t.Errorf("Orgs[0].Auth.GitHubApp.ClientID = %q, want %q", org.Auth.GitHubApp.ClientID, "Iv23li_test")
+	}
+	if org.Auth.GitHubApp.InstallationID != 116416405 {
+		t.Errorf("Orgs[0].Auth.GitHubApp.InstallationID = %d, want %d", org.Auth.GitHubApp.InstallationID, 116416405)
+	}
+	if org.Auth.GitHubApp.PrivateKeyPath != "/path/to/key.pem" {
+		t.Errorf("Orgs[0].Auth.GitHubApp.PrivateKeyPath = %q, want %q", org.Auth.GitHubApp.PrivateKeyPath, "/path/to/key.pem")
+	}
+	if len(org.RunnerSets) != 1 {
+		t.Fatalf("len(Orgs[0].RunnerSets) = %d, want 1", len(org.RunnerSets))
+	}
+	rs := org.RunnerSets[0]
+	if rs.Name != "efr-linux-arm64" {
+		t.Errorf("Orgs[0].RunnerSets[0].Name = %q, want %q", rs.Name, "efr-linux-arm64")
 	}
 	if rs.Backend != "docker" {
-		t.Errorf("RunnerSets[0].Backend = %q, want %q", rs.Backend, "docker")
+		t.Errorf("Orgs[0].RunnerSets[0].Backend = %q, want %q", rs.Backend, "docker")
 	}
-	if rs.Image != "test-image:latest" {
-		t.Errorf("RunnerSets[0].Image = %q, want %q", rs.Image, "test-image:latest")
+	if rs.MaxRunners != 4 {
+		t.Errorf("Orgs[0].RunnerSets[0].MaxRunners = %d, want %d", rs.MaxRunners, 4)
 	}
-	if rs.MaxRunners != 3 {
-		t.Errorf("RunnerSets[0].MaxRunners = %d, want %d", rs.MaxRunners, 3)
-	}
-	if rs.Platform != "linux/amd64" {
-		t.Errorf("RunnerSets[0].Platform = %q, want %q", rs.Platform, "linux/amd64")
-	}
-	if len(rs.Labels) != 2 || rs.Labels[0] != "self-hosted" || rs.Labels[1] != "Linux" {
-		t.Errorf("RunnerSets[0].Labels = %v, want [self-hosted Linux]", rs.Labels)
-	}
-}
-
-func TestLoad_EnvOverridesFile(t *testing.T) {
-	dir := t.TempDir()
-	cfgFile := filepath.Join(dir, "config.yaml")
-	content := `
-github:
-  url: https://github.com/file-org
-  token: ghp_from_file
-runner_group: FileGroup
-`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-		t.Fatalf("write config file: %v", err)
+	if rs.Platform != "linux/arm64" {
+		t.Errorf("Orgs[0].RunnerSets[0].Platform = %q, want %q", rs.Platform, "linux/arm64")
 	}
 
-	t.Setenv("GITHUB_TOKEN", "ghp_from_env")
-	t.Setenv("GITHUB_RUNNER_GROUP", "EnvGroup")
-
-	cfg, err := loadWithArgs([]string{"--config", cfgFile})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	if len(cfg.Repos) != 1 {
+		t.Fatalf("len(Repos) = %d, want 1", len(cfg.Repos))
 	}
-
-	if cfg.GitHub.Token != "ghp_from_env" {
-		t.Errorf("GitHub.Token = %q, want %q (env should override file)", cfg.GitHub.Token, "ghp_from_env")
+	repo := cfg.Repos[0]
+	if repo.Repo != "boring-design/special-repo" {
+		t.Errorf("Repos[0].Repo = %q, want %q", repo.Repo, "boring-design/special-repo")
 	}
-	if cfg.RunnerGroup != "EnvGroup" {
-		t.Errorf("RunnerGroup = %q, want %q (env should override file)", cfg.RunnerGroup, "EnvGroup")
+	if repo.Auth.Token == nil {
+		t.Fatal("Repos[0].Auth.Token is nil")
 	}
-	// URL should remain from file since GITHUB_CONFIG_URL is not set
-	if cfg.GitHub.URL != "https://github.com/file-org" {
-		t.Errorf("GitHub.URL = %q, want %q (should keep file value)", cfg.GitHub.URL, "https://github.com/file-org")
+	if *repo.Auth.Token != "ghp_testtoken123" {
+		t.Errorf("Repos[0].Auth.Token = %q, want %q", *repo.Auth.Token, "ghp_testtoken123")
 	}
-}
-
-func TestLoad_FlagsOverrideEnv(t *testing.T) {
-	dir := t.TempDir()
-	cfgFile := filepath.Join(dir, "config.yaml")
-	content := `
-github:
-  url: https://github.com/file-org
-  token: ghp_from_file
-`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-		t.Fatalf("write config file: %v", err)
+	if len(repo.RunnerSets) != 1 {
+		t.Fatalf("len(Repos[0].RunnerSets) = %d, want 1", len(repo.RunnerSets))
 	}
-
-	t.Setenv("GITHUB_CONFIG_URL", "https://github.com/env-org")
-	t.Setenv("GITHUB_TOKEN", "ghp_from_env")
-
-	cfg, err := loadWithArgs([]string{
-		"--config", cfgFile,
-		"--url", "https://github.com/flag-org",
-		"--token", "ghp_from_flag",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if cfg.GitHub.URL != "https://github.com/flag-org" {
-		t.Errorf("GitHub.URL = %q, want %q (flag should override env)", cfg.GitHub.URL, "https://github.com/flag-org")
-	}
-	if cfg.GitHub.Token != "ghp_from_flag" {
-		t.Errorf("GitHub.Token = %q, want %q (flag should override env)", cfg.GitHub.Token, "ghp_from_flag")
+	rrs := repo.RunnerSets[0]
+	if rrs.Name != "repo-runner" {
+		t.Errorf("Repos[0].RunnerSets[0].Name = %q, want %q", rrs.Name, "repo-runner")
 	}
 }
 
 func TestLoad_DurationParsing(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
-	content := `idle_timeout: 30m`
+	content := `idle_timeout: 45m`
 	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
@@ -161,99 +141,374 @@ func TestLoad_DurationParsing(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if cfg.IdleTimeout != 30*time.Minute {
-		t.Errorf("IdleTimeout = %v, want %v", cfg.IdleTimeout, 30*time.Minute)
+	if cfg.IdleTimeout != 45*time.Minute {
+		t.Errorf("IdleTimeout = %v, want %v", cfg.IdleTimeout, 45*time.Minute)
 	}
 }
 
-func TestLoad_RunnerSets(t *testing.T) {
-	dir := t.TempDir()
-	cfgFile := filepath.Join(dir, "config.yaml")
-	content := `
-runner_sets:
-  - name: macos-runner
-    backend: tart
-    image: macos-image:latest
-    labels: [self-hosted, macOS, ARM64]
-    max_runners: 2
-  - name: linux-runner
-    backend: docker
-    image: linux-image:latest
-    labels: [self-hosted, Linux]
-    max_runners: 4
-    platform: linux/arm64
-`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
-		t.Fatalf("write config file: %v", err)
-	}
-
-	cfg, err := loadWithArgs([]string{"--config", cfgFile})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if len(cfg.RunnerSets) != 2 {
-		t.Fatalf("len(RunnerSets) = %d, want 2", len(cfg.RunnerSets))
-	}
-	if cfg.RunnerSets[0].Name != "macos-runner" {
-		t.Errorf("RunnerSets[0].Name = %q, want %q", cfg.RunnerSets[0].Name, "macos-runner")
-	}
-	if cfg.RunnerSets[1].Platform != "linux/arm64" {
-		t.Errorf("RunnerSets[1].Platform = %q, want %q", cfg.RunnerSets[1].Platform, "linux/arm64")
+func validOrgConfig() OrgConfig {
+	return OrgConfig{
+		Org: "test-org",
+		Auth: AuthConfig{
+			Token: strPtr("ghp_test123"),
+		},
+		RunnerGroup: "Default",
+		RunnerSets: []RunnerSetConfig{
+			{
+				Name:       "org-runner",
+				Backend:    "docker",
+				Image:      "test:latest",
+				Labels:     []string{"self-hosted"},
+				MaxRunners: 2,
+			},
+		},
 	}
 }
 
-func TestLoad_GitHubAppConfig(t *testing.T) {
-	t.Setenv("GITHUB_APP_CLIENT_ID", "Iv1.test123")
-	t.Setenv("GITHUB_APP_INSTALLATION_ID", "12345678")
-	t.Setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/path/to/key.pem")
-
-	cfg, err := loadWithArgs(nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if cfg.GitHub.App.ClientID != "Iv1.test123" {
-		t.Errorf("GitHub.App.ClientID = %q, want %q", cfg.GitHub.App.ClientID, "Iv1.test123")
-	}
-	if cfg.GitHub.App.InstallationID != 12345678 {
-		t.Errorf("GitHub.App.InstallationID = %d, want %d", cfg.GitHub.App.InstallationID, 12345678)
-	}
-	if cfg.GitHub.App.PrivateKeyPath != "/path/to/key.pem" {
-		t.Errorf("GitHub.App.PrivateKeyPath = %q, want %q", cfg.GitHub.App.PrivateKeyPath, "/path/to/key.pem")
+func validRepoConfig() RepoConfig {
+	return RepoConfig{
+		Repo: "owner/repo",
+		Auth: AuthConfig{
+			Token: strPtr("ghp_test456"),
+		},
+		RunnerSets: []RunnerSetConfig{
+			{
+				Name:       "repo-runner",
+				Backend:    "docker",
+				Image:      "test:latest",
+				Labels:     []string{"self-hosted"},
+				MaxRunners: 2,
+			},
+		},
 	}
 }
 
-func TestLoad_DotenvFile(t *testing.T) {
-	// godotenv.Load() reads .env from the current working directory,
-	// so chdir to a temp dir with a .env file
-	dir := t.TempDir()
-	envFile := filepath.Join(dir, ".env")
-	content := `GITHUB_CONFIG_URL=https://github.com/dotenv-org
-GITHUB_TOKEN=ghp_from_dotenv
-`
-	if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
-		t.Fatalf("write dotenv file: %v", err)
-	}
-
-	origDir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd: %v", err)
-	}
-	t.Cleanup(func() { os.Chdir(origDir) })
-	if err := os.Chdir(dir); err != nil {
-		t.Fatalf("chdir: %v", err)
-	}
-
-	cfg, err := loadWithArgs(nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	if cfg.GitHub.URL != "https://github.com/dotenv-org" {
-		t.Errorf("GitHub.URL = %q, want %q", cfg.GitHub.URL, "https://github.com/dotenv-org")
-	}
-	if cfg.GitHub.Token != "ghp_from_dotenv" {
-		t.Errorf("GitHub.Token = %q, want %q", cfg.GitHub.Token, "ghp_from_dotenv")
+func validAppAuth() AuthConfig {
+	return AuthConfig{
+		GitHubApp: &GitHubAppConfig{
+			ClientID:       "Iv23li_test",
+			InstallationID: 12345678,
+			PrivateKeyPath: "/path/to/key.pem",
+		},
 	}
 }
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		cfg     Config
+		wantErr string
+	}{
+		{
+			name: "valid orgs only",
+			cfg: Config{
+				Orgs:        []OrgConfig{validOrgConfig()},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "valid repos only",
+			cfg: Config{
+				Repos:       []RepoConfig{validRepoConfig()},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "valid orgs and repos",
+			cfg: Config{
+				Orgs:        []OrgConfig{validOrgConfig()},
+				Repos:       []RepoConfig{validRepoConfig()},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "no orgs and no repos",
+			cfg: Config{
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "at least one org or repo must be configured",
+		},
+		{
+			name: "org missing org field",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Org = ""
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].org is required",
+		},
+		{
+			name: "org with no auth",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth: one of token or github_app must be configured",
+		},
+		{
+			name: "org with both token and app",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{
+						Token: strPtr("ghp_test"),
+						GitHubApp: &GitHubAppConfig{
+							ClientID:       "Iv23li",
+							InstallationID: 123,
+							PrivateKeyPath: "/key.pem",
+						},
+					}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth: token and github_app are mutually exclusive",
+		},
+		{
+			name: "app auth missing client_id",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{
+						GitHubApp: &GitHubAppConfig{
+							InstallationID: 123,
+							PrivateKeyPath: "/key.pem",
+						},
+					}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth.github_app.client_id is required",
+		},
+		{
+			name: "app auth missing installation_id",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{
+						GitHubApp: &GitHubAppConfig{
+							ClientID:       "Iv23li",
+							PrivateKeyPath: "/key.pem",
+						},
+					}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth.github_app.installation_id is required",
+		},
+		{
+			name: "app auth missing private_key_path",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{
+						GitHubApp: &GitHubAppConfig{
+							ClientID:       "Iv23li",
+							InstallationID: 123,
+						},
+					}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth.github_app.private_key_path is required",
+		},
+		{
+			name: "empty runner_group defaults to Default",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerGroup = ""
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "org with no runner sets",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerSets = nil
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].runner_sets must have at least one entry",
+		},
+		{
+			name: "repo missing repo field",
+			cfg: Config{
+				Repos: []RepoConfig{func() RepoConfig {
+					r := validRepoConfig()
+					r.Repo = ""
+					return r
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "repos[0].repo is required",
+		},
+		{
+			name: "repo with invalid format",
+			cfg: Config{
+				Repos: []RepoConfig{func() RepoConfig {
+					r := validRepoConfig()
+					r.Repo = "just-a-name"
+					return r
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "repos[0].repo must be in \"owner/repo\" format",
+		},
+		{
+			name: "runner set missing name",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerSets[0].Name = ""
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].runner_sets[0].name is required",
+		},
+		{
+			name: "duplicate runner set names across orgs and repos",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerSets[0].Name = "duplicate-name"
+					return o
+				}()},
+				Repos: []RepoConfig{func() RepoConfig {
+					r := validRepoConfig()
+					r.RunnerSets[0].Name = "duplicate-name"
+					return r
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "runner set name \"duplicate-name\" is not unique",
+		},
+		{
+			name: "invalid backend",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerSets[0].Backend = "invalid"
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "must be 'tart', 'docker', or 'host'",
+		},
+		{
+			name: "max_runners <= 0",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.RunnerSets[0].MaxRunners = 0
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "max_runners must be > 0",
+		},
+		{
+			name: "idle_timeout <= 0",
+			cfg: Config{
+				Orgs:        []OrgConfig{validOrgConfig()},
+				IdleTimeout: 0,
+			},
+			wantErr: "idle_timeout must be greater than 0",
+		},
+		{
+			name: "empty token string",
+			cfg: Config{
+				Orgs: []OrgConfig{func() OrgConfig {
+					o := validOrgConfig()
+					o.Auth = AuthConfig{Token: strPtr("")}
+					return o
+				}()},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "orgs[0].auth.token must not be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.cfg.Validate()
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("Validate() unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("Validate() expected error containing %q, got nil", tt.wantErr)
+			}
+			if !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("Validate() error = %q, want it to contain %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidate_DefaultRunnerGroup(t *testing.T) {
+	cfg := Config{
+		Orgs: []OrgConfig{func() OrgConfig {
+			o := validOrgConfig()
+			o.RunnerGroup = ""
+			return o
+		}()},
+		IdleTimeout: 15 * time.Minute,
+	}
+
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate() unexpected error: %v", err)
+	}
+
+	if cfg.Orgs[0].RunnerGroup != "Default" {
+		t.Errorf("RunnerGroup = %q, want %q", cfg.Orgs[0].RunnerGroup, "Default")
+	}
+}
+
+func TestOrgConfig_ConfigURL(t *testing.T) {
+	org := OrgConfig{Org: "boring-design"}
+	if got := org.ConfigURL(); got != "https://github.com/boring-design" {
+		t.Errorf("ConfigURL() = %q, want %q", got, "https://github.com/boring-design")
+	}
+}
+
+func TestRepoConfig_ConfigURL(t *testing.T) {
+	repo := RepoConfig{Repo: "boring-design/special-repo"}
+	if got := repo.ConfigURL(); got != "https://github.com/boring-design/special-repo" {
+		t.Errorf("ConfigURL() = %q, want %q", got, "https://github.com/boring-design/special-repo")
+	}
+}
+
+func TestAuthConfig_Mode(t *testing.T) {
+	t.Run("app", func(t *testing.T) {
+		auth := validAppAuth()
+		if got := auth.Mode(); got != "app" {
+			t.Errorf("Mode() = %q, want %q", got, "app")
+		}
+	})
+
+	t.Run("pat", func(t *testing.T) {
+		auth := AuthConfig{Token: strPtr("ghp_test")}
+		if got := auth.Mode(); got != "pat" {
+			t.Errorf("Mode() = %q, want %q", got, "pat")
+		}
+	})
+}
+

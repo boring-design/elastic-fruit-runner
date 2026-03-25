@@ -1,41 +1,46 @@
 # elastic-fruit-runner configuration
 # Place this file at: ~/.elastic-fruit-runner/config.yaml
 
-github:
-  url: https://github.com/your-org
+# Organization-level runner sets
+orgs:
+  - org: your-org
+    auth:
+      # Option A: GitHub App (recommended)
+      github_app:
+        client_id: Iv1.xxxxxxxxxxxxxxxx
+        installation_id: 12345678
+        private_key_path: /path/to/private-key.pem
 
-  # Option A: Personal Access Token
-  token: ghp_xxx
+      # Option B: Personal Access Token (uncomment and remove github_app above)
+      # token: ghp_xxx
 
-  # Option B: GitHub App (takes precedence over PAT if set)
-  # app:
-  #   client_id: Iv1.xxxxxxxxxxxxxxxx
-  #   installation_id: 12345678
-  #   private_key_path: /path/to/private-key.pem
+    runner_group: Default
+    runner_sets:
+      # macos runners via Tart VMs (Apple Silicon only)
+      - name: efr-macos-arm64
+        backend: tart
+        image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
+        labels: [self-hosted, macos, arm64]
+        max_runners: 2
 
-runner_group: Default
+      # linux arm64 runners via Docker (DinD image includes Docker daemon)
+      - name: efr-linux-arm64
+        backend: docker
+        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
+        labels: [self-hosted, linux, arm64]
+        max_runners: 4
+        platform: linux/arm64
+
+# Repository-level runner sets (no runner_group — repos use default)
+# repos:
+#   - repo: your-org/your-repo
+#     auth:
+#       token: ghp_xxx
+#     runner_sets:
+#       - name: repo-runner
+#         backend: docker
+#         image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
+#         labels: [self-hosted, linux, arm64]
+#         max_runners: 2
+
 idle_timeout: 15m
-
-runner_sets:
-  # macos runners via Tart VMs (Apple Silicon only)
-  - name: efr-macos-arm64
-    backend: tart
-    image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
-    labels: [self-hosted, macos, arm64]
-    max_runners: 2
-
-  # linux arm64 runners via Docker (DinD image includes Docker daemon)
-  - name: efr-linux-arm64
-    backend: docker
-    image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, linux, arm64]
-    max_runners: 4
-    platform: linux/arm64
-
-  # linux AMD64 runners via Docker (Rosetta 2 on Apple Silicon)
-  - name: efr-linux-amd64
-    backend: docker
-    image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, linux, x64]
-    max_runners: 4
-    platform: linux/amd64

@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"os"
 
+	"time"
+
 	"github.com/actions/scaleset"
 	"github.com/actions/scaleset/listener"
 	"github.com/google/uuid"
@@ -27,8 +29,9 @@ var (
 // job assignments via the listener, and manages the lifecycle of ephemeral
 // runners that run each job.
 type ScaleSetController struct {
-	cfg   *config.Config
-	rsCfg *config.RunnerSetConfig
+	rsCfg       *config.RunnerSetConfig
+	runnerGroup string
+	idleTimeout time.Duration
 
 	client     *scaleset.Client
 	scaleSetID int
@@ -43,14 +46,15 @@ type ScaleSetController struct {
 	runnerCancel context.CancelFunc
 }
 
-// New creates a ScaleSetController from the given config and authenticated client.
-func New(cfg *config.Config, rsCfg *config.RunnerSetConfig, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
+// New creates a ScaleSetController for a single runner set.
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
 	return &ScaleSetController{
-		cfg:     cfg,
-		rsCfg:   rsCfg,
-		client:  client,
-		backend: b,
-		logger:  logger,
+		rsCfg:       rsCfg,
+		runnerGroup: runnerGroup,
+		idleTimeout: idleTimeout,
+		client:      client,
+		backend:     b,
+		logger:      logger,
 	}
 }
 
@@ -63,10 +67,10 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.logger.Info("cleaning up resources from previous runs")
 	d.backend.CleanupAll(ctx, d.rsCfg.Name)
 
-	group, err := d.client.GetRunnerGroupByName(ctx, d.cfg.RunnerGroup)
+	group, err := d.client.GetRunnerGroupByName(ctx, d.runnerGroup)
 	if err != nil {
 		runnerCancel()
-		return fmt.Errorf("get runner group %q: %w", d.cfg.RunnerGroup, err)
+		return fmt.Errorf("get runner group %q: %w", d.runnerGroup, err)
 	}
 	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
 

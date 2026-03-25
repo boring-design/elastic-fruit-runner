@@ -183,7 +183,7 @@ func (d *ScaleSetController) runIdleReaper(ctx context.Context) {
 
 func (d *ScaleSetController) reapExpiredIdleRunners() {
 	now := time.Now()
-	timeout := d.cfg.IdleTimeout
+	timeout := d.idleTimeout
 
 	d.runners.mu.Lock()
 	var expired []string
