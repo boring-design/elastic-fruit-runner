@@ -2,7 +2,10 @@
 
 ## Build
 
-- Build: `go build ./cmd/elastic-fruit-runner`
+- Build: `make build`
+- Test: `make test`
+- Lint: `make lint`
+- CI checks: `make ci`
 
 ## Conventions
 
