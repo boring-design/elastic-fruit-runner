@@ -1,0 +1,23 @@
+config/load.go
+  4bcb11a913ebaf9b 57-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "7417a862dea6728fbfd40734b67c125d824983cf",
+  "prompts": {
+    "4bcb11a913ebaf9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed21f729-9ba8-4bb7-b50c-b1fe36867739",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 1,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
