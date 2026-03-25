@@ -1,0 +1,39 @@
+config.example.yaml
+  7262b2cf1b155fb8 34-41
+doc-site/src/content/docs/tutorials/getting-started.md
+  7262b2cf1b155fb8 45,51-66,132
+doc-site/src/content/docs/reference/environment-variables.md
+  7262b2cf1b155fb8 18
+doc-site/src/content/docs/how-to/install-linux-docker.md
+  7262b2cf1b155fb8 19,26-33,66,73-80
+doc-site/astro.config.mjs
+  7262b2cf1b155fb8 9-16,18-23,25,27-30,35-45
+doc-site/src/content/docs/how-to/install-macos.md
+  7262b2cf1b155fb8 24,39,45-60
+doc-site/src/content/docs/how-to/configure-github-app.md
+  7262b2cf1b155fb8 57-68,70
+doc-site/src/content/docs/reference/configuration.md
+  7262b2cf1b155fb8 43-48
+doc-site/src/content/docs/index.mdx
+  7262b2cf1b155fb8 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "5a8347d1961da07c81a61cbde106b3d92d02b9b3",
+  "prompts": {
+    "7262b2cf1b155fb8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "90d9f55a-8554-44db-ace7-8f31a13d4c2a",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 2267,
+      "total_deletions": 173,
+      "accepted_lines": 2114,
+      "overriden_lines": 0
+    }
+  }
+}
