@@ -118,48 +118,60 @@ func (c *Config) Validate() error {
 	runnerSetNames := make(map[string]struct{})
 
 	for i := range c.Orgs {
-		org := &c.Orgs[i]
-		if org.Org == "" {
-			return fmt.Errorf("orgs[%d].org is required", i)
-		}
-		if err := validateAuth(&org.Auth, fmt.Sprintf("orgs[%d]", i)); err != nil {
+		if err := validateOrg(&c.Orgs[i], i, runnerSetNames); err != nil {
 			return err
-		}
-		if org.RunnerGroup == "" {
-			org.RunnerGroup = "Default"
-		}
-		if len(org.RunnerSets) == 0 {
-			return fmt.Errorf("orgs[%d].runner_sets must have at least one entry", i)
-		}
-		for j := range org.RunnerSets {
-			if err := validateRunnerSet(&org.RunnerSets[j], fmt.Sprintf("orgs[%d].runner_sets[%d]", i, j), runnerSetNames); err != nil {
-				return err
-			}
 		}
 	}
 
 	for i := range c.Repos {
-		repo := &c.Repos[i]
-		if repo.Repo == "" {
-			return fmt.Errorf("repos[%d].repo is required", i)
-		}
-		parts := strings.SplitN(repo.Repo, "/", 3)
-		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-			return fmt.Errorf("repos[%d].repo must be in \"owner/repo\" format, got %q", i, repo.Repo)
-		}
-		if err := validateAuth(&repo.Auth, fmt.Sprintf("repos[%d]", i)); err != nil {
+		if err := validateRepo(&c.Repos[i], i, runnerSetNames); err != nil {
 			return err
-		}
-		if len(repo.RunnerSets) == 0 {
-			return fmt.Errorf("repos[%d].runner_sets must have at least one entry", i)
-		}
-		for j := range repo.RunnerSets {
-			if err := validateRunnerSet(&repo.RunnerSets[j], fmt.Sprintf("repos[%d].runner_sets[%d]", i, j), runnerSetNames); err != nil {
-				return err
-			}
 		}
 	}
 
+	return nil
+}
+
+func validateOrg(org *OrgConfig, i int, runnerSetNames map[string]struct{}) error {
+	if org.Org == "" {
+		return fmt.Errorf("orgs[%d].org is required", i)
+	}
+	if err := validateAuth(&org.Auth, fmt.Sprintf("orgs[%d]", i)); err != nil {
+		return err
+	}
+	if org.RunnerGroup == "" {
+		org.RunnerGroup = "Default"
+	}
+	if len(org.RunnerSets) == 0 {
+		return fmt.Errorf("orgs[%d].runner_sets must have at least one entry", i)
+	}
+	for j := range org.RunnerSets {
+		if err := validateRunnerSet(&org.RunnerSets[j], fmt.Sprintf("orgs[%d].runner_sets[%d]", i, j), runnerSetNames); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateRepo(repo *RepoConfig, i int, runnerSetNames map[string]struct{}) error {
+	if repo.Repo == "" {
+		return fmt.Errorf("repos[%d].repo is required", i)
+	}
+	parts := strings.SplitN(repo.Repo, "/", 3)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("repos[%d].repo must be in \"owner/repo\" format, got %q", i, repo.Repo)
+	}
+	if err := validateAuth(&repo.Auth, fmt.Sprintf("repos[%d]", i)); err != nil {
+		return err
+	}
+	if len(repo.RunnerSets) == 0 {
+		return fmt.Errorf("repos[%d].runner_sets must have at least one entry", i)
+	}
+	for j := range repo.RunnerSets {
+		if err := validateRunnerSet(&repo.RunnerSets[j], fmt.Sprintf("repos[%d].runner_sets[%d]", i, j), runnerSetNames); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

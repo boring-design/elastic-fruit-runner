@@ -72,7 +72,7 @@ func run(bootstrapLogger *slog.Logger) error {
 
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
-			if err := launchController(&wg, ctx, rs, org.RunnerGroup, cfg.IdleTimeout, client, logger); err != nil {
+			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, logger); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -87,7 +87,7 @@ func run(bootstrapLogger *slog.Logger) error {
 
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
-			if err := launchController(&wg, ctx, rs, "Default", cfg.IdleTimeout, client, logger); err != nil {
+			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client, logger); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -131,7 +131,7 @@ func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger
 	}
 }
 
-func launchController(wg *sync.WaitGroup, ctx context.Context, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, logger *slog.Logger) error {
+func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, logger *slog.Logger) error {
 	rsLogger := logger.With("runnerSet", rs.Name)
 
 	var b backend.Backend
