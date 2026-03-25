@@ -225,6 +225,8 @@ func TestLoad_GitHubAppConfig(t *testing.T) {
 }
 
 func TestLoad_DotenvFile(t *testing.T) {
+	// godotenv.Load() reads .env from the current working directory,
+	// so chdir to a temp dir with a .env file
 	dir := t.TempDir()
 	envFile := filepath.Join(dir, ".env")
 	content := `GITHUB_CONFIG_URL=https://github.com/dotenv-org
@@ -234,20 +236,14 @@ GITHUB_TOKEN=ghp_from_dotenv
 		t.Fatalf("write dotenv file: %v", err)
 	}
 
-	// We can't easily test the default search paths, so test godotenv directly
-	// by loading the file before calling loadWithArgs
-	// This validates the dotenv format is compatible
-	t.Setenv("GITHUB_CONFIG_URL", "")
-	t.Setenv("GITHUB_TOKEN", "")
-
-	// Load the dotenv file manually to simulate what loadWithArgs does
-	// with its search paths
-	os.Setenv("GITHUB_CONFIG_URL", "https://github.com/dotenv-org")
-	os.Setenv("GITHUB_TOKEN", "ghp_from_dotenv")
-	t.Cleanup(func() {
-		os.Unsetenv("GITHUB_CONFIG_URL")
-		os.Unsetenv("GITHUB_TOKEN")
-	})
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	t.Cleanup(func() { os.Chdir(origDir) })
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir: %v", err)
+	}
 
 	cfg, err := loadWithArgs(nil)
 	if err != nil {

@@ -13,24 +13,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-// dotenvFilePaths returns candidate .env file paths in priority order.
-func dotenvFilePaths() []string {
-	var paths []string
-	if home, err := os.UserHomeDir(); err == nil {
-		paths = append(paths, filepath.Join(home, ".elastic-fruit-runner", ".env"))
-	}
-	paths = append(paths,
-		"/opt/homebrew/var/elastic-fruit-runner/.env",
-		"/usr/local/var/elastic-fruit-runner/.env",
-		"/etc/elastic-fruit-runner/.env",
-	)
-	return paths
-}
-
 // Load reads configuration from (in order of ascending priority):
 //  1. Built-in defaults
-//  2. Config file (YAML)
-//  3. Dotenv file (~/.elastic-fruit-runner/.env)
+//  2. Dotenv file (.env in current working directory)
+//  3. Config file (YAML)
 //  4. Environment variables
 //  5. CLI flags (--config, --url, --token)
 func Load() (*Config, error) {
@@ -38,6 +24,10 @@ func Load() (*Config, error) {
 }
 
 func loadWithArgs(args []string) (*Config, error) {
+	// Load .env from current working directory at the very beginning
+	// (does NOT overwrite existing env vars)
+	_ = godotenv.Load()
+
 	flags := pflag.NewFlagSet("elastic-fruit-runner", pflag.ContinueOnError)
 	configPath := flags.String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
 	flags.String("url", "", "GitHub config URL (overrides config file)")
@@ -73,11 +63,6 @@ func loadWithArgs(args []string) (*Config, error) {
 		} else {
 			return nil, fmt.Errorf("read config: %w", err)
 		}
-	}
-
-	// Load dotenv files (does NOT overwrite existing env vars)
-	for _, p := range dotenvFilePaths() {
-		_ = godotenv.Load(p)
 	}
 
 	// Bind env vars explicitly (names don't follow a simple prefix pattern)
