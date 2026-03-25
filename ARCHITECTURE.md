@@ -25,7 +25,7 @@ Flat `Config` struct populated from `flag` + `os.Getenv`. Flags take precedence 
 | `--url` | `GITHUB_CONFIG_URL` | — | e.g. `https://github.com/myorg` |
 | `--runner-group` | `GITHUB_RUNNER_GROUP` | `Default` | |
 | `--scale-set-name` | `SCALE_SET_NAME` | `elastic-fruit-runner` | |
-| `--vm-image` | `TART_VM_IMAGE` | cirruslabs sequoia base | Base image to clone |
+| `--vm-image` | `TART_VM_IMAGE` | cirruslabs tahoe xcode | Base image to clone |
 | `--max-runners` | — | `2` | Apple EULA caps macOS VMs at 2 per host |
 
 ### `internal/daemon/daemon.go`
