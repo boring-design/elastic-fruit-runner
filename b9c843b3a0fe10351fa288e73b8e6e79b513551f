@@ -1,0 +1,25 @@
+config/load.go
+  ebaa96ecd83b5ae3 18-19,27-30
+config/config_test.go
+  ebaa96ecd83b5ae3 228-229,239-246
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "b9c843b3a0fe10351fa288e73b8e6e79b513551f",
+  "prompts": {
+    "ebaa96ecd83b5ae3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c5ba1afc-665b-47a7-a09e-ad62a477a829",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 37,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    }
+  }
+}
