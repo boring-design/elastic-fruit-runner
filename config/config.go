@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -122,9 +121,6 @@ func (c *Config) Validate() error {
 		org := &c.Orgs[i]
 		if org.Org == "" {
 			return fmt.Errorf("orgs[%d].org is required", i)
-		}
-		if _, err := url.ParseRequestURI(org.ConfigURL()); err != nil {
-			return fmt.Errorf("orgs[%d]: invalid org %q: %w", i, org.Org, err)
 		}
 		if err := validateAuth(&org.Auth, fmt.Sprintf("orgs[%d]", i)); err != nil {
 			return err
