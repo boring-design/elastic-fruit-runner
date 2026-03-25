@@ -1,0 +1,37 @@
+config/load.go
+  ab660852fe281c58 69-74
+config/config.go
+  ab660852fe281c58 80-81,88-100
+internal/tart/manager.go
+  ab660852fe281c58 192-193
+internal/controller/controller.go
+  ab660852fe281c58 80-81,92,103
+cmd/elastic-fruit-runner/main.go
+  ab660852fe281c58 5,23-29,36,40,51,73,81,101,131
+internal/backend/runner_version.go
+  ab660852fe281c58 23
+config/config_test.go
+  ab660852fe281c58 41,95,127,155,186,235
+internal/controller/scaler.go
+  ab660852fe281c58 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "ce7cef1d19b01d199d22687bb8569a43d0e6e6e1",
+  "prompts": {
+    "ab660852fe281c58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a48598ff-1b63-4a70-bfcd-20c663bf9e0f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 54,
+      "total_deletions": 42,
+      "accepted_lines": 53,
+      "overriden_lines": 0
+    }
+  }
+}
