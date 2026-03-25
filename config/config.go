@@ -39,19 +39,27 @@ func (r *RepoConfig) ConfigURL() string {
 	return "https://github.com/" + r.Repo
 }
 
+// AuthMode represents the authentication method.
+type AuthMode string
+
+const (
+	AuthModeGitHubApp AuthMode = "app"
+	AuthModePAT       AuthMode = "pat"
+)
+
 // AuthConfig holds authentication credentials for a GitHub org or repo.
-// Exactly one of GitHubApp or Token must be set.
+// Exactly one of GitHubApp or PATToken must be set.
 type AuthConfig struct {
 	GitHubApp *GitHubAppConfig `yaml:"github_app"`
-	Token     *string          `yaml:"token"`
+	PATToken  *string          `yaml:"pat_token"`
 }
 
-// Mode returns which authentication method is configured: "app" or "pat".
-func (a *AuthConfig) Mode() string {
+// Mode returns which authentication method is configured.
+func (a *AuthConfig) Mode() AuthMode {
 	if a.GitHubApp != nil && a.GitHubApp.ClientID != "" {
-		return "app"
+		return AuthModeGitHubApp
 	}
-	return "pat"
+	return AuthModePAT
 }
 
 // GitHubAppConfig holds GitHub App authentication settings.
@@ -134,18 +142,18 @@ func (c *Config) Validate() error {
 }
 
 func validateAuth(auth *AuthConfig, prefix string) error {
-	hasToken := auth.Token != nil
+	hasToken := auth.PATToken != nil
 	hasApp := auth.GitHubApp != nil
 
 	if !hasToken && !hasApp {
-		return fmt.Errorf("%s.auth: one of token or github_app must be configured", prefix)
+		return fmt.Errorf("%s.auth: one of pat_token or github_app must be configured", prefix)
 	}
 	if hasToken && hasApp {
-		return fmt.Errorf("%s.auth: token and github_app are mutually exclusive", prefix)
+		return fmt.Errorf("%s.auth: pat_token and github_app are mutually exclusive", prefix)
 	}
 
-	if hasToken && *auth.Token == "" {
-		return fmt.Errorf("%s.auth.token must not be empty", prefix)
+	if hasToken && *auth.PATToken == "" {
+		return fmt.Errorf("%s.auth.pat_token must not be empty", prefix)
 	}
 
 	if hasApp {

@@ -44,7 +44,7 @@ orgs:
 repos:
   - repo: boring-design/special-repo
     auth:
-      token: ghp_testtoken123
+      pat_token: ghp_testtoken123
     runner_sets:
       - name: repo-runner
         backend: docker
@@ -113,11 +113,11 @@ idle_timeout: 30m
 	if repo.Repo != "boring-design/special-repo" {
 		t.Errorf("Repos[0].Repo = %q, want %q", repo.Repo, "boring-design/special-repo")
 	}
-	if repo.Auth.Token == nil {
-		t.Fatal("Repos[0].Auth.Token is nil")
+	if repo.Auth.PATToken == nil {
+		t.Fatal("Repos[0].Auth.PATToken is nil")
 	}
-	if *repo.Auth.Token != "ghp_testtoken123" {
-		t.Errorf("Repos[0].Auth.Token = %q, want %q", *repo.Auth.Token, "ghp_testtoken123")
+	if *repo.Auth.PATToken != "ghp_testtoken123" {
+		t.Errorf("Repos[0].Auth.PATToken = %q, want %q", *repo.Auth.PATToken, "ghp_testtoken123")
 	}
 	if len(repo.RunnerSets) != 1 {
 		t.Fatalf("len(Repos[0].RunnerSets) = %d, want 1", len(repo.RunnerSets))
@@ -150,7 +150,7 @@ func validOrgConfig() OrgConfig {
 	return OrgConfig{
 		Org: "test-org",
 		Auth: AuthConfig{
-			Token: strPtr("ghp_test123"),
+			PATToken: strPtr("ghp_test123"),
 		},
 		RunnerGroup: "Default",
 		RunnerSets: []RunnerSetConfig{
@@ -169,7 +169,7 @@ func validRepoConfig() RepoConfig {
 	return RepoConfig{
 		Repo: "owner/repo",
 		Auth: AuthConfig{
-			Token: strPtr("ghp_test456"),
+			PATToken: strPtr("ghp_test456"),
 		},
 		RunnerSets: []RunnerSetConfig{
 			{
@@ -250,15 +250,15 @@ func TestValidate(t *testing.T) {
 				}()},
 				IdleTimeout: 15 * time.Minute,
 			},
-			wantErr: "orgs[0].auth: one of token or github_app must be configured",
+			wantErr: "orgs[0].auth: one of pat_token or github_app must be configured",
 		},
 		{
-			name: "org with both token and app",
+			name: "org with both pat_token and app",
 			cfg: Config{
 				Orgs: []OrgConfig{func() OrgConfig {
 					o := validOrgConfig()
 					o.Auth = AuthConfig{
-						Token: strPtr("ghp_test"),
+						PATToken: strPtr("ghp_test"),
 						GitHubApp: &GitHubAppConfig{
 							ClientID:       "Iv23li",
 							InstallationID: 123,
@@ -269,7 +269,7 @@ func TestValidate(t *testing.T) {
 				}()},
 				IdleTimeout: 15 * time.Minute,
 			},
-			wantErr: "orgs[0].auth: token and github_app are mutually exclusive",
+			wantErr: "orgs[0].auth: pat_token and github_app are mutually exclusive",
 		},
 		{
 			name: "app auth missing client_id",
@@ -431,16 +431,16 @@ func TestValidate(t *testing.T) {
 			wantErr: "idle_timeout must be greater than 0",
 		},
 		{
-			name: "empty token string",
+			name: "empty pat_token string",
 			cfg: Config{
 				Orgs: []OrgConfig{func() OrgConfig {
 					o := validOrgConfig()
-					o.Auth = AuthConfig{Token: strPtr("")}
+					o.Auth = AuthConfig{PATToken: strPtr("")}
 					return o
 				}()},
 				IdleTimeout: 15 * time.Minute,
 			},
-			wantErr: "orgs[0].auth.token must not be empty",
+			wantErr: "orgs[0].auth.pat_token must not be empty",
 		},
 	}
 
@@ -499,15 +499,15 @@ func TestRepoConfig_ConfigURL(t *testing.T) {
 func TestAuthConfig_Mode(t *testing.T) {
 	t.Run("app", func(t *testing.T) {
 		auth := validAppAuth()
-		if got := auth.Mode(); got != "app" {
-			t.Errorf("Mode() = %q, want %q", got, "app")
+		if got := auth.Mode(); got != AuthModeGitHubApp {
+			t.Errorf("Mode() = %q, want %q", got, AuthModeGitHubApp)
 		}
 	})
 
 	t.Run("pat", func(t *testing.T) {
-		auth := AuthConfig{Token: strPtr("ghp_test")}
-		if got := auth.Mode(); got != "pat" {
-			t.Errorf("Mode() = %q, want %q", got, "pat")
+		auth := AuthConfig{PATToken: strPtr("ghp_test")}
+		if got := auth.Mode(); got != AuthModePAT {
+			t.Errorf("Mode() = %q, want %q", got, AuthModePAT)
 		}
 	})
 }

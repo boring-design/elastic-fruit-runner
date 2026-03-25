@@ -12,7 +12,7 @@ orgs:
         private_key_path: /path/to/private-key.pem
 
       # Option B: Personal Access Token (uncomment and remove github_app above)
-      # token: ghp_xxx
+      # pat_token: ghp_xxx
 
     runner_group: Default
     runner_sets:
@@ -35,7 +35,7 @@ orgs:
 # repos:
 #   - repo: your-org/your-repo
 #     auth:
-#       token: ghp_xxx
+#       pat_token: ghp_xxx
 #     runner_sets:
 #       - name: repo-runner
 #         backend: docker

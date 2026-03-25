@@ -77,7 +77,7 @@ func main() {
 
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
-			if err := launchController(&wg, ctx, rs, "", cfg.IdleTimeout, client, logger); err != nil {
+			if err := launchController(&wg, ctx, rs, "Default", cfg.IdleTimeout, client, logger); err != nil {
 				logger.Error("failed to launch controller", "runnerSet", rs.Name, "err", err)
 				os.Exit(1)
 			}
@@ -90,7 +90,7 @@ func main() {
 
 func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger) (*scaleset.Client, error) {
 	switch auth.Mode() {
-	case "app":
+	case config.AuthModeGitHubApp:
 		pemBytes, readErr := os.ReadFile(auth.GitHubApp.PrivateKeyPath)
 		if readErr != nil {
 			return nil, fmt.Errorf("read GitHub App private key %s: %w", auth.GitHubApp.PrivateKeyPath, readErr)
@@ -108,14 +108,16 @@ func createClient(configURL string, auth *config.AuthConfig, logger *slog.Logger
 				PrivateKey:     string(pemBytes),
 			},
 		})
-	default:
+	case config.AuthModePAT:
 		logger.Info("authenticating with PAT", "configURL", configURL)
 		return scaleset.NewClientWithPersonalAccessToken(
 			scaleset.NewClientWithPersonalAccessTokenConfig{
 				GitHubConfigURL:     configURL,
-				PersonalAccessToken: *auth.Token,
+				PersonalAccessToken: *auth.PATToken,
 			},
 		)
+	default:
+		return nil, fmt.Errorf("unknown auth mode %q", auth.Mode())
 	}
 }
 
