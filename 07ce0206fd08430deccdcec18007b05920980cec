@@ -1,0 +1,23 @@
+config.example.yaml
+  0826cbb2fa001fea 27,31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "07ce0206fd08430deccdcec18007b05920980cec",
+  "prompts": {
+    "0826cbb2fa001fea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "672f8954-3e90-4d9e-b68a-73780c57e197",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 386,
+      "total_deletions": 7,
+      "accepted_lines": 386,
+      "overriden_lines": 0
+    }
+  }
+}
