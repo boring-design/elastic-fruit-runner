@@ -189,7 +189,8 @@ func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
 	backoff := 1 * time.Second
 
 	for {
-		conn, err := net.DialTimeout("tcp", ip+":22", 2*time.Second)
+		dialer := net.Dialer{Timeout: 2 * time.Second}
+		conn, err := dialer.DialContext(ctx, "tcp", ip+":22")
 		if err == nil {
 			conn.Close()
 			return nil

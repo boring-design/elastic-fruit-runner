@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -19,19 +20,24 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("fatal", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Error("failed to load configuration", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
 	if err := cfg.Validate(); err != nil {
-		logger.Error("invalid configuration", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	logger.Info("configuration loaded", cfg.RedactedSlogAttrs()...)
@@ -42,8 +48,7 @@ func main() {
 	case "app":
 		pemBytes, readErr := os.ReadFile(cfg.GitHub.App.PrivateKeyPath)
 		if readErr != nil {
-			logger.Error("failed to read GitHub App private key", "path", cfg.GitHub.App.PrivateKeyPath, "err", readErr)
-			os.Exit(1)
+			return fmt.Errorf("read GitHub App private key %s: %w", cfg.GitHub.App.PrivateKeyPath, readErr)
 		}
 		logger.Info("authenticating with GitHub App", "clientID", cfg.GitHub.App.ClientID, "installationID", cfg.GitHub.App.InstallationID)
 		client, err = scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
@@ -65,8 +70,7 @@ func main() {
 	}
 
 	if err != nil {
-		logger.Error("failed to create scale set client", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("create scale set client: %w", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -74,8 +78,7 @@ func main() {
 
 	tracingShutdown, err := tracing.Setup(ctx)
 	if err != nil {
-		logger.Error("failed to initialize tracing", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("initialize tracing: %w", err)
 	}
 	defer func() {
 		if shutdownErr := tracingShutdown(context.Background()); shutdownErr != nil {
@@ -95,8 +98,7 @@ func main() {
 		case "docker":
 			b = backend.NewDockerBackend(rs.Image, rs.Platform, rsLogger)
 		default:
-			logger.Error("unknown backend", "backend", rs.Backend, "runnerSet", rs.Name)
-			os.Exit(1)
+			return fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
 		}
 
 		d := controller.New(cfg, rs, client, b, rsLogger)
@@ -126,4 +128,5 @@ func main() {
 
 	wg.Wait()
 	logger.Info("shutdown complete")
+	return nil
 }
