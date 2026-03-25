@@ -29,6 +29,7 @@ func loadWithArgs(args []string) (*Config, error) {
 
 	// Defaults
 	v.SetDefault("idle_timeout", "15m")
+	v.SetDefault("log_level", "info")
 
 	// Config file search
 	if *configPath != "" {
@@ -51,6 +52,10 @@ func loadWithArgs(args []string) (*Config, error) {
 		} else {
 			return nil, fmt.Errorf("read config: %w", err)
 		}
+	}
+
+	if err := v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
+		return nil, fmt.Errorf("bind env LOG_LEVEL: %w", err)
 	}
 
 	cfg := &Config{}

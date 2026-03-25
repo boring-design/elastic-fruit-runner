@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strings"
 	"time"
@@ -12,6 +13,25 @@ type Config struct {
 	Orgs        []OrgConfig   `yaml:"orgs"`
 	Repos       []RepoConfig  `yaml:"repos"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
+	LogLevel    string        `yaml:"log_level"`
+}
+
+// ParsedLogLevel converts the LogLevel string to a slog.Level.
+// Recognized values: debug, info, warn, error (case-insensitive).
+// Empty string defaults to slog.LevelInfo. Unrecognized values return an error.
+func (c *Config) ParsedLogLevel() (slog.Level, error) {
+	switch strings.ToLower(c.LogLevel) {
+	case "debug":
+		return slog.LevelDebug, nil
+	case "info", "":
+		return slog.LevelInfo, nil
+	case "warn":
+		return slog.LevelWarn, nil
+	case "error":
+		return slog.LevelError, nil
+	default:
+		return slog.LevelInfo, fmt.Errorf("unrecognized log level %q", c.LogLevel)
+	}
 }
 
 // OrgConfig describes a GitHub organization to listen for jobs on.
@@ -88,6 +108,12 @@ func (c *Config) Validate() error {
 
 	if c.IdleTimeout <= 0 {
 		return fmt.Errorf("idle_timeout must be greater than 0")
+	}
+
+	switch strings.ToLower(c.LogLevel) {
+	case "debug", "info", "warn", "error", "":
+	default:
+		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, error", c.LogLevel)
 	}
 
 	runnerSetNames := make(map[string]struct{})
@@ -193,4 +219,3 @@ func validateRunnerSet(rs *RunnerSetConfig, prefix string, seen map[string]struc
 
 	return nil
 }
-
