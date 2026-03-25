@@ -86,20 +86,27 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("at least one runner_sets entry is required")
 	}
 	for i, rs := range c.RunnerSets {
-		if rs.Name == "" {
-			return fmt.Errorf("runner_sets[%d].name is required", i)
-		}
-		if rs.Backend == "" {
-			return fmt.Errorf("runner_sets[%d].backend is required", i)
-		}
-		if rs.Backend != "tart" && rs.Backend != "docker" && rs.Backend != "host" {
-			return fmt.Errorf("runner_sets[%d].backend must be 'tart', 'docker', or 'host', got %q", i, rs.Backend)
-		}
-		if rs.MaxRunners <= 0 {
-			return fmt.Errorf("runner_sets[%d].max_runners must be > 0", i)
+		if err := validateRunnerSet(i, rs); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func validateRunnerSet(idx int, rs RunnerSetConfig) error {
+	if rs.Name == "" {
+		return fmt.Errorf("runner_sets[%d].name is required", idx)
+	}
+	if rs.Backend == "" {
+		return fmt.Errorf("runner_sets[%d].backend is required", idx)
+	}
+	if rs.Backend != "tart" && rs.Backend != "docker" && rs.Backend != "host" {
+		return fmt.Errorf("runner_sets[%d].backend must be 'tart', 'docker', or 'host', got %q", idx, rs.Backend)
+	}
+	if rs.MaxRunners <= 0 {
+		return fmt.Errorf("runner_sets[%d].max_runners must be > 0", idx)
+	}
 	return nil
 }
 
@@ -171,4 +178,3 @@ func (c *Config) RedactedSlogAttrs() []any {
 
 	return attrs
 }
-

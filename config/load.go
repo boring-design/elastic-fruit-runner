@@ -67,13 +67,13 @@ func loadWithArgs(args []string) (*Config, error) {
 	}
 
 	// Bind env vars explicitly (names don't follow a simple prefix pattern)
-	v.BindEnv("github.url", "GITHUB_CONFIG_URL")
-	v.BindEnv("github.token", "GITHUB_TOKEN")
-	v.BindEnv("github.app.client_id", "GITHUB_APP_CLIENT_ID")
-	v.BindEnv("github.app.installation_id", "GITHUB_APP_INSTALLATION_ID")
-	v.BindEnv("github.app.private_key_path", "GITHUB_APP_PRIVATE_KEY_PATH")
-	v.BindEnv("runner_group", "GITHUB_RUNNER_GROUP")
-	v.BindEnv("log_level", "LOG_LEVEL")
+	_ = v.BindEnv("github.url", "GITHUB_CONFIG_URL")
+	_ = v.BindEnv("github.token", "GITHUB_TOKEN")
+	_ = v.BindEnv("github.app.client_id", "GITHUB_APP_CLIENT_ID")
+	_ = v.BindEnv("github.app.installation_id", "GITHUB_APP_INSTALLATION_ID")
+	_ = v.BindEnv("github.app.private_key_path", "GITHUB_APP_PRIVATE_KEY_PATH")
+	_ = v.BindEnv("runner_group", "GITHUB_RUNNER_GROUP")
+	_ = v.BindEnv("log_level", "LOG_LEVEL")
 
 	// Flag overrides (highest priority) — only if explicitly set
 	if f := flags.Lookup("url"); f != nil && f.Changed {

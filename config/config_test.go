@@ -40,7 +40,7 @@ runner_sets:
     max_runners: 3
     platform: linux/amd64
 `
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -94,7 +94,7 @@ github:
   token: ghp_from_file
 runner_group: FileGroup
 `
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -126,7 +126,7 @@ github:
   url: https://github.com/file-org
   token: ghp_from_file
 `
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -154,7 +154,7 @@ func TestLoad_DurationParsing(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
 	content := `idle_timeout: 30m`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -185,7 +185,7 @@ runner_sets:
     max_runners: 4
     platform: linux/arm64
 `
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -280,7 +280,7 @@ func TestLoad_LogLevelFromConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	cfgFile := filepath.Join(dir, "config.yaml")
 	content := `log_level: debug`
-	if err := os.WriteFile(cfgFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(cfgFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write config file: %v", err)
 	}
 
@@ -333,7 +333,7 @@ func TestLoad_DotenvFile(t *testing.T) {
 	content := `GITHUB_CONFIG_URL=https://github.com/dotenv-org
 GITHUB_TOKEN=ghp_from_dotenv
 `
-	if err := os.WriteFile(envFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(envFile, []byte(content), 0o644); err != nil {
 		t.Fatalf("write dotenv file: %v", err)
 	}
 
