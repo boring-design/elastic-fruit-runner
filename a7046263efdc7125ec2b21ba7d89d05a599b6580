@@ -1,0 +1,35 @@
+config/config.go
+  df5e3ac9f249e1f3 5,7,16,79-84,106-123,144
+config/load.go
+  df5e3ac9f249e1f3 44,76
+internal/tracing/setup.go
+  df5e3ac9f249e1f3 5,13,20,23-25,27-28,30,40
+config/config_test.go
+  df5e3ac9f249e1f3 4,7,229-318
+internal/backend/docker.go
+  df5e3ac9f249e1f3 32-35
+cmd/elastic-fruit-runner/main.go
+  df5e3ac9f249e1f3 22,28,33,37-39
+internal/backend/tart.go
+  df5e3ac9f249e1f3 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "a7046263efdc7125ec2b21ba7d89d05a599b6580",
+  "prompts": {
+    "df5e3ac9f249e1f3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "022f1fbc-1a34-48ca-a922-20867c97f995",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 144,
+      "total_deletions": 13,
+      "accepted_lines": 144,
+      "overriden_lines": 0
+    }
+  }
+}
