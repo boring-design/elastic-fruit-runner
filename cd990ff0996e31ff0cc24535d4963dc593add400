@@ -1,0 +1,25 @@
+config/config.go
+  4bcb11a913ebaf9b 121,127,135-150,153-154,156-174
+cmd/elastic-fruit-runner/main.go
+  4bcb11a913ebaf9b 75,90,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "cd990ff0996e31ff0cc24535d4963dc593add400",
+  "prompts": {
+    "4bcb11a913ebaf9b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "ed21f729-9ba8-4bb7-b50c-b1fe36867739",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 48,
+      "total_deletions": 36,
+      "accepted_lines": 48,
+      "overriden_lines": 0
+    }
+  }
+}
