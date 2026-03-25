@@ -35,6 +35,7 @@ type TartBackend struct {
 }
 
 func NewTartBackend(vmImage string, logger *slog.Logger) *TartBackend {
+	logger = logger.With("image", vmImage)
 	return &TartBackend{
 		tart:    tart.NewManager(logger),
 		vmImage: vmImage,

@@ -41,6 +41,7 @@ func loadWithArgs(args []string) (*Config, error) {
 	// Defaults
 	v.SetDefault("runner_group", "Default")
 	v.SetDefault("idle_timeout", "15m")
+	v.SetDefault("log_level", "info")
 
 	// Config file search
 	if *configPath != "" {
@@ -72,6 +73,7 @@ func loadWithArgs(args []string) (*Config, error) {
 	_ = v.BindEnv("github.app.installation_id", "GITHUB_APP_INSTALLATION_ID")
 	_ = v.BindEnv("github.app.private_key_path", "GITHUB_APP_PRIVATE_KEY_PATH")
 	_ = v.BindEnv("runner_group", "GITHUB_RUNNER_GROUP")
+	_ = v.BindEnv("log_level", "LOG_LEVEL")
 
 	// Flag overrides (highest priority) — only if explicitly set
 	if f := flags.Lookup("url"); f != nil && f.Changed {

@@ -27,7 +27,7 @@ func main() {
 }
 
 func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	bootstrapLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 
@@ -39,6 +39,16 @@ func run() error {
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
+
+	logLevel, err := cfg.ParsedLogLevel()
+	if err != nil {
+		bootstrapLogger.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
+		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
+	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	}))
 
 	logger.Info("configuration loaded", cfg.RedactedSlogAttrs()...)
 
