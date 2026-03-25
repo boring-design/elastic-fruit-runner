@@ -18,24 +18,37 @@ idle_timeout: 15m
 
 runner_sets:
   # macOS runners via Tart VMs (Apple Silicon only)
+  # When labels is omitted, defaults are auto-detected from the platform:
+  #   self-hosted, macos, arm64, macos-latest, macos-15, macos-14
   - name: efr-macos-arm64
     backend: tart
     image: ghcr.io/cirruslabs/macos-sequoia-base:latest
-    labels: [self-hosted, macOS, ARM64]
     max_runners: 2
+    # extra_labels: [gpu]
+    # version_aliases: [macos-15]
 
   # Linux ARM64 runners via Docker (DinD image includes Docker daemon)
+  # Auto-detected defaults for linux/arm64:
+  #   self-hosted, linux, arm64, ubuntu-latest-arm, ubuntu-24.04-arm, ubuntu-22.04-arm
   - name: efr-linux-arm64
     backend: docker
     image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, Linux, ARM64]
     max_runners: 4
     platform: linux/arm64
 
   # Linux AMD64 runners via Docker (Rosetta 2 on Apple Silicon)
+  # Auto-detected defaults for linux/amd64:
+  #   self-hosted, linux, x64, ubuntu-latest, ubuntu-24.04, ubuntu-22.04
   - name: efr-linux-amd64
     backend: docker
     image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, Linux, X64]
     max_runners: 4
     platform: linux/amd64
+
+  # Explicit labels override auto-detection entirely:
+  # - name: efr-custom
+  #   backend: docker
+  #   image: my-custom-image:latest
+  #   labels: [self-hosted, custom-label]
+  #   max_runners: 2
+  #   platform: linux/amd64

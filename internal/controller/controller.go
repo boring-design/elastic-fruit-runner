@@ -13,6 +13,7 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
+	"github.com/boring-design/elastic-fruit-runner/internal/labels"
 )
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/controller")
@@ -70,9 +71,17 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	}
 	d.logger.Info("runner group resolved", "id", group.ID, "name", group.Name)
 
-	desiredLabels := make([]scaleset.Label, 0, len(d.rsCfg.Labels)+1)
-	desiredLabels = append(desiredLabels, scaleset.Label{Name: d.rsCfg.Name})
-	for _, l := range d.rsCfg.Labels {
+	detectedOS, detectedArch := labels.DetectPlatform(d.rsCfg.Platform)
+	var opts []labels.Option
+	if d.rsCfg.VersionAliases != nil {
+		opts = append(opts, labels.WithVersionAliases(*d.rsCfg.VersionAliases))
+	}
+	resolvedLabels := labels.ResolveLabels(
+		d.rsCfg.Name, d.rsCfg.Labels, d.rsCfg.ExtraLabels,
+		detectedOS, detectedArch, opts...,
+	)
+	desiredLabels := make([]scaleset.Label, 0, len(resolvedLabels))
+	for _, l := range resolvedLabels {
 		desiredLabels = append(desiredLabels, scaleset.Label{Name: l})
 	}
 

@@ -40,9 +40,21 @@ type RunnerSetConfig struct {
 	Name       string   `yaml:"name"`
 	Backend    string   `yaml:"backend"`
 	Image      string   `yaml:"image"`
-	Labels     []string `yaml:"labels"`
 	MaxRunners int      `yaml:"max_runners"`
 	Platform   string   `yaml:"platform"`
+
+	// Labels overrides all auto-detected labels. When set, only these
+	// labels (plus the scale set name) are registered.
+	Labels []string `yaml:"labels"`
+
+	// ExtraLabels are appended to the auto-detected labels (ignored when
+	// Labels is explicitly set).
+	ExtraLabels []string `yaml:"extra_labels"`
+
+	// VersionAliases overrides the default version alias labels
+	// (e.g. "ubuntu-24.04", "macos-15"). Set to an empty list to disable.
+	// When nil/omitted, defaults are used based on the detected platform.
+	VersionAliases *[]string `yaml:"version_aliases"`
 }
 
 // AuthMode returns which authentication method is configured.
@@ -150,8 +162,12 @@ func (c *Config) RedactedSlogAttrs() []any {
 			prefix+"backend", rs.Backend,
 			prefix+"image", rs.Image,
 			prefix+"labels", rs.Labels,
+			prefix+"extra_labels", rs.ExtraLabels,
 			prefix+"max_runners", rs.MaxRunners,
 		)
+		if rs.VersionAliases != nil {
+			attrs = append(attrs, prefix+"version_aliases", *rs.VersionAliases)
+		}
 		if rs.Platform != "" {
 			attrs = append(attrs, prefix+"platform", rs.Platform)
 		}
