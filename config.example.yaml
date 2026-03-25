@@ -17,25 +17,25 @@ runner_group: Default
 idle_timeout: 15m
 
 runner_sets:
-  # macOS runners via Tart VMs (Apple Silicon only)
+  # macos runners via Tart VMs (Apple Silicon only)
   - name: efr-macos-arm64
     backend: tart
     image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
-    labels: [self-hosted, macOS, ARM64]
+    labels: [self-hosted, macos, arm64]
     max_runners: 2
 
-  # Linux ARM64 runners via Docker (DinD image includes Docker daemon)
+  # linux arm64 runners via Docker (DinD image includes Docker daemon)
   - name: efr-linux-arm64
     backend: docker
     image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, Linux, ARM64]
+    labels: [self-hosted, linux, arm64]
     max_runners: 4
     platform: linux/arm64
 
-  # Linux AMD64 runners via Docker (Rosetta 2 on Apple Silicon)
+  # linux AMD64 runners via Docker (Rosetta 2 on Apple Silicon)
   - name: efr-linux-amd64
     backend: docker
     image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-    labels: [self-hosted, Linux, X64]
+    labels: [self-hosted, linux, x64]
     max_runners: 4
     platform: linux/amd64

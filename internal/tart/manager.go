@@ -145,7 +145,7 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 }
 
 // Exec runs a command inside the VM via SSH (using `tart ip` to discover the address).
-// The default Cirrus Labs macOS base images use admin:admin credentials.
+// The default Cirrus Labs macos base images use admin:admin credentials.
 // It waits for SSH to become reachable with exponential backoff before executing.
 func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	ctx, span := tracer.Start(ctx, "tart.ssh_exec",
@@ -245,7 +245,7 @@ func (m *Manager) Delete(ctx context.Context, name string) error {
 }
 
 // buildSSHArgs constructs sshpass + ssh arguments for executing a command in the VM.
-// Uses admin:admin credentials (Cirrus Labs macOS base image default).
+// Uses admin:admin credentials (Cirrus Labs macos base image default).
 func (m *Manager) buildSSHArgs(ip string, args ...string) []string {
 	sshArgs := []string{
 		"-p", "admin",

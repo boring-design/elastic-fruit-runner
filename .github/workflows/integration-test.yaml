@@ -8,7 +8,7 @@ env:
 
 jobs:
   test-macos-arm64:
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: [self-hosted, macos, arm64]
     steps:
       - name: fastfetch
         run: |
@@ -16,7 +16,7 @@ jobs:
           ./fastfetch-macos-aarch64/usr/bin/fastfetch
 
   test-linux-arm64:
-    runs-on: [self-hosted, Linux, ARM64]
+    runs-on: [self-hosted, linux, arm64]
     steps:
       - name: fastfetch
         run: |
@@ -30,7 +30,7 @@ jobs:
           ./fastfetch-${VARIANT}/usr/bin/fastfetch
 
   test-linux-amd64:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: [self-hosted, linux, x64]
     steps:
       - name: fastfetch
         run: |
