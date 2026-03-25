@@ -1,0 +1,29 @@
+internal/controller/scaler.go
+  3e8bed949cfce0e5 42,64,81,101,142,158,162,201,225
+internal/backend/tart.go
+  3e8bed949cfce0e5 34,41,56,59,130,134,147,153
+internal/backend/docker.go
+  3e8bed949cfce0e5 25,32-35,39,83,100,114
+internal/controller/controller.go
+  3e8bed949cfce0e5 39,56,66,74,85,96,107,110,121,123,130,144,156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "3c9c304cddf7c537a7797928a4489170d224db8d",
+  "prompts": {
+    "3e8bed949cfce0e5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5d5affd5-52e6-4a65-aef7-3a1c1201e06c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 30,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    }
+  }
+}
