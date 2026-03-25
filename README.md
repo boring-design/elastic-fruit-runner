@@ -38,7 +38,7 @@ github:
 runner_sets:
   - name: efr-macos-arm64
     backend: tart
-    image: ghcr.io/cirruslabs/macos-sequoia-base:latest
+    image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
     labels: [self-hosted, macOS, ARM64]
     max_runners: 2
 EOF

@@ -15,7 +15,7 @@ import (
 )
 
 // isRemoteImage returns true if the image looks like a registry reference
-// (e.g. "ghcr.io/cirruslabs/macos-sequoia-base:latest") rather than a local
+// (e.g. "ghcr.io/cirruslabs/macos-tahoe-xcode:26.3") rather than a local
 // VM name (e.g. "gha-runner-sequoia-xcode-16").
 func isRemoteImage(image string) bool {
 	return strings.Contains(image, "/")
