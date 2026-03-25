@@ -1,0 +1,29 @@
+.gitignore
+  4a3a164d6275f042 3
+CLAUDE.md
+  4a3a164d6275f042 5,8-10
+Makefile
+  4a3a164d6275f042 1,31-33,48-71
+README.md
+  4a3a164d6275f042 134-154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "2c1c99faf011a6a1740682143ae23a05bf8e5492",
+  "prompts": {
+    "4a3a164d6275f042": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "59452287-3de3-4758-84d6-020b1b9ae58e",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 54,
+      "total_deletions": 3,
+      "accepted_lines": 54,
+      "overriden_lines": 0
+    }
+  }
+}
