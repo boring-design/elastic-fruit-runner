@@ -25,11 +25,11 @@ type DockerBackend struct {
 	logger   *slog.Logger
 }
 
-func NewDockerBackend(image, platform string, logger *slog.Logger) *DockerBackend {
+func NewDockerBackend(image, platform string) *DockerBackend {
 	if image == "" {
 		image = defaultDockerRunnerImage
 	}
-	logger = logger.With("image", image)
+	logger := slog.Default().With("image", image)
 	if platform != "" {
 		logger = logger.With("platform", platform)
 	}

@@ -21,12 +21,10 @@ var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
-type Manager struct {
-	logger *slog.Logger
-}
+type Manager struct{}
 
-func NewManager(logger *slog.Logger) *Manager {
-	return &Manager{logger: logger}
+func NewManager() *Manager {
+	return &Manager{}
 }
 
 // List returns the names of all local VMs.
@@ -53,7 +51,7 @@ func (m *Manager) Pull(ctx context.Context, image string) error {
 	)
 	defer span.End()
 
-	m.logger.Info("pulling VM image", "image", image)
+	slog.Info("pulling VM image", "image", image)
 	if err := m.run(ctx, "pull", image); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -93,7 +91,7 @@ func (m *Manager) Clone(ctx context.Context, image, name string) error {
 	)
 	defer span.End()
 
-	m.logger.Info("cloning VM", "image", image, "name", name)
+	slog.Info("cloning VM", "image", image, "name", name)
 	if err := m.run(ctx, "clone", image, name); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -110,7 +108,7 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
-	m.logger.Info("starting VM", "name", name)
+	slog.Info("starting VM", "name", name)
 	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "run", name, "--no-graphics")
 	if err := cmd.Start(); err != nil {
 		err = fmt.Errorf("start VM %s: %w", name, err)
@@ -130,7 +128,7 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	)
 	defer span.End()
 
-	m.logger.Info("waiting for VM IP", "name", name)
+	slog.Info("waiting for VM IP", "name", name)
 	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", "60")
 	out, err := cmd.Output()
 	if err != nil {
@@ -167,7 +165,7 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	}
 
 	sshArgs := m.buildSSHArgs(ip, args...)
-	m.logger.Info("ssh exec in VM", "name", name, "ip", ip, "args", args)
+	slog.Info("ssh exec in VM", "name", name, "ip", ip, "args", args)
 	var buf bytes.Buffer
 	cmd := exec.CommandContext(ctx, binpath.Lookup("sshpass"), sshArgs...)
 	cmd.Stdout = &buf
@@ -203,7 +201,7 @@ func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
 			return ctx.Err()
 		}
 
-		m.logger.Info("waiting for SSH", "name", name, "ip", ip, "retry_in", backoff)
+		slog.Info("waiting for SSH", "name", name, "ip", ip, "retry_in", backoff)
 		select {
 		case <-time.After(backoff):
 		case <-ctx.Done():
@@ -220,7 +218,7 @@ func (m *Manager) Stop(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
-	m.logger.Info("stopping VM", "name", name)
+	slog.Info("stopping VM", "name", name)
 	if err := m.run(ctx, "stop", name); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -236,7 +234,7 @@ func (m *Manager) Delete(ctx context.Context, name string) error {
 	)
 	defer span.End()
 
-	m.logger.Info("deleting VM", "name", name)
+	slog.Info("deleting VM", "name", name)
 	if err := m.run(ctx, "delete", name); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

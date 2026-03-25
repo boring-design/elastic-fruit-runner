@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-
 	"time"
 
 	"github.com/actions/scaleset"
@@ -47,14 +46,14 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, logger *slog.Logger) *ScaleSetController {
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
-		logger:      logger,
+		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }
 
