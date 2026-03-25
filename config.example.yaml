@@ -31,6 +31,14 @@ orgs:
         max_runners: 4
         platform: linux/arm64
 
+      # linux amd64 runners via Docker (uses Rosetta 2 emulation on Apple Silicon)
+      - name: efr-linux-amd64
+        backend: docker
+        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
+        labels: [self-hosted, linux, amd64]
+        max_runners: 4
+        platform: linux/amd64
+
 # Repository-level runner sets (no runner_group — repos use default)
 # repos:
 #   - repo: your-org/your-repo
