@@ -20,16 +20,16 @@ import (
 )
 
 func main() {
-	if err := run(); err != nil {
-		slog.Error("fatal", "err", err)
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	if err := run(logger); err != nil {
+		logger.Error("fatal", "err", err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
-	bootstrapLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+func run(bootstrapLogger *slog.Logger) error {
 
 	cfg, err := config.Load()
 	if err != nil {
