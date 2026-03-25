@@ -1,0 +1,23 @@
+.github/workflows/golangci-lint.yaml
+  ab660852fe281c58 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "47689510ced88089db3a45dc157075c80277e78e",
+  "prompts": {
+    "ab660852fe281c58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a48598ff-1b63-4a70-bfcd-20c663bf9e0f",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
