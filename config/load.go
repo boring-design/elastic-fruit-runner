@@ -8,30 +8,19 @@ import (
 	"path/filepath"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/joho/godotenv"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-// Load reads configuration from (in order of ascending priority):
-//  1. Built-in defaults
-//  2. Dotenv file (.env in current working directory)
-//  3. Config file (YAML)
-//  4. Environment variables
-//  5. CLI flags (--config, --url, --token)
+// Load reads configuration from a YAML config file.
+// The --config flag overrides the default search paths.
 func Load() (*Config, error) {
 	return loadWithArgs(os.Args[1:])
 }
 
 func loadWithArgs(args []string) (*Config, error) {
-	// Load .env from current working directory at the very beginning
-	// (does NOT overwrite existing env vars)
-	_ = godotenv.Load()
-
 	flags := pflag.NewFlagSet("elastic-fruit-runner", pflag.ContinueOnError)
 	configPath := flags.String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
-	flags.String("url", "", "GitHub config URL (overrides config file)")
-	flags.String("token", "", "GitHub PAT (overrides config file)")
 	if err := flags.Parse(args); err != nil {
 		return nil, fmt.Errorf("parse flags: %w", err)
 	}
@@ -39,7 +28,6 @@ func loadWithArgs(args []string) (*Config, error) {
 	v := viper.New()
 
 	// Defaults
-	v.SetDefault("runner_group", "Default")
 	v.SetDefault("idle_timeout", "15m")
 	v.SetDefault("log_level", "info")
 
@@ -66,21 +54,8 @@ func loadWithArgs(args []string) (*Config, error) {
 		}
 	}
 
-	// Bind env vars explicitly (names don't follow a simple prefix pattern)
-	_ = v.BindEnv("github.url", "GITHUB_CONFIG_URL")
-	_ = v.BindEnv("github.token", "GITHUB_TOKEN")
-	_ = v.BindEnv("github.app.client_id", "GITHUB_APP_CLIENT_ID")
-	_ = v.BindEnv("github.app.installation_id", "GITHUB_APP_INSTALLATION_ID")
-	_ = v.BindEnv("github.app.private_key_path", "GITHUB_APP_PRIVATE_KEY_PATH")
-	_ = v.BindEnv("runner_group", "GITHUB_RUNNER_GROUP")
-	_ = v.BindEnv("log_level", "LOG_LEVEL")
-
-	// Flag overrides (highest priority) — only if explicitly set
-	if f := flags.Lookup("url"); f != nil && f.Changed {
-		v.Set("github.url", f.Value.String())
-	}
-	if f := flags.Lookup("token"); f != nil && f.Changed {
-		v.Set("github.token", f.Value.String())
+	if err := v.BindEnv("log_level", "LOG_LEVEL"); err != nil {
+		return nil, fmt.Errorf("bind env LOG_LEVEL: %w", err)
 	}
 
 	cfg := &Config{}
