@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -11,6 +13,7 @@ type Config struct {
 	GitHub      GitHubConfig      `yaml:"github"`
 	RunnerGroup string            `yaml:"runner_group"`
 	IdleTimeout time.Duration     `yaml:"idle_timeout"`
+	LogLevel    string            `yaml:"log_level"`
 	RunnerSets  []RunnerSetConfig `yaml:"runner_sets"`
 }
 
@@ -73,6 +76,12 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("idle_timeout must be greater than 0")
 	}
 
+	switch strings.ToLower(c.LogLevel) {
+	case "debug", "info", "warn", "warning", "error", "":
+	default:
+		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, warning, error", c.LogLevel)
+	}
+
 	if len(c.RunnerSets) == 0 {
 		return fmt.Errorf("at least one runner_sets entry is required")
 	}
@@ -92,6 +101,24 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+// ParsedLogLevel converts the LogLevel string to a slog.Level.
+// Recognized values: debug, info, warn, error (case-insensitive).
+// Defaults to slog.LevelInfo for unrecognized or empty values.
+func (c *Config) ParsedLogLevel() slog.Level {
+	switch strings.ToLower(c.LogLevel) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // redact replaces a secret string with a masked version showing only the
@@ -114,6 +141,7 @@ func (c *Config) RedactedSlogAttrs() []any {
 		"auth_mode", c.AuthMode(),
 		"runner_group", c.RunnerGroup,
 		"idle_timeout", c.IdleTimeout.String(),
+		"log_level", c.LogLevel,
 	}
 
 	switch c.AuthMode() {

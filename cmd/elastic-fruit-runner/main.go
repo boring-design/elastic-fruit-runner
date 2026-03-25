@@ -19,20 +19,24 @@ import (
 )
 
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	bootstrapLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Error("failed to load configuration", "err", err)
+		bootstrapLogger.Error("failed to load configuration", "err", err)
 		os.Exit(1)
 	}
 
 	if err := cfg.Validate(); err != nil {
-		logger.Error("invalid configuration", "err", err)
+		bootstrapLogger.Error("invalid configuration", "err", err)
 		os.Exit(1)
 	}
+
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: cfg.ParsedLogLevel(),
+	}))
 
 	logger.Info("configuration loaded", cfg.RedactedSlogAttrs()...)
 
