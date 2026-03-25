@@ -1,0 +1,23 @@
+internal/controller/scaler.go
+  0f29444c02e3fd45 131,164,211,216-228
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "b7b36767e1b67d3f56c7d1448a46e11f46403ea3",
+  "prompts": {
+    "0f29444c02e3fd45": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e43e2bd4-d8f9-4a35-884e-69edb138d87c",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 0,
+      "accepted_lines": 16,
+      "overriden_lines": 0
+    }
+  }
+}
