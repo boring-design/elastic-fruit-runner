@@ -2,10 +2,12 @@
 
 ## Build
 
-- Build: `make build`
+- Build: `make build` (output in `output/`)
 - Test: `make test`
 - Lint: `make lint`
-- CI checks: `make ci`
+- Quick local check: `make check` (fmt + vet + build)
+- Full CI checks: `make ci`
+- Show all targets: `make help`
 
 ## Conventions
 
