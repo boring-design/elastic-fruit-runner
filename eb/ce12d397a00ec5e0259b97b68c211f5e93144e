@@ -1,0 +1,27 @@
+doc-site/astro.config.mjs
+  a26d05acf014b983 45
+doc-site/src/content/docs/index.mdx
+  a26d05acf014b983 40-45,47
+doc-site/src/content/docs/tutorials/getting-started.md
+  a26d05acf014b983 132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "ebce12d397a00ec5e0259b97b68c211f5e93144e",
+  "prompts": {
+    "a26d05acf014b983": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3b4cddac-7207-4578-8903-add36fa0e1b1",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 11,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    }
+  }
+}
