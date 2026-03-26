@@ -1,0 +1,40 @@
+doc-site/src/content/docs/how-to/troubleshooting.md
+  a26d05acf014b983 1-29
+doc-site/astro.config.mjs
+  a26d05acf014b983 31
+doc-site/src/content/docs/how-to/install-macos.md
+  a26d05acf014b983 65-101
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.19",
+  "base_commit_sha": "3b2dd57a1a5fbce6eac138749ddf96e56cac29c9",
+  "prompts": {
+    "73e132900e5cbc79": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8a9705e5-2a2d-4058-a8ef-e8dd86afc410",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 332,
+      "total_deletions": 82,
+      "accepted_lines": 227,
+      "overriden_lines": 0
+    },
+    "a26d05acf014b983": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3b4cddac-7207-4578-8903-add36fa0e1b1",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 67,
+      "total_deletions": 23,
+      "accepted_lines": 67,
+      "overriden_lines": 0
+    }
+  }
+}
