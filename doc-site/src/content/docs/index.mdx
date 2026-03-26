@@ -1,9 +1,9 @@
 ---
-title: Elastic Fruit Runner 
-description: Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
+title: Elastic Fruit Runner
+description: Turn your Apple Silicon Mac into a multi-platform GitHub Actions runner farm.
 template: splash
 hero:
-  tagline: Elastic GitHub Actions self-hosted runner manager for Apple Silicon. Ephemeral macOS VMs via Tart, Linux containers via Docker, zero VM overhead in host mode.
+  tagline: "Your Apple Silicon Mac is more than a desktop. One machine = macOS arm64 runners + Linux arm64 runners + Linux amd64 runners. Stop worrying about GitHub Actions billing — put your hardware to work."
   actions:
     - text: Getting Started
       link: /tutorials/getting-started/
@@ -14,16 +14,25 @@ hero:
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
+
+<Aside type="tip" title="One Mac, three platforms">
+A single MacBook Pro or Mac mini with Apple Silicon can simultaneously serve as:
+- **macOS arm64** runners via ephemeral Tart VMs
+- **Linux arm64** runners via Docker containers
+- **Linux amd64** runners via Docker + Rosetta 2
+
+No more GitHub billing anxiety. No more idle hardware. Just `brew install` and go.
+</Aside>
 
 ## Features
 
 <CardGrid stagger>
 	<Card title="macOS Runners (Tart)" icon="apple">
-		Ephemeral macOS VMs on Apple Silicon via [Tart](https://tart.run). One VM per job, auto-destroyed after completion.
+		Ephemeral macOS VMs on Apple Silicon via [Tart](https://tart.run). One VM per job, auto-destroyed after completion. Build and test iOS/macOS apps on real Apple hardware.
 	</Card>
 	<Card title="Linux Runners (Docker)" icon="linux">
-		Linux arm64 and amd64 runners via Docker-in-Docker. amd64 supported through Rosetta 2 emulation.
+		Linux arm64 and amd64 runners via Docker-in-Docker. amd64 runs through Rosetta 2 — one Mac covers all your CI architectures.
 	</Card>
 	<Card title="Host Mode" icon="rocket">
 		Run the GitHub Actions runner directly on the machine with zero VM overhead for maximum performance.
