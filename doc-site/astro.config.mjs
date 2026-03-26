@@ -28,6 +28,7 @@ export default defineConfig({
 						{ slug: 'how-to/install-linux-docker' },
 						{ slug: 'how-to/configure-github-app' },
 						{ slug: 'how-to/multiple-orgs-repos' },
+						{ slug: 'how-to/troubleshooting' },
 					],
 				},
 				{

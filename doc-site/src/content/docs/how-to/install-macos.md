@@ -62,6 +62,43 @@ orgs:
 idle_timeout: 15m
 ```
 
+## Prevent sleep (headless / always-on servers)
+
+If the Mac is used as a dedicated runner host (e.g. a Mac mini with the lid closed or no display), you should disable sleep and disk hibernation so that Docker and Tart stay responsive after long idle periods.
+
+```sh
+# Disable system sleep
+sudo pmset -a sleep 0
+
+# Disable disk sleep (prevents Docker daemon from hanging after wake)
+sudo pmset -a disksleep 0
+
+# Disable hibernation (no memory-to-disk writes)
+sudo pmset -a hibernatemode 0
+
+# Disable standby (prevents deep sleep on battery-capable Macs)
+sudo pmset -a standby 0
+```
+
+Verify with:
+
+```sh
+sudo pmset -g
+```
+
+The key values should all be `0`:
+
+| Setting         | Value | Effect                              |
+|-----------------|-------|-------------------------------------|
+| `sleep`         | 0     | Never enter system sleep            |
+| `disksleep`     | 0     | Keep disks spinning                 |
+| `hibernatemode` | 0     | No memory dump to disk              |
+| `standby`       | 0     | No deep sleep after prolonged idle  |
+
+:::caution
+Without these settings, macOS will hibernate after the lid is closed or the machine is idle for a long time. On wake, the Docker daemon may become unresponsive, causing Docker-backed runner sets to silently hang during cleanup.
+:::
+
 ## Run as a service (recommended)
 
 ```sh
