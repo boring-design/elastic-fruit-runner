@@ -42,7 +42,7 @@ export default defineConfig({
 				{
 					label: 'Explanation',
 					items: [
-						{ slug: 'explanation/what-is-efr' },
+						{ slug: 'explanation/what-is-elastic-fruit-runner' },
 					],
 				},
 			],

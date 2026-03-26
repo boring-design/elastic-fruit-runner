@@ -37,7 +37,13 @@ No more GitHub billing anxiety. No more idle hardware. Just `brew install` and g
 	<Card title="Host Mode" icon="rocket">
 		Run the GitHub Actions runner directly on the machine with zero VM overhead for maximum performance.
 	</Card>
+	<Card title="Scale to Zero" icon="down-caret">
+		No idle VMs, no idle containers. Runners are provisioned on demand and destroyed after each job. When there are no jobs, resource consumption is near zero.
+	</Card>
+	<Card title="No Kubernetes Required" icon="seti:config">
+		No minikube, no k3s, no cluster management. Just `brew install`, write a config file, and start the service. Goodbye, YAML manifests.
+	</Card>
 	<Card title="Official Scale Set API" icon="github">
-		Powered by the official [GitHub Runner Scale Set Client](https://github.com/actions/scaleset) for reliable job polling and runner lifecycle management.
+		Powered by the official [GitHub Runner Scale Set API](https://github.com/actions/scaleset). One daemon manages all your orgs and repos — no per-repo runner registration, no token juggling.
 	</Card>
 </CardGrid>

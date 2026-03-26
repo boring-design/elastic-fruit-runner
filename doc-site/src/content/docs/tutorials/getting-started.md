@@ -129,4 +129,4 @@ Go back to GitHub Actions. The workflow run should show a green checkmark, with 
 
 - [Configure GitHub App auth](/how-to/configure-github-app/) for production org deployments
 - [Deploy on Linux with Docker](/how-to/install-linux-docker/) for Linux arm64/amd64 runners
-- [What is elastic-fruit-runner?](/explanation/what-is-efr/) to understand the project
+- [What is elastic-fruit-runner?](/explanation/what-is-elastic-fruit-runner/) to understand the project
