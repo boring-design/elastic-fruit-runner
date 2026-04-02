@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!-- background -->
+  <rect width="16" height="16" fill="#080808"/>
+
+  <!-- row 0: head top -->
+  <rect x="5" y="0" width="6" height="1" fill="#b0b0b0"/>
+  <!-- row 1 -->
+  <rect x="4" y="1" width="8" height="1" fill="#b0b0b0"/>
+  <!-- row 2: face top + shadow strip -->
+  <rect x="3" y="2" width="2" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="2" width="6" height="1" fill="#555555"/>
+  <rect x="11" y="2" width="2" height="1" fill="#b0b0b0"/>
+  <!-- row 3: face sides -->
+  <rect x="3" y="3" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="4" y="3" width="1" height="1" fill="#555555"/>
+  <rect x="11" y="3" width="1" height="1" fill="#555555"/>
+  <rect x="12" y="3" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 4: eyes -->
+  <rect x="3" y="4" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="4" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="4" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 5: eyes (2nd row) -->
+  <rect x="3" y="5" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="9" y="5" width="2" height="1" fill="#ffffff"/>
+  <rect x="12" y="5" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 6: face middle -->
+  <rect x="3" y="6" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="12" y="6" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 7: mouth corners -->
+  <rect x="3" y="7" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="7" width="1" height="1" fill="#ffffff"/>
+  <rect x="10" y="7" width="1" height="1" fill="#ffffff"/>
+  <rect x="12" y="7" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 8: smile -->
+  <rect x="3" y="8" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="6" y="8" width="4" height="1" fill="#ffffff"/>
+  <rect x="12" y="8" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 9: head bottom -->
+  <rect x="4" y="9" width="8" height="1" fill="#b0b0b0"/>
+  <!-- row 10: neck -->
+  <rect x="5" y="10" width="6" height="1" fill="#b0b0b0"/>
+  <!-- row 11: shoulders -->
+  <rect x="2" y="11" width="12" height="1" fill="#b0b0b0"/>
+  <!-- row 12: body -->
+  <rect x="2" y="12" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="12" width="6" height="1" fill="#b0b0b0"/>
+  <rect x="13" y="12" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 13: body -->
+  <rect x="2" y="13" width="1" height="1" fill="#b0b0b0"/>
+  <rect x="5" y="13" width="6" height="1" fill="#b0b0b0"/>
+  <rect x="13" y="13" width="1" height="1" fill="#b0b0b0"/>
+  <!-- row 14: body bottom -->
+  <rect x="2" y="14" width="12" height="1" fill="#b0b0b0"/>
+  <!-- row 15: legs -->
+  <rect x="3" y="15" width="2" height="1" fill="#b0b0b0"/>
+  <rect x="11" y="15" width="2" height="1" fill="#b0b0b0"/>
+</svg>
