@@ -1,0 +1,31 @@
+proto/controlplane/v1/controlplane.proto
+  35c3b1596a2a71e6 1-143
+buf.yaml
+  35c3b1596a2a71e6 1-11
+.gitignore
+  35c3b1596a2a71e6 4-6
+Makefile
+  35c3b1596a2a71e6 1,3,39-45,69-70
+buf.gen.yaml
+  35c3b1596a2a71e6 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "602828b2eb2ad5ad07033cccd67e1c8c3c1bcce6",
+  "prompts": {
+    "35c3b1596a2a71e6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7af8f97d-ba02-4b26-8bbb-b5ac84be9dc6",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 511,
+      "total_deletions": 166,
+      "accepted_lines": 177,
+      "overriden_lines": 0
+    }
+  }
+}
