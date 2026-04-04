@@ -12,10 +12,13 @@
   "dependencies": {
     "@fontsource-variable/geist-mono": "^5.2.7",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "swr": "^2.4.1",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@redux-devtools/extension": "^4.0.0",
     "@tailwindcss/vite": "^4.2.2",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",

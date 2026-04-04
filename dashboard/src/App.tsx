@@ -1,38 +1,47 @@
-import { useState, useEffect } from 'react'
-import { daemonStatus, runnerSets, recentJobs } from './mock'
+import { useDashboardSync } from './hooks/useDashboardSync'
+import { useDashboardDerived } from './hooks/useDashboardDerived'
 import { elapsed, fmtDuration, fmtUptime } from './utils'
 import { PixelPet } from './components/PixelPet'
-import { MOOD_LABEL, MOOD_SUBTEXT, type PetMood } from './components/petMood'
+import { MOOD_LABEL, MOOD_SUBTEXT } from './components/petMood'
 import { SystemVitals } from './components/SystemVitals'
 import { RunnerSetPanel } from './components/RunnerSetPanel'
 import { JobRow } from './components/JobRow'
 
 export default function App() {
-  const [now, setNow] = useState(new Date())
+  const { isLoading, error } = useDashboardSync()
+  const {
+    daemonStatus,
+    runnerSets,
+    recentJobs,
+    now,
+    uptime,
+    totalMax,
+    totalActive,
+    preparing,
+    idle,
+    busy,
+    utilPct,
+    successCount,
+    failureCount,
+    mood,
+  } = useDashboardDerived()
 
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
+  if (error) {
+    return (
+      <div className="app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', flexDirection: 'column', gap: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', color: '#ff3b30' }}>FAILED TO LOAD</span>
+        <span style={{ fontSize: 11, color: '#555' }}>{String(error)}</span>
+      </div>
+    )
+  }
 
-  const uptime      = elapsed(daemonStatus.startedAt, now)
-  const allRunners  = runnerSets.flatMap(rs => rs.runners)
-  const totalMax    = runnerSets.reduce((s, rs) => s + rs.maxRunners, 0)
-  const totalActive = allRunners.length
-  const preparing   = allRunners.filter(r => r.state === 'preparing').length
-  const idle        = allRunners.filter(r => r.state === 'idle').length
-  const busy        = allRunners.filter(r => r.state === 'busy').length
-  const utilPct     = Math.round((totalActive / totalMax) * 100)
-
-  const completedJobs = recentJobs.filter(j => j.result !== 'running')
-  const successCount  = completedJobs.filter(j => j.result === 'success').length
-  const failureCount  = completedJobs.filter(j => j.result === 'failure').length
-
-  const mood: PetMood =
-    preparing > 0 ? 'alert' :
-    busy > 0      ? 'busy'  :
-    idle > 0      ? 'idle'  :
-    'sleeping'
+  if (isLoading || !daemonStatus) {
+    return (
+      <div className="app-container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
+        <div className="spinner" />
+      </div>
+    )
+  }
 
   return (
     <div className="app-container">
