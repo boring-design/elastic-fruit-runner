@@ -1,4 +1,6 @@
-.PHONY: build run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build run unit-test test fmt fmt-check vet lint check ci generate proto-gen tidy prek-all prek-install help
+
+.DEFAULT_GOAL := help
 
 # Build the CLI binary
 build:
@@ -34,6 +36,13 @@ check: fmt vet build
 # Run all CI checks (same as pre-commit)
 ci: fmt-check vet build lint unit-test
 
+# Run all code generation
+generate: proto-gen
+
+# Generate protobuf and Connect RPC code
+proto-gen:
+	buf generate
+
 # Tidy go modules
 tidy:
 	go mod tidy
@@ -57,6 +66,8 @@ help:
 	@echo "  lint        Run golangci-lint"
 	@echo "  check       Run fmt + vet + build (quick local check)"
 	@echo "  tidy        Tidy go modules"
+	@echo "  generate    Run all code generation"
+	@echo "  proto-gen   Generate protobuf and Connect RPC code"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test        Run all tests"

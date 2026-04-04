@@ -1,4 +1,8 @@
 # Build output
 /elastic-fruit-runner
 /output/
+
+# Generated protobuf code
+/gen/
 github-app-key.pem
+.claude/settings.local.json
