@@ -1,0 +1,29 @@
+dashboard/src/components/RunnerSetPanel.tsx
+  b03d6d035eb7e67b 1-88
+dashboard/src/utils.ts
+  b03d6d035eb7e67b 1-29
+dashboard/src/App.tsx
+  b03d6d035eb7e67b 3,7-8
+dashboard/src/components/JobRow.tsx
+  b03d6d035eb7e67b 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "f9ab17501bbe9a155c2a99ef6d80ca685c570028",
+  "prompts": {
+    "b03d6d035eb7e67b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "177c6e6a-5677-4714-a712-2d46eaa63d43",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 150,
+      "total_deletions": 151,
+      "accepted_lines": 150,
+      "overriden_lines": 0
+    }
+  }
+}
