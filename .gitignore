@@ -2,7 +2,7 @@
 /elastic-fruit-runner
 /output/
 
-# Generated protobuf code
-/gen/
+# Generated protobuf code is committed so CI does not require buf
+# /gen/
 github-app-key.pem
 .claude/settings.local.json

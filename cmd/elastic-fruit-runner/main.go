@@ -42,15 +42,9 @@ func run() error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	logLevel, err := cfg.ParsedLogLevel()
-	if err != nil {
-		slog.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
-		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
+	if err := configureLogging(cfg); err != nil {
+		return err
 	}
-
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: logLevel,
-	})))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -69,6 +63,36 @@ func run() error {
 
 	var wg sync.WaitGroup
 
+	if err := launchOrgControllers(ctx, cfg, &wg, reg); err != nil {
+		return err
+	}
+
+	if err := launchRepoControllers(ctx, cfg, &wg, reg); err != nil {
+		return err
+	}
+
+	startHostMetricsCollector(ctx, reg)
+	startAPIServer(ctx, cfg, &wg, reg)
+
+	wg.Wait()
+	slog.Info("shutdown complete")
+	return nil
+}
+
+func configureLogging(cfg *config.Config) error {
+	logLevel, err := cfg.ParsedLogLevel()
+	if err != nil {
+		slog.Error("invalid log level", "configured", cfg.LogLevel, "valid_values", "debug, info, warn, error", "err", err)
+		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
+	}
+
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+	return nil
+}
+
+func launchOrgControllers(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, reg *registry.Registry) error {
 	for i := range cfg.Orgs {
 		org := &cfg.Orgs[i]
 		client, clientErr := createClient(org.ConfigURL(), &org.Auth)
@@ -80,12 +104,15 @@ func run() error {
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
 			registerRunnerSet(reg, rs, scope)
-			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, reg); err != nil {
+			if err := launchController(ctx, wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
+	return nil
+}
 
+func launchRepoControllers(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, reg *registry.Registry) error {
 	for i := range cfg.Repos {
 		repo := &cfg.Repos[i]
 		client, clientErr := createClient(repo.ConfigURL(), &repo.Auth)
@@ -97,13 +124,15 @@ func run() error {
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
 			registerRunnerSet(reg, rs, scope)
-			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client, reg); err != nil {
+			if err := launchController(ctx, wg, rs, "Default", cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
+	return nil
+}
 
-	// Start host metrics collector.
+func startHostMetricsCollector(ctx context.Context, reg *registry.Registry) {
 	go hostmetrics.RunCollector(ctx, 5*time.Second, func(v hostmetrics.Vitals) {
 		reg.UpdateMachineVitals(registry.MachineVitals{
 			CPUUsagePercent:    v.CPUUsagePercent,
@@ -112,8 +141,9 @@ func run() error {
 			TemperatureCelsius: v.TemperatureCelsius,
 		})
 	})
+}
 
-	// Start API server.
+func startAPIServer(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup, reg *registry.Registry) {
 	apiAddr := cfg.APIAddr
 	if apiAddr == "" {
 		apiAddr = ":8080"
@@ -130,7 +160,6 @@ func run() error {
 		}
 	}()
 
-	// Graceful shutdown: when ctx is cancelled, shut down the HTTP server.
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -139,10 +168,6 @@ func run() error {
 			slog.Error("API server shutdown error", "err", err)
 		}
 	}()
-
-	wg.Wait()
-	slog.Info("shutdown complete")
-	return nil
 }
 
 func registerRunnerSet(reg *registry.Registry, rs *config.RunnerSetConfig, scope string) {
