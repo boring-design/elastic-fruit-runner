@@ -14,6 +14,7 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
+	"github.com/boring-design/elastic-fruit-runner/internal/registry"
 )
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/controller")
@@ -35,8 +36,9 @@ type ScaleSetController struct {
 	client     *scaleset.Client
 	scaleSetID int
 
-	backend backend.Backend
-	logger  *slog.Logger
+	backend  backend.Backend
+	logger   *slog.Logger
+	registry *registry.Registry
 
 	runners runnerState
 
@@ -46,13 +48,14 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend) *ScaleSetController {
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, reg *registry.Registry) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
+		registry:    reg,
 		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }
@@ -158,7 +161,9 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		"maxRunners", d.rsCfg.MaxRunners,
 	)
 
+	d.registry.SetConnected(d.rsCfg.Name, true)
 	listenerErr := l.Run(ctx, d)
+	d.registry.SetConnected(d.rsCfg.Name, false)
 
 	// Stop in-flight preparations and clean up all remaining runners.
 	runnerCancel()

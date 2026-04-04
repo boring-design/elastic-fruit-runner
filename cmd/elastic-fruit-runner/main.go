@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -13,8 +14,11 @@ import (
 	"github.com/actions/scaleset"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
+	"github.com/boring-design/elastic-fruit-runner/internal/api"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
+	"github.com/boring-design/elastic-fruit-runner/internal/hostmetrics"
+	"github.com/boring-design/elastic-fruit-runner/internal/registry"
 	"github.com/boring-design/elastic-fruit-runner/internal/tracing"
 )
 
@@ -61,6 +65,8 @@ func run() error {
 		}
 	}()
 
+	reg := registry.New(time.Now())
+
 	var wg sync.WaitGroup
 
 	for i := range cfg.Orgs {
@@ -70,9 +76,11 @@ func run() error {
 			return fmt.Errorf("create client for org %s: %w", org.Org, clientErr)
 		}
 
+		scope := "org: " + org.Org
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
-			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client); err != nil {
+			registerRunnerSet(reg, rs, scope)
+			if err := launchController(ctx, &wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -85,17 +93,66 @@ func run() error {
 			return fmt.Errorf("create client for repo %s: %w", repo.Repo, clientErr)
 		}
 
+		scope := "repo: " + repo.Repo
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
-			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client); err != nil {
+			registerRunnerSet(reg, rs, scope)
+			if err := launchController(ctx, &wg, rs, "Default", cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
 	}
 
+	// Start host metrics collector.
+	go hostmetrics.RunCollector(ctx, 5*time.Second, func(v hostmetrics.Vitals) {
+		reg.UpdateMachineVitals(registry.MachineVitals{
+			CPUUsagePercent:    v.CPUUsagePercent,
+			MemoryUsagePercent: v.MemoryUsagePercent,
+			DiskUsagePercent:   v.DiskUsagePercent,
+			TemperatureCelsius: v.TemperatureCelsius,
+		})
+	})
+
+	// Start API server.
+	apiAddr := cfg.APIAddr
+	if apiAddr == "" {
+		apiAddr = ":8080"
+	}
+	apiServer := api.NewServer(reg, cfg.IdleTimeout)
+	httpServer := &http.Server{Addr: apiAddr, Handler: apiServer.Handler()}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		slog.Info("API server starting", "addr", apiAddr)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("API server error", "err", err)
+		}
+	}()
+
+	// Graceful shutdown: when ctx is cancelled, shut down the HTTP server.
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			slog.Error("API server shutdown error", "err", err)
+		}
+	}()
+
 	wg.Wait()
 	slog.Info("shutdown complete")
 	return nil
+}
+
+func registerRunnerSet(reg *registry.Registry, rs *config.RunnerSetConfig, scope string) {
+	reg.RegisterRunnerSet(rs.Name, registry.RunnerSetInfo{
+		Name:       rs.Name,
+		Backend:    rs.Backend,
+		Image:      rs.Image,
+		Labels:     rs.Labels,
+		MaxRunners: rs.MaxRunners,
+	}, scope)
 }
 
 func createClient(configURL string, auth *config.AuthConfig) (*scaleset.Client, error) {
@@ -131,7 +188,7 @@ func createClient(configURL string, auth *config.AuthConfig) (*scaleset.Client, 
 	}
 }
 
-func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client) error {
+func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, reg *registry.Registry) error {
 	var b backend.Backend
 	switch rs.Backend {
 	case "tart":
@@ -142,7 +199,7 @@ func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.Runner
 		return fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
 	}
 
-	d := controller.New(rs, runnerGroup, idleTimeout, client, b)
+	d := controller.New(rs, runnerGroup, idleTimeout, client, b, reg)
 
 	slog.Info("launching controller",
 		"runnerSet", rs.Name,

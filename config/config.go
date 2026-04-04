@@ -13,6 +13,7 @@ type Config struct {
 	Repos       []RepoConfig  `yaml:"repos"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
+	APIAddr     string        `yaml:"api_addr"`
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.

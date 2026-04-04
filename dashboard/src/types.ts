@@ -15,6 +15,7 @@ export interface RunnerSet {
   labels: string[]
   maxRunners: number
   scope: string
+  connected: boolean
   runners: Runner[]
 }
 
@@ -33,4 +34,11 @@ export interface DaemonStatus {
   startedAt: Date
   githubConnected: boolean
   idleTimeout: number
+}
+
+export interface MachineVitals {
+  cpuUsagePercent: number
+  memoryUsagePercent: number
+  diskUsagePercent: number
+  temperatureCelsius: number
 }

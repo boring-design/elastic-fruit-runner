@@ -1,0 +1,156 @@
+package api
+
+import (
+	"context"
+	"net/http"
+	"time"
+
+	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
+	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
+	"github.com/boring-design/elastic-fruit-runner/internal/controller"
+	"github.com/boring-design/elastic-fruit-runner/internal/registry"
+)
+
+var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
+
+// Server implements ControlPlaneServiceHandler.
+type Server struct {
+	registry    *registry.Registry
+	idleTimeout time.Duration
+}
+
+// NewServer creates an API server backed by the given registry.
+func NewServer(reg *registry.Registry, idleTimeout time.Duration) *Server {
+	return &Server{registry: reg, idleTimeout: idleTimeout}
+}
+
+// Handler returns the HTTP handler for the Connect RPC service with CORS support.
+func (s *Server) Handler() http.Handler {
+	mux := http.NewServeMux()
+	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s)
+	mux.Handle(path, handler)
+	return withCORS(mux)
+}
+
+func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
+	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
+		Version:            controller.Version,
+		CommitSha:          controller.CommitSHA,
+		StartedAt:          timestamppb.New(s.registry.StartedAt()),
+		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
+	}), nil
+}
+
+func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlplanev1.ListRunnerSetsRequest]) (*connect.Response[controlplanev1.ListRunnerSetsResponse], error) {
+	snapshots := s.registry.Snapshot()
+	sets := make([]*controlplanev1.RunnerSet, 0, len(snapshots))
+	for _, snap := range snapshots {
+		runners := make([]*controlplanev1.Runner, 0, len(snap.Runners))
+		for _, r := range snap.Runners {
+			runners = append(runners, &controlplanev1.Runner{
+				Name:  r.Name,
+				State: toProtoRunnerState(r.State),
+				Since: timestamppb.New(r.Since),
+			})
+		}
+		sets = append(sets, &controlplanev1.RunnerSet{
+			Name:       snap.Info.Name,
+			Backend:    toProtoBackend(snap.Info.Backend),
+			Image:      snap.Info.Image,
+			Labels:     snap.Info.Labels,
+			MaxRunners: int32(snap.Info.MaxRunners),
+			Scope:      snap.Scope,
+			Connected:  snap.Connected,
+			Runners:    runners,
+		})
+	}
+	return connect.NewResponse(&controlplanev1.ListRunnerSetsResponse{
+		RunnerSets: sets,
+	}), nil
+}
+
+func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
+	jobs := s.registry.RecentJobs()
+	records := make([]*controlplanev1.JobRecord, 0, len(jobs))
+	for _, j := range jobs {
+		rec := &controlplanev1.JobRecord{
+			Id:            j.ID,
+			RunnerName:    j.RunnerName,
+			RunnerSetName: j.RunnerSetName,
+			Result:        toProtoJobResult(j.Result),
+			StartedAt:     timestamppb.New(j.StartedAt),
+		}
+		if j.CompletedAt != nil {
+			rec.CompletedAt = timestamppb.New(*j.CompletedAt)
+		}
+		records = append(records, rec)
+	}
+	return connect.NewResponse(&controlplanev1.ListJobRecordsResponse{
+		JobRecords: records,
+	}), nil
+}
+
+func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlplanev1.GetMachineVitalsRequest]) (*connect.Response[controlplanev1.GetMachineVitalsResponse], error) {
+	v := s.registry.GetMachineVitals()
+	return connect.NewResponse(&controlplanev1.GetMachineVitalsResponse{
+		CpuUsagePercent:    v.CPUUsagePercent,
+		MemoryUsagePercent: v.MemoryUsagePercent,
+		DiskUsagePercent:   v.DiskUsagePercent,
+		TemperatureCelsius: v.TemperatureCelsius,
+	}), nil
+}
+
+func toProtoRunnerState(s registry.RunnerState) controlplanev1.RunnerState {
+	switch s {
+	case registry.StatePreparing:
+		return controlplanev1.RunnerState_RUNNER_STATE_PREPARING
+	case registry.StateIdle:
+		return controlplanev1.RunnerState_RUNNER_STATE_IDLE
+	case registry.StateBusy:
+		return controlplanev1.RunnerState_RUNNER_STATE_BUSY
+	default:
+		return controlplanev1.RunnerState_RUNNER_STATE_UNSPECIFIED
+	}
+}
+
+func toProtoBackend(b string) controlplanev1.Backend {
+	switch b {
+	case "tart":
+		return controlplanev1.Backend_BACKEND_TART
+	case "docker":
+		return controlplanev1.Backend_BACKEND_DOCKER
+	default:
+		return controlplanev1.Backend_BACKEND_UNSPECIFIED
+	}
+}
+
+func toProtoJobResult(r string) controlplanev1.JobResult {
+	switch r {
+	case "running":
+		return controlplanev1.JobResult_JOB_RESULT_RUNNING
+	case "Succeeded":
+		return controlplanev1.JobResult_JOB_RESULT_SUCCESS
+	case "Failed":
+		return controlplanev1.JobResult_JOB_RESULT_FAILURE
+	default:
+		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
+	}
+}
+
+// withCORS wraps a handler with permissive CORS headers for dashboard dev mode.
+func withCORS(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version")
+		w.Header().Set("Access-Control-Expose-Headers", "Connect-Protocol-Version")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}

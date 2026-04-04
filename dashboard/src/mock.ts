@@ -19,6 +19,7 @@ export const runnerSets: RunnerSet[] = [
     labels: ['macos', 'arm64', 'xcode-16'],
     maxRunners: 5,
     scope: 'org: acme-corp',
+    connected: true,
     runners: [
       { name: 'macos-tart-arm64-a3f2c', state: 'busy',     since: ago(134) },
       { name: 'macos-tart-arm64-b7d1a', state: 'busy',     since: ago(331) },
@@ -33,6 +34,7 @@ export const runnerSets: RunnerSet[] = [
     labels: ['linux', 'arm64'],
     maxRunners: 5,
     scope: 'org: acme-corp',
+    connected: true,
     runners: [
       { name: 'docker-linux-arm64-e1a3d', state: 'busy', since: ago(482) },
       { name: 'docker-linux-arm64-f5b2e', state: 'idle', since: ago(202) },
