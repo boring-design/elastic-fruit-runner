@@ -1,0 +1,31 @@
+dashboard/src/hooks/useDashboardSync.ts
+  b03d6d035eb7e67b 1-35
+dashboard/src/api/fetchers.ts
+  b03d6d035eb7e67b 1-14
+dashboard/src/store/useDashboardStore.ts
+  b03d6d035eb7e67b 1-32
+dashboard/src/hooks/useDashboardDerived.ts
+  b03d6d035eb7e67b 1-44
+dashboard/src/App.tsx
+  b03d6d035eb7e67b 1-2,5,11-27,29-36,38-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "a871f536a6b8cf88b703c4b2abb2f54ac5bad733",
+  "prompts": {
+    "b03d6d035eb7e67b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "177c6e6a-5677-4714-a712-2d46eaa63d43",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 162,
+      "total_deletions": 28,
+      "accepted_lines": 161,
+      "overriden_lines": 0
+    }
+  }
+}
