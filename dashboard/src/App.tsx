@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import type { Runner, RunnerSet, JobRecord } from './types'
 import { daemonStatus, runnerSets, recentJobs } from './mock'
-import { PixelPet, MOOD_LABEL, MOOD_SUBTEXT, type PetMood } from './components/PixelPet'
+import { PixelPet } from './components/PixelPet'
+import { MOOD_LABEL, MOOD_SUBTEXT, type PetMood } from './components/petMood'
 import { SystemVitals } from './components/SystemVitals'
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

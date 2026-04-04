@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-
-export type PetMood = 'idle' | 'busy' | 'sleeping' | 'alert'
+import type { PetMood } from './petMood'
 
 // ─── Pixel frame definitions (16×16) ─────────────────────────────────────────
 // 0 = transparent  1 = body  2 = eye/bright  3 = mouth  4 = dim/shadow
@@ -194,9 +193,13 @@ interface PixelPetProps {
 export function PixelPet({ mood }: PixelPetProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [seqIdx, setSeqIdx] = useState(0)
+  const [prevMood, setPrevMood] = useState(mood)
 
   // Reset sequence index when mood changes
-  useEffect(() => { setSeqIdx(0) }, [mood])
+  if (prevMood !== mood) {
+    setPrevMood(mood)
+    setSeqIdx(0)
+  }
 
   // Advance animation frames
   useEffect(() => {
@@ -227,17 +230,3 @@ export function PixelPet({ mood }: PixelPetProps) {
   )
 }
 
-// ─── Status text per mood ─────────────────────────────────────────────────────
-export const MOOD_LABEL: Record<PetMood, string> = {
-  idle:     'STANDING BY',
-  busy:     'PROCESSING',
-  sleeping: 'RESTING',
-  alert:    'SPINNING UP',
-}
-
-export const MOOD_SUBTEXT: Record<PetMood, string> = {
-  idle:     'runners waiting for jobs',
-  busy:     'jobs in execution',
-  sleeping: 'all runners idle',
-  alert:    'preparing new runners',
-}
