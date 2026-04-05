@@ -1,0 +1,25 @@
+internal/registry/jobs.go
+  e45db5b1993696b7 72-73,77
+internal/hostmetrics/collector.go
+  e45db5b1993696b7 31-32,40-41,45,48,52-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "73fc72da576e37929cbe6ddb36d43993211a8a02",
+  "prompts": {
+    "e45db5b1993696b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c404bf10-a044-4892-b5ed-3c909ea5ca22",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 14,
+      "total_deletions": 4,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    }
+  }
+}

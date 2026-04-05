@@ -1,0 +1,25 @@
+.gitignore
+  95ee1e4406237ce2 5-6
+cmd/elastic-fruit-runner/main.go
+  95ee1e4406237ce2 45-46,66-80,82-95,107,112-113,115,127,132-133,135,144,146
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "45e52537293649348aad4220c73e42e5ef79ea4b",
+  "prompts": {
+    "95ee1e4406237ce2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4f56a9f7-1462-4620-8da6-3669cf1aaeb1",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 44,
+      "total_deletions": 19,
+      "accepted_lines": 44,
+      "overriden_lines": 0
+    }
+  }
+}
