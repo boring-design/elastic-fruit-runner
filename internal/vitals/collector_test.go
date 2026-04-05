@@ -1,5 +1,3 @@
-//go:build linux
-
 package vitals
 
 import (
@@ -7,7 +5,7 @@ import (
 	"time"
 )
 
-func TestCollect_Linux_ReturnsNonZero(t *testing.T) {
+func TestCollect_ReturnsValidRanges(t *testing.T) {
 	// First call seeds the CPU counters; second call computes a delta.
 	Collect()
 	time.Sleep(100 * time.Millisecond)
@@ -22,5 +20,5 @@ func TestCollect_Linux_ReturnsNonZero(t *testing.T) {
 	if v.DiskUsagePercent <= 0 || v.DiskUsagePercent > 100 {
 		t.Errorf("DiskUsagePercent out of range: %f", v.DiskUsagePercent)
 	}
-	// Temperature may be 0 if thermal_zone0 is not available in container.
+	// Temperature may be 0 on platforms without sensor support.
 }

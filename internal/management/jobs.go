@@ -1,6 +1,7 @@
 package management
 
 import (
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -50,9 +51,18 @@ func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
 	}
 }
 
+// knownJobResults is the set of valid result strings from the GitHub Actions API.
+var knownJobResults = map[string]struct{}{
+	"Succeeded": {},
+	"Failed":    {},
+}
+
 // RecordJobCompleted finds an existing job by ID and updates its result.
 // If the job was evicted (ring wrapped), inserts a completed-only record.
 func (s *JobStore) RecordJobCompleted(jobID, result string) {
+	if _, ok := knownJobResults[result]; !ok {
+		slog.Warn("unexpected job result from scale-set API, recording as-is", "job_id", jobID, "result", result)
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

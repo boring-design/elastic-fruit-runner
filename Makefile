@@ -34,7 +34,7 @@ lint:
 check: fmt vet build
 
 # Run all CI checks (same as pre-commit)
-ci: fmt-check vet build lint unit-test
+ci: fmt-check vet build lint unit-test prek-all
 
 # Run all code generation
 generate: proto-gen

@@ -153,9 +153,9 @@ func (d *ScaleSetController) shutdown(ctx context.Context) {
 		toCleanup = append(toCleanup, name)
 	}
 	preparingCount := len(d.runners.preparing)
-	d.runners.preparing = make(map[string]struct{})
+	d.runners.preparing = make(map[string]time.Time)
 	d.runners.idle = make(map[string]time.Time)
-	d.runners.busy = make(map[string]struct{})
+	d.runners.busy = make(map[string]time.Time)
 	d.runners.mu.Unlock()
 
 	if preparingCount > 0 {
@@ -241,9 +241,9 @@ func (d *ScaleSetController) removeGitHubRunner(ctx context.Context, name string
 type runnerState struct {
 	mu        sync.Mutex
 	runnerCtx context.Context
-	preparing map[string]struct{}
+	preparing map[string]time.Time
 	idle      map[string]time.Time
-	busy      map[string]struct{}
+	busy      map[string]time.Time
 }
 
 func (r *runnerState) setRunnerCtx(ctx context.Context) {
@@ -276,9 +276,9 @@ func (r *runnerState) addPreparing(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.preparing == nil {
-		r.preparing = make(map[string]struct{})
+		r.preparing = make(map[string]time.Time)
 	}
-	r.preparing[name] = struct{}{}
+	r.preparing[name] = time.Now()
 }
 
 func (r *runnerState) moveToIdle(name string) {
@@ -296,9 +296,9 @@ func (r *runnerState) markBusy(name string) {
 	defer r.mu.Unlock()
 	delete(r.idle, name)
 	if r.busy == nil {
-		r.busy = make(map[string]struct{})
+		r.busy = make(map[string]time.Time)
 	}
-	r.busy[name] = struct{}{}
+	r.busy[name] = time.Now()
 }
 
 // markDone removes the runner from whichever set it is in.
@@ -317,14 +317,14 @@ func (r *runnerState) snapshot() []RunnerSnapshot {
 	defer r.mu.Unlock()
 
 	result := make([]RunnerSnapshot, 0, len(r.preparing)+len(r.idle)+len(r.busy))
-	for name := range r.preparing {
-		result = append(result, RunnerSnapshot{Name: name, State: StatePreparing})
+	for name, since := range r.preparing {
+		result = append(result, RunnerSnapshot{Name: name, State: StatePreparing, Since: since})
 	}
 	for name, since := range r.idle {
 		result = append(result, RunnerSnapshot{Name: name, State: StateIdle, Since: since})
 	}
-	for name := range r.busy {
-		result = append(result, RunnerSnapshot{Name: name, State: StateBusy})
+	for name, since := range r.busy {
+		result = append(result, RunnerSnapshot{Name: name, State: StateBusy, Since: since})
 	}
 	return result
 }
