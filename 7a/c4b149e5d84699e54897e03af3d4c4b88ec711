@@ -1,0 +1,25 @@
+cmd/elastic-fruit-runner/main.go
+  73571ab2f0e59afd 58-59,61,65,71,94
+internal/api/server.go
+  73571ab2f0e59afd 22-23,30,35-36,54,60,88,109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "7ac4b149e5d84699e54897e03af3d4c4b88ec711",
+  "prompts": {
+    "73571ab2f0e59afd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99326584-02b5-443a-8f03-d924be2494e4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 17,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  }
+}
