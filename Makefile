@@ -1,98 +1,71 @@
-.PHONY: help build build-full build-go build-all clean test fmt fmt-check vet lint check ci generate proto-gen sqlc-gen tidy dashboard dashboard-clean prek-all prek-install
+.PHONY: build run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
-# Build variables
-BINARY_NAME := elastic-fruit-runner
-BUILD_DIR := output
-GO := go
-GOFLAGS := -v
+# Build the CLI binary
+build:
+	@mkdir -p output
+	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
-# Dashboard variables
-DASHBOARD_DIR := dashboard
+# Run unit tests
+unit-test:
+	go test ./...
 
-# Version info: tag if tagged, "untagged" otherwise; sha with -dirty suffix if dirty
-GIT_SHA := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-GIT_DIRTY := $(shell git diff-index --quiet HEAD -- 2>/dev/null || echo "dirty")
-GIT_TAG := $(shell git describe --tags --exact-match 2>/dev/null)
+# Run all tests
+test: unit-test
 
-ifdef GIT_TAG
-    VERSION := $(GIT_TAG)
-else
-    VERSION := untagged
-endif
-
-ifdef GIT_DIRTY
-    GIT_SHA := $(GIT_SHA)-dirty
-endif
-
-VERSION_PKG := github.com/boring-design/elastic-fruit-runner/internal/controller
-LDFLAGS := -s -w -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).CommitSHA=$(GIT_SHA)
-
-help: ## Show this help message
-	@echo "Elastic Fruit Runner - Build System"
-	@echo ""
-	@echo "Usage: make [target]"
-	@echo ""
-	@echo "Targets:"
-	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-
-build: build-go ## Build the Go binary
-
-build-full: dashboard build-go ## Build binary with dashboard
-
-build-go: ## Build Go binary only
-	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(GOFLAGS) -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/elastic-fruit-runner/
-
-build-all: ## Build for all platforms (linux/darwin, amd64/arm64)
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 ./cmd/elastic-fruit-runner/
-	GOOS=linux GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 ./cmd/elastic-fruit-runner/
-	GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 ./cmd/elastic-fruit-runner/
-	GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 ./cmd/elastic-fruit-runner/
-
-clean: dashboard-clean ## Remove build artifacts
-	rm -rf $(BUILD_DIR)
-	rm -f coverage.out
-
-test: ## Run tests
-	$(GO) test ./...
-
-fmt: ## Format Go code
+# Format Go code
+fmt:
 	gofmt -l -w .
 
-fmt-check: ## Check formatting without modifying files
+# Check formatting without modifying files (fails if unformatted)
+fmt-check:
 	@test -z "$$(gofmt -l .)" || (echo "Files not formatted:"; gofmt -l .; exit 1)
 
-vet: ## Run go vet
-	$(GO) vet ./...
+# Run go vet
+vet:
+	go vet ./...
 
-lint: ## Run golangci-lint
-	@command -v golangci-lint >/dev/null 2>&1 || { echo "ERROR: golangci-lint not installed"; exit 1; }
-	golangci-lint run ./...
+# Run golangci-lint
+lint:
+	golangci-lint run
 
-check: fmt vet build-go ## Quick local check (fmt + vet + build)
+# Run quick local checks before committing (format, vet, build, prek)
+check: fmt vet build prek-all
 
-ci: fmt-check vet build-go lint test prek-all ## Run all CI checks
+# Run all CI checks (same as pre-commit)
+ci: fmt-check vet build lint unit-test
 
-generate: proto-gen sqlc-gen ## Run all code generation
+# Tidy go modules
+tidy:
+	go mod tidy
 
-proto-gen: ## Generate protobuf and Connect RPC code
-	buf generate
-
-sqlc-gen: ## Generate sqlc query code
-	cd internal/management/sqlc && sqlc generate
-
-tidy: ## Tidy go modules
-	$(GO) mod tidy
-
-dashboard: ## Build dashboard
-	cd $(DASHBOARD_DIR) && pnpm install && pnpm run build
-
-dashboard-clean: ## Clean dashboard build artifacts
-	rm -rf $(DASHBOARD_DIR)/node_modules $(DASHBOARD_DIR)/dist
-
-prek-all: ## Run prek on all files
+# Run prek on all files
+prek-all:
 	prek run --all-files
 
-prek-install: ## Install prek git hooks
+# Install prek git hooks
+prek-install:
 	prek install
+
+# Show available targets
+help:
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Development:"
+	@echo "  build       Build the CLI binary to output/"
+	@echo "  fmt         Format Go code"
+	@echo "  vet         Run go vet"
+	@echo "  lint        Run golangci-lint"
+	@echo "  check       Run fmt + vet + build (quick local check)"
+	@echo "  tidy        Tidy go modules"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test        Run all tests"
+	@echo "  unit-test   Run unit tests"
+	@echo ""
+	@echo "CI:"
+	@echo "  ci          Run all CI checks (fmt-check + vet + build + lint + unit-test)"
+	@echo "  fmt-check   Check formatting without modifying files"
+	@echo ""
+	@echo "Hooks:"
+	@echo "  prek-install  Install prek git hooks"
+	@echo "  prek-all      Run prek on all files"
