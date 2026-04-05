@@ -57,10 +57,21 @@ export default function App() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="pulse" style={{ fontSize: 10, color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>●</span>
-          <span style={{ fontSize: 11, letterSpacing: '0.12em', color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>
-            {daemonStatus.githubConnected ? 'CONNECTED' : 'DISCONNECTED'}
-          </span>
+          {daemonStatus.githubConnected === null ? (
+            <>
+              <span className="pulse" style={{ fontSize: 10, color: '#888' }}>●</span>
+              <span style={{ fontSize: 11, letterSpacing: '0.12em', color: '#888' }}>
+                CHECKING...
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="pulse" style={{ fontSize: 10, color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>●</span>
+              <span style={{ fontSize: 11, letterSpacing: '0.12em', color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>
+                {daemonStatus.githubConnected ? 'CONNECTED' : 'DISCONNECTED'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 

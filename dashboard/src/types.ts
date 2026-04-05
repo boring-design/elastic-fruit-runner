@@ -32,7 +32,8 @@ export interface DaemonStatus {
   version: string
   commitSha: string
   startedAt: Date
-  githubConnected: boolean
+  // null while runner set data has not been fetched yet (loading state)
+  githubConnected: boolean | null
   idleTimeout: number
 }
 

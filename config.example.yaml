@@ -52,3 +52,8 @@ orgs:
 #         max_runners: 2
 
 idle_timeout: 15m
+
+# CORS origin for the API server. Defaults to "*" (allow all) which is fine for
+# local development. In production, set this to your dashboard's actual origin
+# (e.g. "https://dashboard.example.com") to restrict cross-origin access.
+# cors_origin: "*"

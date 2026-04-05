@@ -77,9 +77,11 @@ let cachedRunnerSets: RunnerSet[] = []
 
 export async function fetchDaemonStatus(): Promise<DaemonStatus> {
   const data = await rpc<ServiceInfoResponse>('GetServiceInfo')
+  // Return null when runner set data has not been fetched yet so the UI
+  // can show a loading indicator instead of a misleading "CONNECTED".
   const githubConnected = cachedRunnerSets.length > 0
     ? cachedRunnerSets.every(rs => rs.connected)
-    : true
+    : null
   return {
     version: data.version,
     commitSha: data.commitSha,

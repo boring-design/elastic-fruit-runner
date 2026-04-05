@@ -14,6 +14,7 @@ type Config struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
+	CORSOrigin  string        `yaml:"cors_origin"`
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.

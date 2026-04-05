@@ -20,11 +20,16 @@ var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
 type Server struct {
 	registry    *registry.Registry
 	idleTimeout time.Duration
+	corsOrigin  string
 }
 
 // NewServer creates an API server backed by the given registry.
-func NewServer(reg *registry.Registry, idleTimeout time.Duration) *Server {
-	return &Server{registry: reg, idleTimeout: idleTimeout}
+// corsOrigin controls the Access-Control-Allow-Origin header; defaults to "*".
+func NewServer(reg *registry.Registry, idleTimeout time.Duration, corsOrigin string) *Server {
+	if corsOrigin == "" {
+		corsOrigin = "*"
+	}
+	return &Server{registry: reg, idleTimeout: idleTimeout, corsOrigin: corsOrigin}
 }
 
 // Handler returns the HTTP handler for the Connect RPC service with CORS support.
@@ -32,7 +37,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s)
 	mux.Handle(path, handler)
-	return withCORS(mux)
+	return withCORS(mux, s.corsOrigin)
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
@@ -140,10 +145,11 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 	}
 }
 
-// withCORS wraps a handler with permissive CORS headers for dashboard dev mode.
-func withCORS(h http.Handler) http.Handler {
+// withCORS wraps a handler with CORS headers. The allowed origin is
+// configurable via the cors_origin config field (defaults to "*").
+func withCORS(h http.Handler, origin string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version")
 		w.Header().Set("Access-Control-Expose-Headers", "Connect-Protocol-Version")
