@@ -69,9 +69,12 @@ func (r *JobRing) RecordCompleted(jobID, result string) {
 
 	// Job was evicted from the ring (wrapped). Insert a completed-only record
 	// so that completion events are not silently lost.
+	// Set StartedAt to CompletedAt so dashboard duration math shows zero
+	// instead of a multi-century value from a zero-time start.
 	r.entries[r.cursor] = JobRecord{
 		ID:          jobID,
 		Result:      result,
+		StartedAt:   now,
 		CompletedAt: &now,
 	}
 	r.cursor = (r.cursor + 1) % r.size

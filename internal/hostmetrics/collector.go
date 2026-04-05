@@ -28,6 +28,8 @@ func Collect() Vitals {
 }
 
 // readCPUTicks reads kern.cp_time and returns (user, nice, sys, idle).
+// On 64-bit Darwin, kern.cp_time exposes 5 counters as C `long` values
+// (8 bytes each), so the raw payload is 40 bytes.
 func readCPUTicks() (user, nice, sys, idle uint64, ok bool) {
 	cpTime, err := unix.SysctlRaw("kern.cp_time")
 	if err != nil {
@@ -35,18 +37,23 @@ func readCPUTicks() (user, nice, sys, idle uint64, ok bool) {
 		return 0, 0, 0, 0, false
 	}
 
-	if len(cpTime) < 20 {
+	// 5 counters x 8 bytes (uint64 / long on 64-bit Darwin) = 40 bytes.
+	if len(cpTime) < 40 {
 		return 0, 0, 0, 0, false
 	}
 
-	// Parse as 5 little-endian uint32 values.
+	// Parse as 5 little-endian uint64 values.
 	vals := make([]uint64, 5)
 	for i := range 5 {
-		offset := i * 4
+		offset := i * 8
 		vals[i] = uint64(cpTime[offset]) |
 			uint64(cpTime[offset+1])<<8 |
 			uint64(cpTime[offset+2])<<16 |
-			uint64(cpTime[offset+3])<<24
+			uint64(cpTime[offset+3])<<24 |
+			uint64(cpTime[offset+4])<<32 |
+			uint64(cpTime[offset+5])<<40 |
+			uint64(cpTime[offset+6])<<48 |
+			uint64(cpTime[offset+7])<<56
 	}
 
 	return vals[0], vals[1], vals[2], vals[3], true
