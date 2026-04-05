@@ -1,0 +1,37 @@
+internal/controller/controller.go
+  73571ab2f0e59afd 8,41-44,54,61-62,168,170
+internal/management/service.go
+  73571ab2f0e59afd 1-170
+internal/api/server.go
+  73571ab2f0e59afd 14-15,22-23,28,30,35-36,38,54,60-64,72-78,88,109,118,120,122,124
+internal/controller/scaler.go
+  73571ab2f0e59afd 44,65,83,156,255-260,313-358
+internal/vitals/service.go
+  73571ab2f0e59afd 1-45
+cmd/elastic-fruit-runner/main.go
+  73571ab2f0e59afd 5,16,18,58-59,61,63,65,71,76,90-92,95-99,102-104
+internal/management/jobs.go
+  73571ab2f0e59afd 1-94
+internal/controller/types.go
+  73571ab2f0e59afd 1-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "ed12c1176d1ff6fb046e5dde81c63c817b16a2c5",
+  "prompts": {
+    "73571ab2f0e59afd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99326584-02b5-443a-8f03-d924be2494e4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 482,
+      "total_deletions": 231,
+      "accepted_lines": 459,
+      "overriden_lines": 0
+    }
+  }
+}
