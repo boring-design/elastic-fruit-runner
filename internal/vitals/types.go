@@ -1,4 +1,4 @@
-package hostmetrics
+package vitals
 
 import (
 	"context"

@@ -1,6 +1,6 @@
 //go:build darwin
 
-package hostmetrics
+package vitals
 
 import (
 	"log/slog"

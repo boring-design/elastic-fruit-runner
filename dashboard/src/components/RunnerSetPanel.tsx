@@ -6,7 +6,7 @@ function StateLabel({ state }: { state: Runner['state'] }) {
     busy:      { label: 'BUSY', color: '#f0f0f0' },
     idle:      { label: 'IDLE', color: '#888' },
     preparing: { label: 'PREP', color: '#aaa' },
-    unknown:   { label: '???',  color: '#666' },
+    unknown:   { label: 'UNKNOWN', color: '#666' },
   }
   const { label, color } = map[state]
   return (
@@ -68,7 +68,7 @@ export function RunnerSetPanel({ rs, now }: { rs: RunnerSet; now: Date }) {
         {busyCount > 0 && <span style={{ color: '#f0f0f0' }}>{busyCount} BUSY</span>}
         {idleCount > 0 && <span style={{ color: '#888' }}>{idleCount} IDLE</span>}
         {prepCount > 0 && <span style={{ color: '#aaa' }}>{prepCount} PREP</span>}
-        {unknownCount > 0 && <span style={{ color: '#666' }}>{unknownCount} ???</span>}
+        {unknownCount > 0 && <span style={{ color: '#666' }}>{unknownCount} UNKNOWN</span>}
         {count === 0 && <span style={{ color: '#444' }}>NO RUNNERS</span>}
       </div>
 

@@ -14,7 +14,17 @@ type Config struct {
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
-	CORSOrigin  string        `yaml:"cors_origin"`
+	CORS        CORSConfig    `yaml:"cors"`
+}
+
+// CORSConfig holds Cross-Origin Resource Sharing settings.
+type CORSConfig struct {
+	AllowOrigin      string `yaml:"allow_origin"`
+	AllowMethods     string `yaml:"allow_methods"`
+	AllowHeaders     string `yaml:"allow_headers"`
+	ExposeHeaders    string `yaml:"expose_headers"`
+	AllowCredentials bool   `yaml:"allow_credentials"`
+	MaxAge           int    `yaml:"max_age"`
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.

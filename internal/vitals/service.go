@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/boring-design/elastic-fruit-runner/internal/hostmetrics"
 )
 
 // Service provides process-level information (startedAt) and periodically
@@ -14,10 +12,10 @@ type Service struct {
 	startedAt time.Time
 
 	mu      sync.RWMutex
-	current hostmetrics.Vitals
+	current Vitals
 }
 
-// New creates a VitalsService that records the given start time.
+// New creates a Service that records the given start time.
 func New(startedAt time.Time) *Service {
 	return &Service{startedAt: startedAt}
 }
@@ -25,7 +23,7 @@ func New(startedAt time.Time) *Service {
 // Start begins periodic host metrics collection in a background goroutine.
 // Blocks until ctx is cancelled.
 func (s *Service) Start(ctx context.Context, interval time.Duration) {
-	hostmetrics.RunCollector(ctx, interval, func(v hostmetrics.Vitals) {
+	RunCollector(ctx, interval, func(v Vitals) {
 		s.mu.Lock()
 		s.current = v
 		s.mu.Unlock()
@@ -38,7 +36,7 @@ func (s *Service) StartedAt() time.Time {
 }
 
 // GetVitals returns the latest host metrics snapshot.
-func (s *Service) GetVitals() hostmetrics.Vitals {
+func (s *Service) GetVitals() Vitals {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.current

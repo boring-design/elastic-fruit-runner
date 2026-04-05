@@ -3,11 +3,13 @@ package api
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/boring-design/elastic-fruit-runner/config"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
@@ -22,20 +24,28 @@ type Server struct {
 	managementService *management.Service
 	vitalsService     *vitals.Service
 	idleTimeout       time.Duration
-	corsOrigin        string
+	cors              config.CORSConfig
 }
 
 // NewServer creates an API server backed by the management and vitals services.
-// corsOrigin controls the Access-Control-Allow-Origin header; defaults to "*".
-func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, corsOrigin string) *Server {
-	if corsOrigin == "" {
-		corsOrigin = "*"
+func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, cors config.CORSConfig) *Server {
+	if cors.AllowOrigin == "" {
+		cors.AllowOrigin = "*"
+	}
+	if cors.AllowMethods == "" {
+		cors.AllowMethods = "GET, POST, OPTIONS"
+	}
+	if cors.AllowHeaders == "" {
+		cors.AllowHeaders = "Content-Type, Connect-Protocol-Version"
+	}
+	if cors.ExposeHeaders == "" {
+		cors.ExposeHeaders = "Connect-Protocol-Version"
 	}
 	return &Server{
 		managementService: managementService,
 		vitalsService:     vitalsService,
 		idleTimeout:       idleTimeout,
-		corsOrigin:        corsOrigin,
+		cors:              cors,
 	}
 }
 
@@ -44,7 +54,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s)
 	mux.Handle(path, handler)
-	return withCORS(mux, s.corsOrigin)
+	return withCORS(mux, s.cors)
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
@@ -152,14 +162,19 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 	}
 }
 
-// withCORS wraps a handler with CORS headers. The allowed origin is
-// configurable via the cors_origin config field (defaults to "*").
-func withCORS(h http.Handler, origin string) http.Handler {
+// withCORS wraps a handler with CORS headers based on the provided configuration.
+func withCORS(h http.Handler, cors config.CORSConfig) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Connect-Protocol-Version")
-		w.Header().Set("Access-Control-Expose-Headers", "Connect-Protocol-Version")
+		w.Header().Set("Access-Control-Allow-Origin", cors.AllowOrigin)
+		w.Header().Set("Access-Control-Allow-Methods", cors.AllowMethods)
+		w.Header().Set("Access-Control-Allow-Headers", cors.AllowHeaders)
+		w.Header().Set("Access-Control-Expose-Headers", cors.ExposeHeaders)
+		if cors.AllowCredentials {
+			w.Header().Set("Access-Control-Allow-Credentials", "true")
+		}
+		if cors.MaxAge > 0 {
+			w.Header().Set("Access-Control-Max-Age", strconv.Itoa(cors.MaxAge))
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
