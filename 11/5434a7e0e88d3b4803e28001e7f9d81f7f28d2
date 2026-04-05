@@ -1,0 +1,23 @@
+.github/workflows/claude.yml
+  05a757ea37192099 43-45,47-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "115434a7e0e88d3b4803e28001e7f9d81f7f28d2",
+  "prompts": {
+    "05a757ea37192099": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3d50425f-4281-46e8-b4d5-69ee390d65d1",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 7,
+      "accepted_lines": 35,
+      "overriden_lines": 0
+    }
+  }
+}
