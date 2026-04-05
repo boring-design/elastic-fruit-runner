@@ -95,7 +95,7 @@ export async function fetchRunnerSets(): Promise<RunnerSet[]> {
   const data = await rpc<RunnerSetsResponse>('ListRunnerSets')
   const sets = (data.runnerSets ?? []).map((rs): RunnerSet => ({
     name: rs.name,
-    backend: BACKEND_MAP[rs.backend] ?? 'tart',
+    backend: BACKEND_MAP[rs.backend] ?? 'unknown',
     image: rs.image,
     labels: rs.labels ?? [],
     maxRunners: rs.maxRunners,
@@ -103,7 +103,7 @@ export async function fetchRunnerSets(): Promise<RunnerSet[]> {
     connected: rs.connected,
     runners: (rs.runners ?? []).map((r): Runner => ({
       name: r.name,
-      state: RUNNER_STATE_MAP[r.state] ?? 'preparing',
+      state: RUNNER_STATE_MAP[r.state] ?? 'unknown',
       since: new Date(r.since),
     })),
   }))

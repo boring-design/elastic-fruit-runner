@@ -2,10 +2,11 @@ import type { Runner, RunnerSet } from '../types'
 import { elapsed, fmtDuration, shortName } from '../utils'
 
 function StateLabel({ state }: { state: Runner['state'] }) {
-  const map = {
-    busy:     { label: 'BUSY', color: '#f0f0f0' },
-    idle:     { label: 'IDLE', color: '#888' },
-    preparing:{ label: 'PREP', color: '#aaa' },
+  const map: Record<Runner['state'], { label: string; color: string }> = {
+    busy:      { label: 'BUSY', color: '#f0f0f0' },
+    idle:      { label: 'IDLE', color: '#888' },
+    preparing: { label: 'PREP', color: '#aaa' },
+    unknown:   { label: '???',  color: '#666' },
   }
   const { label, color } = map[state]
   return (
@@ -33,9 +34,10 @@ function RunnerRow({ runner, now }: { runner: Runner; now: Date }) {
 export function RunnerSetPanel({ rs, now }: { rs: RunnerSet; now: Date }) {
   const count = rs.runners.length
   const util = count / rs.maxRunners
-  const busyCount  = rs.runners.filter(r => r.state === 'busy').length
-  const idleCount  = rs.runners.filter(r => r.state === 'idle').length
-  const prepCount  = rs.runners.filter(r => r.state === 'preparing').length
+  const busyCount    = rs.runners.filter(r => r.state === 'busy').length
+  const idleCount    = rs.runners.filter(r => r.state === 'idle').length
+  const prepCount    = rs.runners.filter(r => r.state === 'preparing').length
+  const unknownCount = rs.runners.filter(r => r.state === 'unknown').length
 
   return (
     <div style={{ marginBottom: 28 }}>
@@ -66,6 +68,7 @@ export function RunnerSetPanel({ rs, now }: { rs: RunnerSet; now: Date }) {
         {busyCount > 0 && <span style={{ color: '#f0f0f0' }}>{busyCount} BUSY</span>}
         {idleCount > 0 && <span style={{ color: '#888' }}>{idleCount} IDLE</span>}
         {prepCount > 0 && <span style={{ color: '#aaa' }}>{prepCount} PREP</span>}
+        {unknownCount > 0 && <span style={{ color: '#666' }}>{unknownCount} ???</span>}
         {count === 0 && <span style={{ color: '#444' }}>NO RUNNERS</span>}
       </div>
 
