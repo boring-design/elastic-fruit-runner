@@ -11,25 +11,32 @@ import (
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
-	"github.com/boring-design/elastic-fruit-runner/internal/registry"
+	"github.com/boring-design/elastic-fruit-runner/internal/management"
+	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
 var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
 
 // Server implements ControlPlaneServiceHandler.
 type Server struct {
-	registry    *registry.Registry
+	mgmt        *management.Service
+	vitalsSvc   *vitals.Service
 	idleTimeout time.Duration
 	corsOrigin  string
 }
 
-// NewServer creates an API server backed by the given registry.
+// NewServer creates an API server backed by the management and vitals services.
 // corsOrigin controls the Access-Control-Allow-Origin header; defaults to "*".
-func NewServer(reg *registry.Registry, idleTimeout time.Duration, corsOrigin string) *Server {
+func NewServer(mgmt *management.Service, vitalsSvc *vitals.Service, idleTimeout time.Duration, corsOrigin string) *Server {
 	if corsOrigin == "" {
 		corsOrigin = "*"
 	}
-	return &Server{registry: reg, idleTimeout: idleTimeout, corsOrigin: corsOrigin}
+	return &Server{
+		mgmt:        mgmt,
+		vitalsSvc:   vitalsSvc,
+		idleTimeout: idleTimeout,
+		corsOrigin:  corsOrigin,
+	}
 }
 
 // Handler returns the HTTP handler for the Connect RPC service with CORS support.
@@ -44,17 +51,17 @@ func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlpla
 	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
 		Version:            controller.Version,
 		CommitSha:          controller.CommitSHA,
-		StartedAt:          timestamppb.New(s.registry.StartedAt()),
+		StartedAt:          timestamppb.New(s.vitalsSvc.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 	}), nil
 }
 
 func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlplanev1.ListRunnerSetsRequest]) (*connect.Response[controlplanev1.ListRunnerSetsResponse], error) {
-	snapshots := s.registry.Snapshot()
-	sets := make([]*controlplanev1.RunnerSet, 0, len(snapshots))
-	for _, snap := range snapshots {
-		runners := make([]*controlplanev1.Runner, 0, len(snap.Runners))
-		for _, r := range snap.Runners {
+	views := s.mgmt.ListRunnerSets()
+	sets := make([]*controlplanev1.RunnerSet, 0, len(views))
+	for _, v := range views {
+		runners := make([]*controlplanev1.Runner, 0, len(v.Runners))
+		for _, r := range v.Runners {
 			runners = append(runners, &controlplanev1.Runner{
 				Name:  r.Name,
 				State: toProtoRunnerState(r.State),
@@ -62,13 +69,13 @@ func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlpla
 			})
 		}
 		sets = append(sets, &controlplanev1.RunnerSet{
-			Name:       snap.Info.Name,
-			Backend:    toProtoBackend(snap.Info.Backend),
-			Image:      snap.Info.Image,
-			Labels:     snap.Info.Labels,
-			MaxRunners: int32(snap.Info.MaxRunners),
-			Scope:      snap.Scope,
-			Connected:  snap.Connected,
+			Name:       v.Info.Name,
+			Backend:    toProtoBackend(v.Info.Backend),
+			Image:      v.Info.Image,
+			Labels:     v.Info.Labels,
+			MaxRunners: int32(v.Info.MaxRunners),
+			Scope:      v.Scope,
+			Connected:  v.Connected,
 			Runners:    runners,
 		})
 	}
@@ -78,7 +85,7 @@ func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlpla
 }
 
 func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
-	jobs := s.registry.RecentJobs()
+	jobs := s.mgmt.ListJobRecords()
 	records := make([]*controlplanev1.JobRecord, 0, len(jobs))
 	for _, j := range jobs {
 		rec := &controlplanev1.JobRecord{
@@ -99,7 +106,7 @@ func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlpla
 }
 
 func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlplanev1.GetMachineVitalsRequest]) (*connect.Response[controlplanev1.GetMachineVitalsResponse], error) {
-	v := s.registry.GetMachineVitals()
+	v := s.vitalsSvc.GetVitals()
 	return connect.NewResponse(&controlplanev1.GetMachineVitalsResponse{
 		CpuUsagePercent:    v.CPUUsagePercent,
 		MemoryUsagePercent: v.MemoryUsagePercent,
@@ -108,13 +115,13 @@ func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlp
 	}), nil
 }
 
-func toProtoRunnerState(s registry.RunnerState) controlplanev1.RunnerState {
+func toProtoRunnerState(s controller.RunnerState) controlplanev1.RunnerState {
 	switch s {
-	case registry.StatePreparing:
+	case controller.StatePreparing:
 		return controlplanev1.RunnerState_RUNNER_STATE_PREPARING
-	case registry.StateIdle:
+	case controller.StateIdle:
 		return controlplanev1.RunnerState_RUNNER_STATE_IDLE
-	case registry.StateBusy:
+	case controller.StateBusy:
 		return controlplanev1.RunnerState_RUNNER_STATE_BUSY
 	default:
 		return controlplanev1.RunnerState_RUNNER_STATE_UNSPECIFIED

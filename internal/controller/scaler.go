@@ -41,11 +41,11 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	)
 	d.logger.Info("scaling", "desired", count, "current", current, "spawning", needed)
 
+	runnerCtx := d.runners.getRunnerCtx()
 	for range needed {
 		name := fmt.Sprintf("%s-%s", d.rsCfg.Name, randSuffix())
 		d.runners.addPreparing(name)
-		d.registry.AddPreparing(d.registryKey, name)
-		go d.startRunner(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
+		go d.startRunner(trace.ContextWithSpan(runnerCtx, span), name)
 	}
 	return d.runners.count(), nil
 }
@@ -62,8 +62,7 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	defer span.End()
 
 	d.runners.markBusy(job.RunnerName)
-	d.registry.MarkBusy(d.registryKey, job.RunnerName)
-	d.registry.RecordJobStarted(d.registryKey, job.JobID, job.RunnerName)
+	d.jobRecorder.RecordJobStarted(d.rsCfg.Name, job.JobID, job.RunnerName)
 	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
 	return nil
 }
@@ -81,8 +80,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 
 	name := job.RunnerName
 	d.runners.markDone(name)
-	d.registry.MarkDone(d.registryKey, name)
-	d.registry.RecordJobCompleted(job.JobID, job.Result)
+	d.jobRecorder.RecordJobCompleted(job.JobID, job.Result)
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
 	go func() {
@@ -124,7 +122,6 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		jitSpan.SetStatus(codes.Error, "generate JIT config failed")
 		span.SetStatus(codes.Error, "generate JIT config failed")
 		d.runners.markDone(name)
-		d.registry.MarkDone(d.registryKey, name)
 		return
 	}
 
@@ -133,14 +130,12 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "start runner failed")
 		d.runners.markDone(name)
-		d.registry.MarkDone(d.registryKey, name)
 		d.backend.Cleanup(context.Background(), name)
 		d.removeGitHubRunner(context.Background(), name)
 		return
 	}
 
 	d.runners.moveToIdle(name)
-	d.registry.MoveToIdle(d.registryKey, name)
 	log.Info("runner started, waiting for job assignment")
 }
 
@@ -158,11 +153,10 @@ func (d *ScaleSetController) shutdown(ctx context.Context) {
 		toCleanup = append(toCleanup, name)
 	}
 	preparingCount := len(d.runners.preparing)
+	d.runners.preparing = make(map[string]struct{})
 	d.runners.idle = make(map[string]time.Time)
 	d.runners.busy = make(map[string]struct{})
 	d.runners.mu.Unlock()
-
-	d.registry.ClearRunners(d.registryKey)
 
 	if preparingCount > 0 {
 		d.logger.Info("aborting in-flight preparations", "count", preparingCount)
@@ -206,10 +200,6 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 		delete(d.runners.idle, name)
 	}
 	d.runners.mu.Unlock()
-
-	for _, name := range expired {
-		d.registry.MarkDone(d.registryKey, name)
-	}
 
 	for _, name := range expired {
 		d.logger.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
@@ -260,6 +250,12 @@ func (r *runnerState) setRunnerCtx(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.runnerCtx = ctx
+}
+
+func (r *runnerState) getRunnerCtx() context.Context {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.runnerCtx
 }
 
 func (r *runnerState) count() int {
@@ -313,4 +309,50 @@ func (r *runnerState) markDone(name string) {
 	delete(r.preparing, name)
 	delete(r.idle, name)
 	delete(r.busy, name)
+}
+
+// snapshot returns a point-in-time copy of all runners.
+func (r *runnerState) snapshot() []RunnerSnapshot {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	result := make([]RunnerSnapshot, 0, len(r.preparing)+len(r.idle)+len(r.busy))
+	for name := range r.preparing {
+		result = append(result, RunnerSnapshot{Name: name, State: StatePreparing})
+	}
+	for name, since := range r.idle {
+		result = append(result, RunnerSnapshot{Name: name, State: StateIdle, Since: since})
+	}
+	for name := range r.busy {
+		result = append(result, RunnerSnapshot{Name: name, State: StateBusy})
+	}
+	return result
+}
+
+// GetRunnerSetInfo returns the static configuration of this runner set.
+func (d *ScaleSetController) GetRunnerSetInfo() RunnerSetInfo {
+	labels := make([]string, len(d.rsCfg.Labels))
+	copy(labels, d.rsCfg.Labels)
+	return RunnerSetInfo{
+		Name:       d.rsCfg.Name,
+		Backend:    d.rsCfg.Backend,
+		Image:      d.rsCfg.Image,
+		Labels:     labels,
+		MaxRunners: d.rsCfg.MaxRunners,
+	}
+}
+
+// GetScope returns the org/repo scope of this runner set.
+func (d *ScaleSetController) GetScope() string {
+	return d.scope
+}
+
+// IsConnected returns whether the controller is connected to GitHub.
+func (d *ScaleSetController) IsConnected() bool {
+	return d.connected.Load()
+}
+
+// GetRunners returns a point-in-time copy of all runners and their states.
+func (d *ScaleSetController) GetRunners() []RunnerSnapshot {
+	return d.runners.snapshot()
 }

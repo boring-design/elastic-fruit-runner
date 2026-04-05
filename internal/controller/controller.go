@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/actions/scaleset"
@@ -14,7 +15,6 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
-	"github.com/boring-design/elastic-fruit-runner/internal/registry"
 )
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/controller")
@@ -30,16 +30,18 @@ var (
 // runners that run each job.
 type ScaleSetController struct {
 	rsCfg       *config.RunnerSetConfig
-	registryKey string
 	runnerGroup string
 	idleTimeout time.Duration
 
 	client     *scaleset.Client
 	scaleSetID int
 
-	backend  backend.Backend
-	logger   *slog.Logger
-	registry *registry.Registry
+	backend backend.Backend
+	logger  *slog.Logger
+
+	scope       string
+	connected   atomic.Bool
+	jobRecorder JobRecorder
 
 	runners runnerState
 
@@ -49,17 +51,15 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-// scope identifies the org or repo that owns this runner set and is used
-// together with the runner-set name to form a unique registry key.
-func New(rsCfg *config.RunnerSetConfig, scope, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, reg *registry.Registry) *ScaleSetController {
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, scope string, jr JobRecorder) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
-		registryKey: registry.SetKey(scope, rsCfg.Name),
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
-		registry:    reg,
+		scope:       scope,
+		jobRecorder: jr,
 		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }
@@ -165,9 +165,9 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		"maxRunners", d.rsCfg.MaxRunners,
 	)
 
-	d.registry.SetConnected(d.registryKey, true)
+	d.connected.Store(true)
 	listenerErr := l.Run(ctx, d)
-	d.registry.SetConnected(d.registryKey, false)
+	d.connected.Store(false)
 
 	// Stop in-flight preparations and clean up all remaining runners.
 	runnerCancel()
