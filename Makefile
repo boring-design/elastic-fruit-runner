@@ -1,4 +1,4 @@
-.PHONY: help build build-go build-all clean test fmt fmt-check vet lint check ci generate proto-gen tidy dashboard dashboard-clean prek-all prek-install
+.PHONY: help build build-full build-go build-all clean test fmt fmt-check vet lint check ci generate proto-gen tidy dashboard dashboard-clean prek-all prek-install
 
 # Build variables
 BINARY_NAME := elastic-fruit-runner
@@ -35,7 +35,9 @@ help: ## Show this help message
 	@echo "Targets:"
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-18s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-build: dashboard build-go ## Build binary with dashboard
+build: build-go ## Build the Go binary
+
+build-full: dashboard build-go ## Build binary with dashboard
 
 build-go: ## Build Go binary only
 	@mkdir -p $(BUILD_DIR)
@@ -65,11 +67,8 @@ vet: ## Run go vet
 	$(GO) vet ./...
 
 lint: ## Run golangci-lint
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run ./...; \
-	else \
-		echo "golangci-lint not installed, skipping"; \
-	fi
+	@command -v golangci-lint >/dev/null 2>&1 || { echo "ERROR: golangci-lint not installed"; exit 1; }
+	golangci-lint run ./...
 
 check: fmt vet build-go ## Quick local check (fmt + vet + build)
 

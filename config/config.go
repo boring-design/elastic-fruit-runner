@@ -127,6 +127,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, error", c.LogLevel)
 	}
 
+	if c.CORS.AllowCredentials && (c.CORS.AllowOrigin == "" || c.CORS.AllowOrigin == "*") {
+		return fmt.Errorf("cors: allow_credentials requires a specific allow_origin, wildcard \"*\" is not valid per the CORS spec")
+	}
+
 	runnerSetNames := make(map[string]struct{})
 
 	for i := range c.Orgs {

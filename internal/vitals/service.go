@@ -23,6 +23,9 @@ func New(startedAt time.Time) *Service {
 // Start begins periodic host metrics collection in a background goroutine.
 // Blocks until ctx is cancelled.
 func (s *Service) Start(ctx context.Context, interval time.Duration) {
+	// Prime CPU counters so the first real sample has a delta to compare against.
+	Collect()
+
 	RunCollector(ctx, interval, func(v Vitals) {
 		s.mu.Lock()
 		s.current = v
