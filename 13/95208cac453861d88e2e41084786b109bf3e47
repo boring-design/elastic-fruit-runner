@@ -1,0 +1,25 @@
+dashboard/vite.config.ts
+  16f490ae5b63293a 7-13
+Makefile
+  16f490ae5b63293a 15-16,30-31,34-35,61-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "1395208cac453861d88e2e41084786b109bf3e47",
+  "prompts": {
+    "16f490ae5b63293a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11100ce4-e7e5-4d51-b904-7b7a2ff7e087",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 12,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    }
+  }
+}
