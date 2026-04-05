@@ -19,23 +19,23 @@ var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
 
 // Server implements ControlPlaneServiceHandler.
 type Server struct {
-	mgmt        *management.Service
-	vitalsSvc   *vitals.Service
-	idleTimeout time.Duration
-	corsOrigin  string
+	managementService *management.Service
+	vitalsService     *vitals.Service
+	idleTimeout       time.Duration
+	corsOrigin        string
 }
 
 // NewServer creates an API server backed by the management and vitals services.
 // corsOrigin controls the Access-Control-Allow-Origin header; defaults to "*".
-func NewServer(mgmt *management.Service, vitalsSvc *vitals.Service, idleTimeout time.Duration, corsOrigin string) *Server {
+func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, corsOrigin string) *Server {
 	if corsOrigin == "" {
 		corsOrigin = "*"
 	}
 	return &Server{
-		mgmt:        mgmt,
-		vitalsSvc:   vitalsSvc,
-		idleTimeout: idleTimeout,
-		corsOrigin:  corsOrigin,
+		managementService: managementService,
+		vitalsService:     vitalsService,
+		idleTimeout:       idleTimeout,
+		corsOrigin:        corsOrigin,
 	}
 }
 
@@ -51,13 +51,13 @@ func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlpla
 	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
 		Version:            controller.Version,
 		CommitSha:          controller.CommitSHA,
-		StartedAt:          timestamppb.New(s.vitalsSvc.StartedAt()),
+		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 	}), nil
 }
 
 func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlplanev1.ListRunnerSetsRequest]) (*connect.Response[controlplanev1.ListRunnerSetsResponse], error) {
-	views := s.mgmt.ListRunnerSets()
+	views := s.managementService.ListRunnerSets()
 	sets := make([]*controlplanev1.RunnerSet, 0, len(views))
 	for _, v := range views {
 		runners := make([]*controlplanev1.Runner, 0, len(v.Runners))
@@ -85,7 +85,7 @@ func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlpla
 }
 
 func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
-	jobs := s.mgmt.ListJobRecords()
+	jobs := s.managementService.ListJobRecords()
 	records := make([]*controlplanev1.JobRecord, 0, len(jobs))
 	for _, j := range jobs {
 		rec := &controlplanev1.JobRecord{
@@ -106,7 +106,7 @@ func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlpla
 }
 
 func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlplanev1.GetMachineVitalsRequest]) (*connect.Response[controlplanev1.GetMachineVitalsResponse], error) {
-	v := s.vitalsSvc.GetVitals()
+	v := s.vitalsService.GetVitals()
 	return connect.NewResponse(&controlplanev1.GetMachineVitalsResponse{
 		CpuUsagePercent:    v.CPUUsagePercent,
 		MemoryUsagePercent: v.MemoryUsagePercent,

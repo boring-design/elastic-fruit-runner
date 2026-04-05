@@ -55,20 +55,20 @@ func run() error {
 		}
 	}()
 
-	vitalsSvc := vitals.New(time.Now())
-	go vitalsSvc.Start(ctx, 5*time.Second)
+	vitalsService := vitals.New(time.Now())
+	go vitalsService.Start(ctx, 5*time.Second)
 
-	mgmtSvc, err := management.New(cfg)
+	managementService, err := management.New(cfg)
 	if err != nil {
 		return fmt.Errorf("initialize management service: %w", err)
 	}
-	mgmtSvc.Start(ctx)
+	managementService.Start(ctx)
 
 	apiAddr := cfg.APIAddr
 	if apiAddr == "" {
 		apiAddr = ":8080"
 	}
-	apiServer := api.NewServer(mgmtSvc, vitalsSvc, cfg.IdleTimeout, cfg.CORSOrigin)
+	apiServer := api.NewServer(managementService, vitalsService, cfg.IdleTimeout, cfg.CORSOrigin)
 	httpServer := &http.Server{
 		Addr:              apiAddr,
 		Handler:           apiServer.Handler(),
@@ -91,7 +91,7 @@ func run() error {
 		}
 	}()
 
-	mgmtSvc.Wait()
+	managementService.Wait()
 	slog.Info("shutdown complete")
 	return nil
 }
