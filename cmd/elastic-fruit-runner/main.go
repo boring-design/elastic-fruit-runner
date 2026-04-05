@@ -149,7 +149,11 @@ func startAPIServer(ctx context.Context, cfg *config.Config, wg *sync.WaitGroup,
 		apiAddr = ":8080"
 	}
 	apiServer := api.NewServer(reg, cfg.IdleTimeout, cfg.CORSOrigin)
-	httpServer := &http.Server{Addr: apiAddr, Handler: apiServer.Handler()}
+	httpServer := &http.Server{
+		Addr:              apiAddr,
+		Handler:           apiServer.Handler(),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
 
 	wg.Add(1)
 	go func() {
