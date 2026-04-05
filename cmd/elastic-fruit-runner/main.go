@@ -60,8 +60,9 @@ func run() error {
 
 	managementService, err := management.New(cfg)
 	if err != nil {
-		return fmt.Errorf("initialize management service: %w", err)
+		return fmt.Errorf("initialize scale set controller management service: %w", err)
 	}
+	defer managementService.Close()
 	managementService.Start(ctx)
 
 	apiAddr := cfg.APIAddr
@@ -75,10 +76,11 @@ func run() error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	listenErr := make(chan error, 1)
 	go func() {
 		slog.Info("API server starting", "addr", apiAddr)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("API server error", "err", err)
+			listenErr <- err
 		}
 	}()
 
@@ -91,9 +93,19 @@ func run() error {
 		}
 	}()
 
-	managementService.Wait()
-	slog.Info("shutdown complete")
-	return nil
+	done := make(chan struct{})
+	go func() {
+		managementService.Wait()
+		close(done)
+	}()
+
+	select {
+	case err := <-listenErr:
+		return fmt.Errorf("API server failed to start: %w", err)
+	case <-done:
+		slog.Info("shutdown complete")
+		return nil
+	}
 }
 
 func configureLogging(cfg *config.Config) error {

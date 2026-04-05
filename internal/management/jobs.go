@@ -1,9 +1,12 @@
 package management
 
 import (
+	"context"
+	"database/sql"
 	"log/slog"
-	"sync"
 	"time"
+
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
 )
 
 // JobRecord represents a single job execution.
@@ -16,38 +19,15 @@ type JobRecord struct {
 	CompletedAt   *time.Time
 }
 
-// JobStore is a fixed-size ring buffer for job history.
+// JobStore persists job lifecycle events in SQLite.
 type JobStore struct {
-	mu      sync.Mutex
-	entries []JobRecord
-	size    int
-	cursor  int
-	count   int
+	queries *sqlcdb.Queries
 }
 
-// NewJobStore creates a ring buffer with the given capacity.
-func NewJobStore(size int) *JobStore {
+// NewJobStore creates a SQLite-backed job store.
+func NewJobStore(db *sql.DB) *JobStore {
 	return &JobStore{
-		entries: make([]JobRecord, size),
-		size:    size,
-	}
-}
-
-// RecordJobStarted inserts a new job with result "running".
-func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.entries[s.cursor] = JobRecord{
-		ID:            jobID,
-		RunnerName:    runnerName,
-		RunnerSetName: setName,
-		Result:        "running",
-		StartedAt:     time.Now(),
-	}
-	s.cursor = (s.cursor + 1) % s.size
-	if s.count < s.size {
-		s.count++
+		queries: sqlcdb.New(db),
 	}
 }
 
@@ -57,48 +37,83 @@ var knownJobResults = map[string]struct{}{
 	"Failed":    {},
 }
 
+// RecordJobStarted inserts a new job with result "running".
+func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
+	ctx := context.Background()
+	err := s.queries.InsertJob(ctx, sqlcdb.InsertJobParams{
+		ID:            jobID,
+		RunnerName:    runnerName,
+		RunnerSetName: setName,
+		Result:        "running",
+		StartedAt:     time.Now(),
+	})
+	if err != nil {
+		slog.Error("failed to record job started", "job_id", jobID, "err", err)
+	}
+}
+
 // RecordJobCompleted finds an existing job by ID and updates its result.
-// If the job was evicted (ring wrapped), inserts a completed-only record.
+// If the job does not exist, inserts a completed-only record.
 func (s *JobStore) RecordJobCompleted(jobID, result string) {
 	if _, ok := knownJobResults[result]; !ok {
 		slog.Warn("unexpected job result from scale-set API, recording as-is", "job_id", jobID, "result", result)
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
+	ctx := context.Background()
 	now := time.Now()
-	for i := range s.count {
-		idx := (s.cursor - 1 - i + s.size) % s.size
-		if s.entries[idx].ID == jobID {
-			s.entries[idx].Result = result
-			s.entries[idx].CompletedAt = &now
-			return
-		}
+
+	res, err := s.queries.UpdateJobCompleted(ctx, sqlcdb.UpdateJobCompletedParams{
+		Result:      result,
+		CompletedAt: sql.NullTime{Time: now, Valid: true},
+		ID:          jobID,
+	})
+	if err != nil {
+		slog.Error("failed to update job completed", "job_id", jobID, "err", err)
+		return
 	}
 
-	// Job was evicted from the ring (wrapped). Insert a completed-only record
-	// so that completion events are not silently lost.
-	s.entries[s.cursor] = JobRecord{
-		ID:          jobID,
-		Result:      result,
-		StartedAt:   now,
-		CompletedAt: &now,
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		slog.Error("failed to check rows affected", "job_id", jobID, "err", err)
+		return
 	}
-	s.cursor = (s.cursor + 1) % s.size
-	if s.count < s.size {
-		s.count++
+
+	if rowsAffected == 0 {
+		// Job was never recorded (e.g. daemon restarted). Insert a completed-only record.
+		err = s.queries.InsertCompletedJob(ctx, sqlcdb.InsertCompletedJobParams{
+			ID:          jobID,
+			Result:      result,
+			StartedAt:   now,
+			CompletedAt: sql.NullTime{Time: now, Valid: true},
+		})
+		if err != nil {
+			slog.Error("failed to insert completed-only job record", "job_id", jobID, "err", err)
+		}
 	}
 }
 
-// Snapshot returns a copy of all recorded jobs, most-recent-first.
+// Snapshot returns recent job records, most-recent-first.
 func (s *JobStore) Snapshot() []JobRecord {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	result := make([]JobRecord, s.count)
-	for i := range s.count {
-		idx := (s.cursor - 1 - i + s.size) % s.size
-		result[i] = s.entries[idx]
+	ctx := context.Background()
+	rows, err := s.queries.ListRecentJobs(ctx, 200)
+	if err != nil {
+		slog.Error("failed to list recent jobs", "err", err)
+		return nil
 	}
-	return result
+
+	records := make([]JobRecord, len(rows))
+	for i, row := range rows {
+		records[i] = JobRecord{
+			ID:            row.ID,
+			RunnerName:    row.RunnerName,
+			RunnerSetName: row.RunnerSetName,
+			Result:        row.Result,
+			StartedAt:     row.StartedAt,
+		}
+		if row.CompletedAt.Valid {
+			t := row.CompletedAt.Time
+			records[i].CompletedAt = &t
+		}
+	}
+	return records
 }

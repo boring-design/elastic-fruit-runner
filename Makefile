@@ -1,4 +1,4 @@
-.PHONY: help build build-full build-go build-all clean test fmt fmt-check vet lint check ci generate proto-gen tidy dashboard dashboard-clean prek-all prek-install
+.PHONY: help build build-full build-go build-all clean test fmt fmt-check vet lint check ci generate proto-gen sqlc-gen tidy dashboard dashboard-clean prek-all prek-install
 
 # Build variables
 BINARY_NAME := elastic-fruit-runner
@@ -74,10 +74,13 @@ check: fmt vet build-go ## Quick local check (fmt + vet + build)
 
 ci: fmt-check vet build-go lint test prek-all ## Run all CI checks
 
-generate: proto-gen ## Run all code generation
+generate: proto-gen sqlc-gen ## Run all code generation
 
 proto-gen: ## Generate protobuf and Connect RPC code
 	buf generate
+
+sqlc-gen: ## Generate sqlc query code
+	cd internal/management/sqlc && sqlc generate
 
 tidy: ## Tidy go modules
 	$(GO) mod tidy

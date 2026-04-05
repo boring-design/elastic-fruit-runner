@@ -15,6 +15,7 @@ type Config struct {
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
 	CORS        CORSConfig    `yaml:"cors"`
+	DBPath      string        `yaml:"db_path"`
 }
 
 // CORSConfig holds Cross-Origin Resource Sharing settings.

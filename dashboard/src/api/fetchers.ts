@@ -5,7 +5,7 @@ const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
 async function rpc<T>(method: string, body: Record<string, unknown> = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/controlplane.v1.ControlPlaneService/${method}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Connect-Protocol-Version': '1' },
     body: JSON.stringify(body),
   })
   if (!res.ok) {
