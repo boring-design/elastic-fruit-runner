@@ -117,7 +117,7 @@ export async function fetchRecentJobs(): Promise<JobRecord[]> {
     id: j.id,
     runnerName: j.runnerName,
     runnerSetName: j.runnerSetName,
-    result: JOB_RESULT_MAP[j.result] ?? 'running',
+    result: JOB_RESULT_MAP[j.result] ?? (j.completedAt ? 'failure' : 'running'),
     startedAt: new Date(j.startedAt),
     completedAt: j.completedAt ? new Date(j.completedAt) : null,
   }))

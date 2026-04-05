@@ -56,7 +56,9 @@ func readCPUTicks() (user, nice, sys, idle uint64, ok bool) {
 			uint64(cpTime[offset+7])<<56
 	}
 
-	return vals[0], vals[1], vals[2], vals[3], true
+	// kern.cp_time order: CP_USER(0), CP_NICE(1), CP_SYS(2), CP_INTR(3), CP_IDLE(4).
+	// Return idle (index 4), not interrupt (index 3).
+	return vals[0], vals[1], vals[2], vals[4], true
 }
 
 func collectCPU() float32 {
