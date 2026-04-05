@@ -2,6 +2,7 @@ package vitals
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/disk"
@@ -51,11 +52,20 @@ func collectTemperature() float32 {
 	if err != nil || len(temps) == 0 {
 		return 0
 	}
-	// Return the first non-zero reading (typically CPU/SoC temperature).
+	// On Apple Silicon, "PMU tdie*" sensors report CPU die temperatures.
+	// Use the highest die temperature as the representative value.
+	// Fall back to the highest reading from any sensor.
+	var maxDie, maxAny float64
 	for _, t := range temps {
-		if t.Temperature > 0 {
-			return float32(t.Temperature)
+		if t.Temperature > maxAny {
+			maxAny = t.Temperature
+		}
+		if strings.Contains(t.SensorKey, "tdie") && t.Temperature > maxDie {
+			maxDie = t.Temperature
 		}
 	}
-	return 0
+	if maxDie > 0 {
+		return float32(maxDie)
+	}
+	return float32(maxAny)
 }

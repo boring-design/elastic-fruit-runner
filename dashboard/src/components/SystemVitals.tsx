@@ -1,61 +1,53 @@
-import { useState, useEffect } from 'react'
+import type { MachineVitals } from '../types'
 
-interface Vital {
+interface VitalConfig {
   key: string
-  label: string       // human label
-  persona: string     // personified label
+  persona: string
   unit: string
-  base: number        // base value
-  variance: number    // random noise range
-  warn: number        // warn threshold
-  crit: number        // critical threshold
+  max: number
+  warn: number
+  crit: number
 }
 
-const VITALS: Vital[] = [
-  { key: 'cpu',  label: 'CPU',      persona: 'PROCESSOR LOAD',   unit: '%',   base: 34,  variance: 18, warn: 70, crit: 90 },
-  { key: 'mem',  label: 'MEMORY',   persona: 'MEMORY BANKS',     unit: '%',   base: 52,  variance: 8,  warn: 80, crit: 95 },
-  { key: 'disk', label: 'DISK',     persona: 'STORAGE ARRAY',    unit: '%',   base: 67,  variance: 1,  warn: 85, crit: 95 },
-  { key: 'temp', label: 'TEMP',     persona: 'CORE TEMPERATURE', unit: '°C',  base: 48,  variance: 12, warn: 70, crit: 85 },
+const VITAL_CONFIGS: VitalConfig[] = [
+  { key: 'cpu',  persona: 'PROCESSOR LOAD',   unit: '%',   max: 100, warn: 70, crit: 90 },
+  { key: 'mem',  persona: 'MEMORY BANKS',     unit: '%',   max: 100, warn: 80, crit: 95 },
+  { key: 'disk', persona: 'STORAGE ARRAY',    unit: '%',   max: 100, warn: 85, crit: 95 },
+  { key: 'temp', persona: 'CORE TEMPERATURE', unit: '°C',  max: 100, warn: 70, crit: 85 },
 ]
 
-function clamp(v: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, v))
+function getValue(vitals: MachineVitals, key: string): number {
+  switch (key) {
+    case 'cpu':  return vitals.cpuUsagePercent
+    case 'mem':  return vitals.memoryUsagePercent
+    case 'disk': return vitals.diskUsagePercent
+    case 'temp': return vitals.temperatureCelsius
+    default:     return 0
+  }
 }
 
-function useFluctuating(base: number, variance: number, interval = 2000) {
-  const [value, setValue] = useState(base)
-  useEffect(() => {
-    const id = setInterval(() => {
-      const delta = (Math.random() - 0.5) * variance
-      setValue(v => clamp(Math.round(v + delta * 0.3), base - variance, base + variance))
-    }, interval)
-    return () => clearInterval(id)
-  }, [base, variance, interval])
-  return value
-}
-
-function VitalBar({ vital }: { vital: Vital }) {
-  const value = useFluctuating(vital.base, vital.variance)
-  const pct = clamp(value / (vital.key === 'temp' ? 100 : 100) * 100, 0, 100)
+function VitalBar({ config, value }: { config: VitalConfig; value: number }) {
+  const rounded = Math.round(value)
+  const pct = Math.min(100, Math.max(0, (value / config.max) * 100))
 
   const color =
-    value >= vital.crit ? '#ff3b30' :
-    value >= vital.warn ? '#ff9500' :
+    rounded >= config.crit ? '#ff3b30' :
+    rounded >= config.warn ? '#ff9500' :
     '#888888'
 
   const barColor =
-    value >= vital.crit ? '#ff3b30' :
-    value >= vital.warn ? '#ff9500' :
+    rounded >= config.crit ? '#ff3b30' :
+    rounded >= config.warn ? '#ff9500' :
     '#e8e8e8'
 
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
         <span style={{ fontSize: 9, letterSpacing: '0.15em', color: '#555', textTransform: 'uppercase' }}>
-          {vital.persona}
+          {config.persona}
         </span>
         <span style={{ fontSize: 13, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>
-          {value}{vital.unit}
+          {rounded}{config.unit}
         </span>
       </div>
       <div style={{ height: 4, background: '#1a1a1a', position: 'relative', overflow: 'hidden' }}>
@@ -68,7 +60,6 @@ function VitalBar({ vital }: { vital: Vital }) {
             position: 'relative',
           }}
         >
-          {/* barcode texture */}
           <div style={{
             position: 'absolute', inset: 0,
             background: 'repeating-linear-gradient(90deg, transparent 0px, transparent 3px, rgba(0,0,0,0.4) 3px, rgba(0,0,0,0.4) 4px)',
@@ -79,10 +70,20 @@ function VitalBar({ vital }: { vital: Vital }) {
   )
 }
 
-export function SystemVitals() {
+export function SystemVitals({ vitals }: { vitals: MachineVitals | null }) {
+  if (!vitals) {
+    return (
+      <div style={{ fontSize: 10, color: '#444', letterSpacing: '0.1em' }}>
+        LOADING...
+      </div>
+    )
+  }
+
   return (
     <div>
-      {VITALS.map(v => <VitalBar key={v.key} vital={v} />)}
+      {VITAL_CONFIGS.map(config => (
+        <VitalBar key={config.key} config={config} value={getValue(vitals, config.key)} />
+      ))}
     </div>
   )
 }

@@ -14,6 +14,7 @@ export default function App() {
     daemonStatus,
     runnerSets,
     recentJobs,
+    machineVitals,
     now,
     uptime,
     totalMax,
@@ -217,7 +218,7 @@ export default function App() {
           {/* System vitals */}
           <div className="brain-vitals" style={{ borderTop: '1px solid #1e1e1e', marginTop: 14, paddingTop: 14 }}>
             <div className="label" style={{ marginBottom: 10 }}>SYSTEM VITALS</div>
-            <SystemVitals />
+            <SystemVitals vitals={machineVitals} />
           </div>
         </div>
       </div>

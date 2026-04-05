@@ -3,7 +3,7 @@ import { elapsed } from '../utils'
 import type { PetMood } from '../components/petMood'
 
 export function useDashboardDerived() {
-  const { daemonStatus, runnerSets, recentJobs, now } = useDashboardStore()
+  const { daemonStatus, runnerSets, recentJobs, machineVitals, now } = useDashboardStore()
 
   const uptime = daemonStatus ? elapsed(daemonStatus.startedAt, now) : 0
 
@@ -29,6 +29,7 @@ export function useDashboardDerived() {
     daemonStatus,
     runnerSets,
     recentJobs,
+    machineVitals,
     now,
     uptime,
     totalMax,
