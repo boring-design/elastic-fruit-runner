@@ -1,7 +1,14 @@
-.PHONY: build run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard build-go run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
-# Build the CLI binary
-build:
+# Build dashboard then Go binary
+build: build-dashboard build-go
+
+# Build the React dashboard
+build-dashboard:
+	cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
+# Build only the Go binary (requires dashboard/dist/ to exist)
+build-go:
 	@mkdir -p output
 	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
