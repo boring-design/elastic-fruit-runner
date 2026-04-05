@@ -104,7 +104,7 @@ func launchOrgControllers(ctx context.Context, cfg *config.Config, wg *sync.Wait
 		for j := range org.RunnerSets {
 			rs := &org.RunnerSets[j]
 			registerRunnerSet(reg, rs, scope)
-			if err := launchController(ctx, wg, rs, org.RunnerGroup, cfg.IdleTimeout, client, reg); err != nil {
+			if err := launchController(ctx, wg, rs, scope, org.RunnerGroup, cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -124,7 +124,7 @@ func launchRepoControllers(ctx context.Context, cfg *config.Config, wg *sync.Wai
 		for j := range repo.RunnerSets {
 			rs := &repo.RunnerSets[j]
 			registerRunnerSet(reg, rs, scope)
-			if err := launchController(ctx, wg, rs, "Default", cfg.IdleTimeout, client, reg); err != nil {
+			if err := launchController(ctx, wg, rs, scope, "Default", cfg.IdleTimeout, client, reg); err != nil {
 				return fmt.Errorf("launch controller for runner set %s: %w", rs.Name, err)
 			}
 		}
@@ -213,7 +213,7 @@ func createClient(configURL string, auth *config.AuthConfig) (*scaleset.Client, 
 	}
 }
 
-func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, reg *registry.Registry) error {
+func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.RunnerSetConfig, scope, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, reg *registry.Registry) error {
 	var b backend.Backend
 	switch rs.Backend {
 	case "tart":
@@ -224,7 +224,7 @@ func launchController(ctx context.Context, wg *sync.WaitGroup, rs *config.Runner
 		return fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
 	}
 
-	d := controller.New(rs, runnerGroup, idleTimeout, client, b, reg)
+	d := controller.New(rs, scope, runnerGroup, idleTimeout, client, b, reg)
 
 	slog.Info("launching controller",
 		"runnerSet", rs.Name,

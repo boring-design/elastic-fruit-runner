@@ -30,6 +30,7 @@ var (
 // runners that run each job.
 type ScaleSetController struct {
 	rsCfg       *config.RunnerSetConfig
+	registryKey string
 	runnerGroup string
 	idleTimeout time.Duration
 
@@ -48,9 +49,12 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, reg *registry.Registry) *ScaleSetController {
+// scope identifies the org or repo that owns this runner set and is used
+// together with the runner-set name to form a unique registry key.
+func New(rsCfg *config.RunnerSetConfig, scope, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, reg *registry.Registry) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
+		registryKey: registry.SetKey(scope, rsCfg.Name),
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
@@ -161,9 +165,9 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		"maxRunners", d.rsCfg.MaxRunners,
 	)
 
-	d.registry.SetConnected(d.rsCfg.Name, true)
+	d.registry.SetConnected(d.registryKey, true)
 	listenerErr := l.Run(ctx, d)
-	d.registry.SetConnected(d.rsCfg.Name, false)
+	d.registry.SetConnected(d.registryKey, false)
 
 	// Stop in-flight preparations and clean up all remaining runners.
 	runnerCancel()

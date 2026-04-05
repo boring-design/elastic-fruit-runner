@@ -44,7 +44,7 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	for range needed {
 		name := fmt.Sprintf("%s-%s", d.rsCfg.Name, randSuffix())
 		d.runners.addPreparing(name)
-		d.registry.AddPreparing(d.rsCfg.Name, name)
+		d.registry.AddPreparing(d.registryKey, name)
 		go d.startRunner(trace.ContextWithSpan(d.runners.runnerCtx, span), name)
 	}
 	return d.runners.count(), nil
@@ -62,8 +62,8 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	defer span.End()
 
 	d.runners.markBusy(job.RunnerName)
-	d.registry.MarkBusy(d.rsCfg.Name, job.RunnerName)
-	d.registry.RecordJobStarted(d.rsCfg.Name, job.JobID, job.RunnerName)
+	d.registry.MarkBusy(d.registryKey, job.RunnerName)
+	d.registry.RecordJobStarted(d.registryKey, job.JobID, job.RunnerName)
 	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
 	return nil
 }
@@ -81,7 +81,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 
 	name := job.RunnerName
 	d.runners.markDone(name)
-	d.registry.MarkDone(d.rsCfg.Name, name)
+	d.registry.MarkDone(d.registryKey, name)
 	d.registry.RecordJobCompleted(job.JobID, job.Result)
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
@@ -124,7 +124,7 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		jitSpan.SetStatus(codes.Error, "generate JIT config failed")
 		span.SetStatus(codes.Error, "generate JIT config failed")
 		d.runners.markDone(name)
-		d.registry.MarkDone(d.rsCfg.Name, name)
+		d.registry.MarkDone(d.registryKey, name)
 		return
 	}
 
@@ -133,14 +133,14 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "start runner failed")
 		d.runners.markDone(name)
-		d.registry.MarkDone(d.rsCfg.Name, name)
+		d.registry.MarkDone(d.registryKey, name)
 		d.backend.Cleanup(context.Background(), name)
 		d.removeGitHubRunner(context.Background(), name)
 		return
 	}
 
 	d.runners.moveToIdle(name)
-	d.registry.MoveToIdle(d.rsCfg.Name, name)
+	d.registry.MoveToIdle(d.registryKey, name)
 	log.Info("runner started, waiting for job assignment")
 }
 
@@ -162,7 +162,7 @@ func (d *ScaleSetController) shutdown(ctx context.Context) {
 	d.runners.busy = make(map[string]struct{})
 	d.runners.mu.Unlock()
 
-	d.registry.ClearRunners(d.rsCfg.Name)
+	d.registry.ClearRunners(d.registryKey)
 
 	if preparingCount > 0 {
 		d.logger.Info("aborting in-flight preparations", "count", preparingCount)
@@ -208,7 +208,7 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 	d.runners.mu.Unlock()
 
 	for _, name := range expired {
-		d.registry.MarkDone(d.rsCfg.Name, name)
+		d.registry.MarkDone(d.registryKey, name)
 	}
 
 	for _, name := range expired {

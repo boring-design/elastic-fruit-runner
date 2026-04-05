@@ -68,6 +68,13 @@ type Registry struct {
 	vitals     MachineVitals
 }
 
+// SetKey builds the composite map key used to identify a runner set.
+// Using scope+name prevents collisions when two runner sets in different
+// scopes (e.g. an org and a repo) share the same name.
+func SetKey(scope, name string) string {
+	return scope + "/" + name
+}
+
 // New creates a Registry with the given daemon start time.
 func New(startedAt time.Time) *Registry {
 	return &Registry{
@@ -78,10 +85,11 @@ func New(startedAt time.Time) *Registry {
 }
 
 // RegisterRunnerSet registers a runner set's static config. Called once per set at startup.
+// The map key is SetKey(scope, name) to avoid collisions across scopes.
 func (r *Registry) RegisterRunnerSet(name string, info RunnerSetInfo, scope string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.runnerSets[name] = &runnerSet{
+	r.runnerSets[SetKey(scope, name)] = &runnerSet{
 		info:    info,
 		scope:   scope,
 		runners: make(map[string]*runner),
