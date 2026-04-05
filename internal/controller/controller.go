@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/actions/scaleset"
@@ -38,6 +39,10 @@ type ScaleSetController struct {
 	backend backend.Backend
 	logger  *slog.Logger
 
+	scope       string
+	connected   atomic.Bool
+	jobRecorder JobRecorder
+
 	runners runnerState
 
 	// runnerCancel cancels the context used by startRunner goroutines,
@@ -46,13 +51,15 @@ type ScaleSetController struct {
 }
 
 // New creates a ScaleSetController for a single runner set.
-func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend) *ScaleSetController {
+func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Duration, client *scaleset.Client, b backend.Backend, scope string, jr JobRecorder) *ScaleSetController {
 	return &ScaleSetController{
 		rsCfg:       rsCfg,
 		runnerGroup: runnerGroup,
 		idleTimeout: idleTimeout,
 		client:      client,
 		backend:     b,
+		scope:       scope,
+		jobRecorder: jr,
 		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }
@@ -158,7 +165,9 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 		"maxRunners", d.rsCfg.MaxRunners,
 	)
 
+	d.connected.Store(true)
 	listenerErr := l.Run(ctx, d)
+	d.connected.Store(false)
 
 	// Stop in-flight preparations and clean up all remaining runners.
 	runnerCancel()

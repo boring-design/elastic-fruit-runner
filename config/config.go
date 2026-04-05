@@ -13,6 +13,19 @@ type Config struct {
 	Repos       []RepoConfig  `yaml:"repos"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
+	APIAddr     string        `yaml:"api_addr"`
+	CORS        CORSConfig    `yaml:"cors"`
+	DBPath      string        `yaml:"db_path"`
+}
+
+// CORSConfig holds Cross-Origin Resource Sharing settings.
+type CORSConfig struct {
+	AllowOrigin      string `yaml:"allow_origin"`
+	AllowMethods     string `yaml:"allow_methods"`
+	AllowHeaders     string `yaml:"allow_headers"`
+	ExposeHeaders    string `yaml:"expose_headers"`
+	AllowCredentials bool   `yaml:"allow_credentials"`
+	MaxAge           int    `yaml:"max_age"`
 }
 
 // ParsedLogLevel converts the LogLevel string to a slog.Level.
@@ -113,6 +126,10 @@ func (c *Config) Validate() error {
 	case "debug", "info", "warn", "error", "":
 	default:
 		return fmt.Errorf("log_level %q is invalid; must be one of: debug, info, warn, error", c.LogLevel)
+	}
+
+	if c.CORS.AllowCredentials && (c.CORS.AllowOrigin == "" || c.CORS.AllowOrigin == "*") {
+		return fmt.Errorf("cors: allow_credentials requires a specific allow_origin, wildcard \"*\" is not valid per the CORS spec")
 	}
 
 	runnerSetNames := make(map[string]struct{})

@@ -1,5 +1,5 @@
-export type RunnerState = 'preparing' | 'idle' | 'busy'
-export type Backend = 'tart' | 'docker'
+export type RunnerState = 'preparing' | 'idle' | 'busy' | 'unknown'
+export type Backend = 'tart' | 'docker' | 'unknown'
 export type JobResult = 'success' | 'failure' | 'running'
 
 export interface Runner {
@@ -15,6 +15,7 @@ export interface RunnerSet {
   labels: string[]
   maxRunners: number
   scope: string
+  connected: boolean
   runners: Runner[]
 }
 
@@ -31,6 +32,14 @@ export interface DaemonStatus {
   version: string
   commitSha: string
   startedAt: Date
-  githubConnected: boolean
+  // null while runner set data has not been fetched yet (loading state)
+  githubConnected: boolean | null
   idleTimeout: number
+}
+
+export interface MachineVitals {
+  cpuUsagePercent: number
+  memoryUsagePercent: number
+  diskUsagePercent: number
+  temperatureCelsius: number
 }

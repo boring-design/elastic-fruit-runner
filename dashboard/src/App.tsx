@@ -6,6 +6,7 @@ import { MOOD_LABEL, MOOD_SUBTEXT } from './components/petMood'
 import { SystemVitals } from './components/SystemVitals'
 import { RunnerSetPanel } from './components/RunnerSetPanel'
 import { JobRow } from './components/JobRow'
+import { ConnectionStatus } from './components/ConnectionStatus'
 
 export default function App() {
   const { isLoading, error } = useDashboardSync()
@@ -13,6 +14,7 @@ export default function App() {
     daemonStatus,
     runnerSets,
     recentJobs,
+    machineVitals,
     now,
     uptime,
     totalMax,
@@ -57,10 +59,7 @@ export default function App() {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="pulse" style={{ fontSize: 10, color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>●</span>
-          <span style={{ fontSize: 11, letterSpacing: '0.12em', color: daemonStatus.githubConnected ? '#f0f0f0' : '#ff3b30' }}>
-            {daemonStatus.githubConnected ? 'CONNECTED' : 'DISCONNECTED'}
-          </span>
+          <ConnectionStatus connected={daemonStatus.githubConnected} />
         </div>
       </div>
 
@@ -219,7 +218,7 @@ export default function App() {
           {/* System vitals */}
           <div className="brain-vitals" style={{ borderTop: '1px solid #1e1e1e', marginTop: 14, paddingTop: 14 }}>
             <div className="label" style={{ marginBottom: 10 }}>SYSTEM VITALS</div>
-            <SystemVitals />
+            <SystemVitals vitals={machineVitals} />
           </div>
         </div>
       </div>

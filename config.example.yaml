@@ -52,3 +52,14 @@ orgs:
 #         max_runners: 2
 
 idle_timeout: 15m
+
+# CORS configuration for the API server. All fields default to permissive
+# values suitable for local development. In production, restrict these to
+# your dashboard's actual origin.
+# cors:
+#   allow_origin: "*"
+#   allow_methods: "GET, POST, OPTIONS"
+#   allow_headers: "Content-Type, Connect-Protocol-Version"
+#   expose_headers: "Connect-Protocol-Version"
+#   allow_credentials: false
+#   max_age: 0

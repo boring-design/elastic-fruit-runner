@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package controlplane.v1;
+
+option go_package = "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1;controlplanev1";
+
+import "google/protobuf/timestamp.proto";
+
+service ControlPlaneService {
+  // GetServiceInfo returns the daemon's identity and configuration.
+  // These values are immutable for the lifetime of the process.
+  rpc GetServiceInfo(GetServiceInfoRequest) returns (GetServiceInfoResponse);
+
+  // ListRunnerSets returns all runner sets with their configuration,
+  // GitHub connection state, and live runner instances.
+  rpc ListRunnerSets(ListRunnerSetsRequest) returns (ListRunnerSetsResponse);
+
+  // ListJobRecords returns a bounded history of job executions
+  // across all runner sets, ordered most-recent-first.
+  rpc ListJobRecords(ListJobRecordsRequest) returns (ListJobRecordsResponse);
+
+  // GetMachineVitals returns a point-in-time snapshot of host-level
+  // resource metrics (CPU, memory, disk, temperature).
+  rpc GetMachineVitals(GetMachineVitalsRequest) returns (GetMachineVitalsResponse);
+}
+
+// ---------------------------------------------------------------------------
+// GetServiceInfo
+// ---------------------------------------------------------------------------
+
+message GetServiceInfoRequest {}
+
+message GetServiceInfoResponse {
+  // Semantic version set at build time via -ldflags.
+  string version = 1;
+  // Git commit hash set at build time via -ldflags.
+  string commit_sha = 2;
+  // When the daemon process started.
+  google.protobuf.Timestamp started_at = 3;
+  // Configured idle runner timeout in seconds.
+  int32 idle_timeout_seconds = 4;
+}
+
+// ---------------------------------------------------------------------------
+// ListRunnerSets
+// ---------------------------------------------------------------------------
+
+message ListRunnerSetsRequest {}
+
+message ListRunnerSetsResponse {
+  repeated RunnerSet runner_sets = 1;
+}
+
+enum Backend {
+  BACKEND_UNSPECIFIED = 0;
+  BACKEND_TART = 1;
+  BACKEND_DOCKER = 2;
+}
+
+message RunnerSet {
+  // Unique runner set identifier (e.g. "macos-tart-arm64").
+  string name = 1;
+  // Execution backend type.
+  Backend backend = 2;
+  // VM or container image URI.
+  string image = 3;
+  // GitHub runner labels.
+  repeated string labels = 4;
+  // Maximum runner capacity for this set.
+  int32 max_runners = 5;
+  // GitHub scope (e.g. "org: acme-corp" or "repo: owner/repo").
+  string scope = 6;
+  // Whether this set's listener is connected to the GitHub Scale Set API.
+  // Each set has an independent connection.
+  bool connected = 7;
+  // Currently tracked runner instances.
+  repeated Runner runners = 8;
+}
+
+enum RunnerState {
+  RUNNER_STATE_UNSPECIFIED = 0;
+  RUNNER_STATE_PREPARING = 1;
+  RUNNER_STATE_IDLE = 2;
+  RUNNER_STATE_BUSY = 3;
+}
+
+message Runner {
+  // Unique runner instance name (e.g. "macos-tart-arm64-a3f2c").
+  string name = 1;
+  // Current lifecycle state.
+  RunnerState state = 2;
+  // When the runner entered the current state.
+  google.protobuf.Timestamp since = 3;
+}
+
+// ---------------------------------------------------------------------------
+// ListJobRecords
+// ---------------------------------------------------------------------------
+
+message ListJobRecordsRequest {}
+
+message ListJobRecordsResponse {
+  repeated JobRecord job_records = 1;
+}
+
+enum JobResult {
+  JOB_RESULT_UNSPECIFIED = 0;
+  JOB_RESULT_RUNNING = 1;
+  JOB_RESULT_SUCCESS = 2;
+  JOB_RESULT_FAILURE = 3;
+}
+
+message JobRecord {
+  // Unique job identifier from GitHub.
+  string id = 1;
+  // Name of the runner that executed (or is executing) this job.
+  string runner_name = 2;
+  // Name of the runner set the runner belongs to.
+  string runner_set_name = 3;
+  // Current result / outcome.
+  JobResult result = 4;
+  // When the job started.
+  google.protobuf.Timestamp started_at = 5;
+  // When the job finished. Absent if still running.
+  optional google.protobuf.Timestamp completed_at = 6;
+}
+
+// ---------------------------------------------------------------------------
+// GetMachineVitals
+// ---------------------------------------------------------------------------
+
+message GetMachineVitalsRequest {}
+
+message GetMachineVitalsResponse {
+  // Host CPU utilization (0–100).
+  float cpu_usage_percent = 1;
+  // Host memory utilization (0–100).
+  float memory_usage_percent = 2;
+  // Host disk utilization (0–100).
+  float disk_usage_percent = 3;
+  // CPU/SoC core temperature in Celsius.
+  float temperature_celsius = 4;
+}

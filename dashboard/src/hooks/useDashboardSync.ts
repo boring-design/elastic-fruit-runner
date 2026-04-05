@@ -1,12 +1,12 @@
 import { useEffect } from 'react'
 import useSWR from 'swr'
 import { useDashboardStore } from '../store/useDashboardStore'
-import { fetchDaemonStatus, fetchRunnerSets, fetchRecentJobs } from '../api/fetchers'
+import { fetchDaemonStatus, fetchRunnerSets, fetchRecentJobs, fetchMachineVitals } from '../api/fetchers'
 
 const REFRESH_INTERVAL = 5000
 
 export function useDashboardSync() {
-  const { setDaemonStatus, setRunnerSets, setRecentJobs, tick } = useDashboardStore()
+  const { setDaemonStatus, setRunnerSets, setRecentJobs, setMachineVitals, tick } = useDashboardStore()
 
   const status = useSWR('daemonStatus', fetchDaemonStatus, {
     refreshInterval: REFRESH_INTERVAL,
@@ -23,13 +23,18 @@ export function useDashboardSync() {
     onSuccess: setRecentJobs,
   })
 
+  const vitals = useSWR('machineVitals', fetchMachineVitals, {
+    refreshInterval: REFRESH_INTERVAL,
+    onSuccess: setMachineVitals,
+  })
+
   useEffect(() => {
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [tick])
 
   return {
-    isLoading: status.isLoading || sets.isLoading || jobs.isLoading,
-    error: status.error ?? sets.error ?? jobs.error ?? null,
+    isLoading: status.isLoading || sets.isLoading || jobs.isLoading || vitals.isLoading,
+    error: status.error ?? sets.error ?? jobs.error ?? vitals.error ?? null,
   }
 }
