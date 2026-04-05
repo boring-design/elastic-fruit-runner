@@ -1,0 +1,53 @@
+internal/controller/scaler.go
+  ada0e2f5c5a90cb2 66,85
+internal/jobstore/store.go
+  a6e20963f1300fae 11
+  ada0e2f5c5a90cb2 1-10,12-107
+internal/registry/registry.go
+  a6e20963f1300fae 5,157-159,164-166
+  ada0e2f5c5a90cb2 4,8-9,71,75-76,80,156,163,209-211
+internal/api/server.go
+  ada0e2f5c5a90cb2 75-76
+cmd/elastic-fruit-runner/main.go
+  a6e20963f1300fae 5
+  ada0e2f5c5a90cb2 22,57,60-61,73-79,141,157-158
+internal/jobstore/store_test.go
+  ada0e2f5c5a90cb2 1-187
+internal/hostmetrics/collector.go
+  ada0e2f5c5a90cb2 106
+.gitignore
+  ada0e2f5c5a90cb2 9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "a81a79ae29a5b0648e65faa2eea3bf4f1a883959",
+  "prompts": {
+    "a6e20963f1300fae": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "075ba70d-a7c8-4326-a475-acece4e4a823",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 3,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    },
+    "ada0e2f5c5a90cb2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7b8b9cd8-fd7a-4c85-88a1-1b745e8ace18",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 375,
+      "total_deletions": 23,
+      "accepted_lines": 329,
+      "overriden_lines": 1
+    }
+  }
+}
