@@ -19,6 +19,19 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
       - uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11
