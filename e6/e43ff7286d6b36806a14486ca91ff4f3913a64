@@ -1,0 +1,29 @@
+internal/management/jobs.go
+  f73239c0e7ad3c5f 4,54-59,63-65
+internal/vitals/collector_test.go
+  f73239c0e7ad3c5f 1-24
+internal/vitals/collector.go
+  f73239c0e7ad3c5f 6-9,12,23-25,28,32,34,37-38,40-41,43,46,49-51,54-58
+internal/controller/scaler.go
+  f73239c0e7ad3c5f 156,158,244,246,279,281,299,301,320-321,326-327
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "e6e43ff7286d6b36806a14486ca91ff4f3913a64",
+  "prompts": {
+    "f73239c0e7ad3c5f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8715652c-e5d8-4140-b269-17eb4cc936ce",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 73,
+      "total_deletions": 133,
+      "accepted_lines": 71,
+      "overriden_lines": 0
+    }
+  }
+}
