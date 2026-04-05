@@ -1,0 +1,35 @@
+cmd/elastic-fruit-runner/main.go
+  e45db5b1993696b7 151
+dashboard/src/api/fetchers.ts
+  e45db5b1993696b7 80-81,84
+dashboard/src/App.tsx
+  e45db5b1993696b7 60-74
+dashboard/src/types.ts
+  e45db5b1993696b7 35-36
+config/config.go
+  e45db5b1993696b7 17
+internal/api/server.go
+  e45db5b1993696b7 23,27-32,40,148-150,152
+config.example.yaml
+  e45db5b1993696b7 55-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "a0549ba38db1c9cd2b189b4103fc045caf5ae4b7",
+  "prompts": {
+    "e45db5b1993696b7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c404bf10-a044-4892-b5ed-3c909ea5ca22",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 13,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    }
+  }
+}
