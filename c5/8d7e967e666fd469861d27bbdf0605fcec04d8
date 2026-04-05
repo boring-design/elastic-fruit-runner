@@ -1,0 +1,56 @@
+internal/management/migrations/001_create_jobs.sql
+  1177ab43233be0cc 1-14
+internal/management/migrations/embed.go
+  1177ab43233be0cc 1-6
+internal/management/sqlc/queries.sql
+  1177ab43233be0cc 1-18
+config/config.go
+  1177ab43233be0cc 18
+dashboard/src/api/fetchers.ts
+  1177ab43233be0cc 8
+internal/management/jobs.go
+  1177ab43233be0cc 4-5,8,22,24,27-28,30,34-37,42-43,50-51,56,62,65,67-72,74-91,95,97-102,104-116,118
+internal/management/sqlc/sqlc.yaml
+  1177ab43233be0cc 1-9
+internal/management/service.go
+  1177ab43233be0cc 5,9,14-15,20,36,42-43,45-49,52-53,184-232
+internal/management/jobs_test.go
+  1177ab43233be0cc 1-171
+cmd/elastic-fruit-runner/main.go
+  1177ab43233be0cc 65,79,83,96-108
+Makefile
+  1177ab43233be0cc 1,77,82-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "c58d7e967e666fd469861d27bbdf0605fcec04d8",
+  "prompts": {
+    "1177ab43233be0cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de9ee210-ac69-40aa-a2dd-bb37181e3f7d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 378,
+      "total_deletions": 67,
+      "accepted_lines": 373,
+      "overriden_lines": 1
+    },
+    "f73239c0e7ad3c5f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8715652c-e5d8-4140-b269-17eb4cc936ce",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    }
+  }
+}

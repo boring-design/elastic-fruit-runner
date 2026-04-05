@@ -1,0 +1,47 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "6b9814aa6891061355744b1081da1e13dc48b9d5",
+  "prompts": {
+    "1177ab43233be0cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "de9ee210-ac69-40aa-a2dd-bb37181e3f7d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    },
+    "15ae12431bdf7fe3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "27c8708a-7021-41d2-8538-d10709a28211",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 10,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 1
+    },
+    "f73239c0e7ad3c5f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8715652c-e5d8-4140-b269-17eb4cc936ce",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}

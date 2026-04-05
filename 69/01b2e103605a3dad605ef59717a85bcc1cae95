@@ -1,0 +1,37 @@
+cmd/elastic-fruit-runner/main.go
+  73571ab2f0e59afd 71
+internal/vitals/service.go
+  73571ab2f0e59afd 15,18,26,39
+config/config.go
+  73571ab2f0e59afd 17,20-27
+config.example.yaml
+  73571ab2f0e59afd 56-65
+internal/api/server.go
+  73571ab2f0e59afd 12,27,31-33,35-42,48,57,165-166,168-175,177
+dashboard/src/components/ConnectionStatus.tsx
+  73571ab2f0e59afd 1-24
+dashboard/src/App.tsx
+  73571ab2f0e59afd 9,61
+dashboard/src/components/RunnerSetPanel.tsx
+  73571ab2f0e59afd 9,71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "6901b2e103605a3dad605ef59717a85bcc1cae95",
+  "prompts": {
+    "73571ab2f0e59afd": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "99326584-02b5-443a-8f03-d924be2494e4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 301,
+      "total_deletions": 47,
+      "accepted_lines": 81,
+      "overriden_lines": 0
+    }
+  }
+}

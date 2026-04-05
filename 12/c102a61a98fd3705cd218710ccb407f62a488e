@@ -1,0 +1,27 @@
+Makefile
+  f73239c0e7ad3c5f 1,38-40,70-71
+internal/vitals/service.go
+  f73239c0e7ad3c5f 26-28
+config/config.go
+  f73239c0e7ad3c5f 130-133
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "12c102a61a98fd3705cd218710ccb407f62a488e",
+  "prompts": {
+    "f73239c0e7ad3c5f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8715652c-e5d8-4140-b269-17eb4cc936ce",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 13,
+      "total_deletions": 7,
+      "accepted_lines": 37,
+      "overriden_lines": 0
+    }
+  }
+}
