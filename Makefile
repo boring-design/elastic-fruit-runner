@@ -13,7 +13,7 @@ build-go:
 	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
 # Run unit tests (requires dashboard/dist/ for embed)
-unit-test: build-dashboard
+unit-test:
 	go test ./...
 
 # Run all tests
@@ -28,18 +28,18 @@ fmt-check:
 	@test -z "$$(gofmt -l .)" || (echo "Files not formatted:"; gofmt -l .; exit 1)
 
 # Run go vet (requires dashboard/dist/ for embed)
-vet: build-dashboard
+vet:
 	go vet ./...
 
 # Run golangci-lint (requires dashboard/dist/ for embed)
-lint: build-dashboard
+lint:
 	golangci-lint run
 
 # Run quick local checks before committing (format, vet, build, prek)
-check: fmt vet build prek-all
+check: fmt build-dashboard vet build-go prek-all
 
 # Run all CI checks (same as pre-commit)
-ci: fmt-check vet build lint unit-test
+ci: fmt-check build-dashboard vet build-go lint unit-test
 
 # Tidy go modules
 tidy:

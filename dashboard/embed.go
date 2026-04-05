@@ -40,7 +40,7 @@ func Handler() http.Handler {
 			fileServer.ServeHTTP(w, r2)
 			return
 		}
-		f.Close()
+		_ = f.Close()
 
 		fileServer.ServeHTTP(w, r)
 	})
