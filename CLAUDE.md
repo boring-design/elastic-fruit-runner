@@ -9,6 +9,10 @@
 - Full CI checks: `make ci`
 - Show all targets: `make help`
 
+## Pre-commit
+
+- Run `prek run --all-files` before commits to execute all pre-commit hooks (formatting, linting, etc.)
+
 ## Conventions
 
 - Error messages must include context (relevant values) and be descriptive enough to diagnose without source code
