@@ -4,8 +4,17 @@ package hostmetrics
 
 import (
 	"log/slog"
+	"sync"
 
 	"golang.org/x/sys/unix"
+)
+
+// prevCPU stores the previous kern.cp_time sample so we can compute
+// delta-based CPU utilization instead of boot-time averages.
+var (
+	prevCPUMu   sync.Mutex
+	prevCPUVals [4]uint64
+	prevCPUInit bool
 )
 
 // Collect gathers current host metrics from the OS.
@@ -18,18 +27,16 @@ func Collect() Vitals {
 	}
 }
 
-func collectCPU() float32 {
-	// Use sysctl kern.cp_time to get CPU ticks.
-	// On macOS this returns an array of 5 uint32: user, nice, system, idle, ???
-	// We approximate utilization as (user+nice+system) / total.
+// readCPUTicks reads kern.cp_time and returns (user, nice, sys, idle).
+func readCPUTicks() (user, nice, sys, idle uint64, ok bool) {
 	cpTime, err := unix.SysctlRaw("kern.cp_time")
 	if err != nil {
 		slog.Debug("failed to read kern.cp_time", "err", err)
-		return 0
+		return 0, 0, 0, 0, false
 	}
 
 	if len(cpTime) < 20 {
-		return 0
+		return 0, 0, 0, 0, false
 	}
 
 	// Parse as 5 little-endian uint32 values.
@@ -42,12 +49,43 @@ func collectCPU() float32 {
 			uint64(cpTime[offset+3])<<24
 	}
 
-	user, nice, sys, idle := vals[0], vals[1], vals[2], vals[3]
-	total := user + nice + sys + idle
-	if total == 0 {
+	return vals[0], vals[1], vals[2], vals[3], true
+}
+
+func collectCPU() float32 {
+	user, nice, sys, idle, ok := readCPUTicks()
+	if !ok {
 		return 0
 	}
-	return float32(user+nice+sys) * 100.0 / float32(total)
+
+	prevCPUMu.Lock()
+	defer prevCPUMu.Unlock()
+
+	if !prevCPUInit {
+		// First sample: store counters and fall back to cumulative average.
+		prevCPUVals = [4]uint64{user, nice, sys, idle}
+		prevCPUInit = true
+		total := user + nice + sys + idle
+		if total == 0 {
+			return 0
+		}
+		return float32(user+nice+sys) * 100.0 / float32(total)
+	}
+
+	// Compute delta from previous sample.
+	dUser := user - prevCPUVals[0]
+	dNice := nice - prevCPUVals[1]
+	dSys := sys - prevCPUVals[2]
+	dIdle := idle - prevCPUVals[3]
+
+	prevCPUVals = [4]uint64{user, nice, sys, idle}
+
+	dActive := dUser + dNice + dSys
+	dTotal := dActive + dIdle
+	if dTotal == 0 {
+		return 0
+	}
+	return float32(dActive) * 100.0 / float32(dTotal)
 }
 
 func collectMemory() float32 {
@@ -74,6 +112,11 @@ func collectMemory() float32 {
 
 	freeBytes := uint64(freePages) * uint64(pageSize)
 	if totalBytes == 0 {
+		return 0
+	}
+	// Guard against unsigned underflow: the two sysctl calls are not atomic,
+	// so freeBytes can transiently exceed totalBytes.
+	if freeBytes >= totalBytes {
 		return 0
 	}
 	usedBytes := totalBytes - freeBytes

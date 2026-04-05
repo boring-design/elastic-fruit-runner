@@ -66,6 +66,18 @@ func (r *JobRing) RecordCompleted(jobID, result string) {
 			return
 		}
 	}
+
+	// Job was evicted from the ring (wrapped). Insert a completed-only record
+	// so that completion events are not silently lost.
+	r.entries[r.cursor] = JobRecord{
+		ID:          jobID,
+		Result:      result,
+		CompletedAt: &now,
+	}
+	r.cursor = (r.cursor + 1) % r.size
+	if r.count < r.size {
+		r.count++
+	}
 }
 
 // Snapshot returns a copy of all recorded jobs, most-recent-first.
