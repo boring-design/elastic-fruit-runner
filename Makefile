@@ -1,16 +1,13 @@
-.PHONY: build build-dashboard build-go run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
 # Build dashboard then Go binary
-build: build-dashboard build-go
+build: build-dashboard
+	@mkdir -p output
+	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
 # Build the React dashboard
 build-dashboard:
 	cd dashboard && pnpm install --frozen-lockfile && pnpm run build
-
-# Build only the Go binary (requires dashboard/dist/ to exist)
-build-go:
-	@mkdir -p output
-	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
 # Run unit tests (requires dashboard/dist/ for embed)
 unit-test: build-dashboard
@@ -36,10 +33,10 @@ lint: build-dashboard
 	golangci-lint run
 
 # Run quick local checks before committing (format, vet, build, prek)
-check: fmt build-dashboard vet build-go prek-all
+check: fmt vet build prek-all
 
 # Run all CI checks (same as pre-commit)
-ci: fmt-check build-dashboard vet build-go lint unit-test
+ci: fmt-check vet build lint unit-test
 
 # Tidy go modules
 tidy:
@@ -60,7 +57,6 @@ help:
 	@echo "Development:"
 	@echo "  build            Build dashboard + Go binary to output/"
 	@echo "  build-dashboard  Build React dashboard (required before Go compilation)"
-	@echo "  build-go         Build Go binary only (requires dashboard/dist/)"
 	@echo "  fmt              Format Go code"
 	@echo "  vet              Run go vet"
 	@echo "  lint             Run golangci-lint"

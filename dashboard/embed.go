@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 //go:embed all:dist
@@ -30,7 +31,13 @@ func Handler() http.Handler {
 		// Check if the requested file exists in the embedded FS.
 		f, err := sub.Open(path[1:])
 		if err != nil {
-			// File not found — serve index.html for SPA client-side routing.
+			// Static assets (hashed filenames under /assets/, favicon, etc.)
+			// should return 404 when missing, not the SPA shell.
+			if isStaticAsset(path) {
+				http.NotFound(w, r)
+				return
+			}
+			// SPA client-side route — serve index.html.
 			// Shallow-copy the request to avoid mutating the original.
 			r2 := new(http.Request)
 			*r2 = *r
@@ -44,4 +51,24 @@ func Handler() http.Handler {
 
 		fileServer.ServeHTTP(w, r)
 	})
+}
+
+// isStaticAsset returns true for paths that look like real static files
+// (Vite hashed assets, fonts, images, etc.) rather than SPA routes.
+func isStaticAsset(path string) bool {
+	if strings.HasPrefix(path, "/assets/") {
+		return true
+	}
+	// Check for common static file extensions.
+	for _, ext := range []string{
+		".js", ".css", ".map",
+		".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp",
+		".woff", ".woff2", ".ttf", ".eot",
+		".json", ".xml", ".txt",
+	} {
+		if strings.HasSuffix(path, ext) {
+			return true
+		}
+	}
+	return false
 }
