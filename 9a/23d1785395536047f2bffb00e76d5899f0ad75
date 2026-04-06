@@ -1,0 +1,45 @@
+config/load.go
+  4aa683ef7d0860d3 18,21-22
+features/jobstore/lifecycle.feature
+  4aa683ef7d0860d3 1-48
+test/bdd/steps_test.go
+  4aa683ef7d0860d3 1-576,578-723
+features/vitals/collector.feature
+  4aa683ef7d0860d3 1-10
+config/load_integration_test.go
+  4aa683ef7d0860d3 17,69,152,175,199,215
+Makefile
+  4aa683ef7d0860d3 1,16-19,74
+features/controller/lifecycle.feature
+  4aa683ef7d0860d3 1-20
+internal/binpath/lookup.go
+  4aa683ef7d0860d3 45-48,55
+features/binpath/lookup.feature
+  4aa683ef7d0860d3 1-26
+test/bdd/bdd_test.go
+  4aa683ef7d0860d3 1-60
+features/config/loading.feature
+  4aa683ef7d0860d3 1-82
+internal/binpath/lookup_integration_test.go
+  4aa683ef7d0860d3 15-16,34,37,56-57,71-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "9a23d1785395536047f2bffb00e76d5899f0ad75",
+  "prompts": {
+    "4aa683ef7d0860d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cd55441-b92e-45c7-b6e2-af634d1449d0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 730,
+      "total_deletions": 1,
+      "accepted_lines": 996,
+      "overriden_lines": 1
+    }
+  }
+}
