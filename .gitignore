@@ -1,6 +1,7 @@
 # Build output
 /elastic-fruit-runner
 /output/
+dashboard/dist/
 
 # Generated protobuf code is committed so CI does not require buf
 # /gen/

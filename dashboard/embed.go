@@ -1,0 +1,51 @@
+package dashboard
+
+import (
+	"embed"
+	"io/fs"
+	"net/http"
+)
+
+//go:embed all:dist
+var distFS embed.FS
+
+// Handler returns an http.Handler that serves the embedded dashboard SPA.
+// It serves static files from the Vite build output and falls back to
+// index.html for any path that does not match a real file (SPA routing).
+func Handler() http.Handler {
+	sub, err := fs.Sub(distFS, "dist")
+	if err != nil {
+		panic("dashboard: embedded dist/ subtree not found: " + err.Error())
+	}
+	fileServer := http.FileServer(http.FS(sub))
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "" || path == "/" {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Check if the requested file exists in the embedded FS.
+		f, err := sub.Open(path[1:])
+		if err != nil {
+			// Only serve the SPA fallback for GET/HEAD browser navigation.
+			// Other methods (POST, PUT, DELETE) to unknown paths get 404.
+			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+				http.NotFound(w, r)
+				return
+			}
+			// Vite build assets live under /assets/ — return 404 if missing.
+			if len(path) > 8 && path[:8] == "/assets/" {
+				http.NotFound(w, r)
+				return
+			}
+			// SPA client-side route — serve index.html.
+			http.ServeFileFS(w, r, sub, "index.html")
+			return
+		}
+		_ = f.Close()
+
+		fileServer.ServeHTTP(w, r)
+	})
+}

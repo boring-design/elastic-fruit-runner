@@ -21,6 +21,19 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
       - name: Install goreleaser
         run: |
           curl -fsSL -o /tmp/goreleaser.tar.gz "https://github.com/goreleaser/goreleaser/releases/latest/download/goreleaser_Darwin_arm64.tar.gz"
@@ -41,6 +54,19 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o dist/elastic-fruit-runner-linux-amd64 ./cmd/elastic-fruit-runner
@@ -70,6 +96,19 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Build binary
         run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o dist/elastic-fruit-runner-linux-arm64 ./cmd/elastic-fruit-runner

@@ -1,12 +1,16 @@
-.PHONY: build run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
-# Build the CLI binary
-build:
+# Build dashboard then Go binary
+build: build-dashboard
 	@mkdir -p output
 	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
-# Run unit tests
-unit-test:
+# Build the React dashboard
+build-dashboard:
+	cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
+# Run unit tests (requires dashboard/dist/ for embed)
+unit-test: build-dashboard
 	go test ./...
 
 # Run all tests
@@ -20,12 +24,12 @@ fmt:
 fmt-check:
 	@test -z "$$(gofmt -l .)" || (echo "Files not formatted:"; gofmt -l .; exit 1)
 
-# Run go vet
-vet:
+# Run go vet (requires dashboard/dist/ for embed)
+vet: build-dashboard
 	go vet ./...
 
-# Run golangci-lint
-lint:
+# Run golangci-lint (requires dashboard/dist/ for embed)
+lint: build-dashboard
 	golangci-lint run
 
 # Run quick local checks before committing (format, vet, build, prek)
@@ -51,12 +55,13 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Development:"
-	@echo "  build       Build the CLI binary to output/"
-	@echo "  fmt         Format Go code"
-	@echo "  vet         Run go vet"
-	@echo "  lint        Run golangci-lint"
-	@echo "  check       Run fmt + vet + build (quick local check)"
-	@echo "  tidy        Tidy go modules"
+	@echo "  build            Build dashboard + Go binary to output/"
+	@echo "  build-dashboard  Build React dashboard (required before Go compilation)"
+	@echo "  fmt              Format Go code"
+	@echo "  vet              Run go vet"
+	@echo "  lint             Run golangci-lint"
+	@echo "  check            Run fmt + vet + build (quick local check)"
+	@echo "  tidy             Tidy go modules"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test        Run all tests"

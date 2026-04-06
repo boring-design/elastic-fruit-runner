@@ -1,6 +1,6 @@
 import type { DaemonStatus, RunnerSet, JobRecord, Runner, MachineVitals } from '../types'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8080'
+const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 
 async function rpc<T>(method: string, body: Record<string, unknown> = {}): Promise<T> {
   const res = await fetch(`${API_BASE}/controlplane.v1.ControlPlaneService/${method}`, {

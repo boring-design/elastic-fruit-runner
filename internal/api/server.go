@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
+	"github.com/boring-design/elastic-fruit-runner/dashboard"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
@@ -54,6 +55,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s)
 	mux.Handle(path, handler)
+	mux.Handle("/", dashboard.Handler())
 	return withCORS(mux, s.cors)
 }
 

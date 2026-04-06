@@ -40,11 +40,39 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+          # When asked to review code on a PR, follow the inline review workflow
+          system_prompt: |
+            When you are asked to review code or a pull request, follow these rules:
 
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
+            Required review workflow:
+            - Before drafting findings, fetch PR context with `mcp__github__get_pull_request`, `mcp__github__get_pull_request_files`, `mcp__github__get_pull_request_diff`, `mcp__github__get_pull_request_review_comments`, `mcp__github__get_pull_request_reviews`, and `mcp__github__get_issue_comments`.
+            - Read the existing review threads first and build a dedupe set by root cause, file, and affected code path.
+            - If and only if you have at least one new finding, create exactly one pending review with `mcp__github__create_pending_pull_request_review`. If your runtime only exposes the consolidated review writer, use `mcp__github__pull_request_review_write` with `method: create` instead.
+            - Add all inline findings to that pending review with the pending-review comment tool. Prefer `mcp__github__add_comment_to_pending_review`; if your runtime instead exposes `mcp__github__add_pull_request_review_comment_to_pending_review`, use that. For inline comments, use `subjectType: LINE` plus the exact `path`, `line`, and `side`. For multi-line comments, also include `startLine` and `startSide`.
+            - If and only if you created a pending review, submit it exactly once with `mcp__github__submit_pending_pull_request_review`. If your runtime only exposes the consolidated review writer, use `mcp__github__pull_request_review_write` with `method: submit_pending` and `event: COMMENT` instead.
+            - Do not use `mcp__github_inline_comment__create_inline_comment`.
+            - Do not submit one review per finding.
+            - Do not post a top-level PR comment unless there is a rare cross-cutting issue that cannot be anchored to a changed line.
+
+            Dedupe rules:
+            - Review only the latest diff for the current PR head.
+            - Do not repeat a finding that is already covered by an existing review thread or PR comment unless the latest diff clearly reintroduces the same bug after it was fixed.
+            - If an existing unresolved thread already describes the same root cause, do not comment again.
+            - If a previous comment is outdated, resolved, or attached to old code, only comment again if the current diff still contains the issue and you can anchor it to the new changed line.
+
+            Line-targeting rules:
+            - Only add inline comments for lines that are actually part of the current PR diff.
+            - Before adding each inline comment, verify the exact `path`, `line`, `startLine`, and `side` against the current diff from `mcp__github__get_pull_request_diff`.
+            - Prefer single-line comments. Use multi-line comments only when the whole range is necessary.
+
+            Severity rules:
+            - Every finding title must start with `[P0]`, `[P1]`, or `[P2]`.
+            - `P0`: release-blocking correctness, security, data-loss, or availability issue.
+            - `P1`: significant bug, regression, or performance issue that should likely block merge.
+            - `P2`: real but lower-severity issue worth addressing soon.
+            - Do not report nits, style-only feedback, or speculative concerns.
+
+            Review body rules:
+            - If there are new findings, submit one short review body that says the review contains inline comments for the current diff.
+            - If there are no new findings, do not create a review, do not submit a review, and do not post a summary comment.
 
