@@ -12,8 +12,8 @@ func TestLookup_findsInPath(t *testing.T) {
 	}
 
 	origDirs := wellKnownDirs
-	t.Cleanup(func() { resetForTesting(origDirs) })
-	resetForTesting(nil)
+	t.Cleanup(func() { ResetForTesting(origDirs) })
+	ResetForTesting(nil)
 
 	// "ls" should always be found on any Unix system
 	got := Lookup("ls")
@@ -31,10 +31,10 @@ func TestLookup_fallsBackToWellKnownDirs(t *testing.T) {
 	}
 
 	origDirs := wellKnownDirs
-	t.Cleanup(func() { resetForTesting(origDirs) })
+	t.Cleanup(func() { ResetForTesting(origDirs) })
 
 	tmpDir := t.TempDir()
-	resetForTesting([]string{tmpDir})
+	ResetForTesting([]string{tmpDir})
 
 	fakeBin := filepath.Join(tmpDir, "test-fake-bin")
 	if err := os.WriteFile(fakeBin, []byte("#!/bin/sh\n"), 0o755); err != nil {
@@ -53,8 +53,8 @@ func TestLookup_returnsBareName_whenNotFound(t *testing.T) {
 	}
 
 	origDirs := wellKnownDirs
-	t.Cleanup(func() { resetForTesting(origDirs) })
-	resetForTesting(nil)
+	t.Cleanup(func() { ResetForTesting(origDirs) })
+	ResetForTesting(nil)
 
 	got := Lookup("nonexistent-binary-xyz-12345")
 	if got != "nonexistent-binary-xyz-12345" {
@@ -68,8 +68,8 @@ func TestLookup_caches(t *testing.T) {
 	}
 
 	origDirs := wellKnownDirs
-	t.Cleanup(func() { resetForTesting(origDirs) })
-	resetForTesting(nil)
+	t.Cleanup(func() { ResetForTesting(origDirs) })
+	ResetForTesting(nil)
 
 	first := Lookup("ls")
 	second := Lookup("ls")

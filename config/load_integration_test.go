@@ -14,7 +14,7 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 	t.Setenv("HOME", t.TempDir())
 
-	cfg, err := loadWithArgs(nil)
+	cfg, err := LoadWithArgs(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,7 +66,7 @@ idle_timeout: 30m
 		t.Fatalf("write config file: %v", err)
 	}
 
-	cfg, err := loadWithArgs([]string{"--config", cfgFile})
+	cfg, err := LoadWithArgs([]string{"--config", cfgFile})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestLoad_DurationParsing(t *testing.T) {
 		t.Fatalf("write config file: %v", err)
 	}
 
-	cfg, err := loadWithArgs([]string{"--config", cfgFile})
+	cfg, err := LoadWithArgs([]string{"--config", cfgFile})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestLoad_LogLevelFromConfigFile(t *testing.T) {
 		t.Fatalf("write config file: %v", err)
 	}
 
-	cfg, err := loadWithArgs([]string{"--config", cfgFile})
+	cfg, err := LoadWithArgs([]string{"--config", cfgFile})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestLoad_LogLevelEnvOverride(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("LOG_LEVEL", "warn")
 
-	cfg, err := loadWithArgs(nil)
+	cfg, err := LoadWithArgs(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestLoad_LogLevelDefault(t *testing.T) {
 	}
 	t.Setenv("HOME", t.TempDir())
 
-	cfg, err := loadWithArgs(nil)
+	cfg, err := LoadWithArgs(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

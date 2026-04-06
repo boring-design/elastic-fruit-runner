@@ -1,4 +1,4 @@
-.PHONY: build build-dashboard run unit-test test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard run unit-test test bdd-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
 # Build dashboard then Go binary
 build: build-dashboard
@@ -12,6 +12,10 @@ build-dashboard:
 # Run unit tests only (fast, no external deps)
 unit-test: build-dashboard
 	go test -short -count=1 ./...
+
+# Run BDD integration tests (excludes @external tagged scenarios)
+bdd-test: build-dashboard
+	go test -v -count=1 ./test/bdd/ -run TestFeatures
 
 # Run all tests including integration
 test: build-dashboard
@@ -67,6 +71,7 @@ help:
 	@echo "Testing:"
 	@echo "  test        Run all tests"
 	@echo "  unit-test   Run unit tests"
+	@echo "  bdd-test    Run BDD integration tests"
 	@echo ""
 	@echo "CI:"
 	@echo "  ci          Run all CI checks (fmt-check + vet + build + lint + unit-test)"

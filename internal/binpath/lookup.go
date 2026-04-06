@@ -42,14 +42,17 @@ func Lookup(name string) string {
 	return resolved
 }
 
-// resetForTesting clears the lookup cache and optionally overrides wellKnownDirs.
-func resetForTesting(dirs []string) {
+// ResetForTesting clears the lookup cache and optionally overrides wellKnownDirs.
+// It returns the previous wellKnownDirs so callers can restore them.
+func ResetForTesting(dirs []string) []string {
+	old := wellKnownDirs
 	cacheMu.Lock()
 	cache = make(map[string]string)
 	cacheMu.Unlock()
 	if dirs != nil {
 		wellKnownDirs = dirs
 	}
+	return old
 }
 
 func resolve(name string) string {

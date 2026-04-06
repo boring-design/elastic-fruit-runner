@@ -15,10 +15,11 @@ import (
 // Load reads configuration from a YAML config file.
 // The --config flag overrides the default search paths.
 func Load() (*Config, error) {
-	return loadWithArgs(os.Args[1:])
+	return LoadWithArgs(os.Args[1:])
 }
 
-func loadWithArgs(args []string) (*Config, error) {
+// LoadWithArgs reads configuration with explicit CLI arguments instead of os.Args.
+func LoadWithArgs(args []string) (*Config, error) {
 	flags := pflag.NewFlagSet("elastic-fruit-runner", pflag.ContinueOnError)
 	configPath := flags.String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
 	if err := flags.Parse(args); err != nil {
