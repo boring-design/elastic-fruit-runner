@@ -1,0 +1,27 @@
+.github/workflows/controller-integration-test.yaml
+  bc6d4cc96f499c68 50,52-57,97-104
+codecov.yml
+  bc6d4cc96f499c68 1-17
+.github/workflows/golangci-lint.yaml
+  bc6d4cc96f499c68 11,39-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "536bd00a2d9a954e23f97a5a0ebf8f7612a8d42a",
+  "prompts": {
+    "bc6d4cc96f499c68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3db87a75-95aa-44af-81d2-0fc69b5447fa",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 43,
+      "total_deletions": 2,
+      "accepted_lines": 43,
+      "overriden_lines": 0
+    }
+  }
+}
