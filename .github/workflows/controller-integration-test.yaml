@@ -1,0 +1,90 @@
+name: Controller Integration Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/controller/**'
+      - 'internal/backend/**'
+      - 'internal/management/**'
+      - 'config/**'
+
+permissions:
+  contents: read
+
+jobs:
+  integration-test-pat:
+    name: Integration Test (PAT)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Run controller integration test (PAT auth)
+        env:
+          EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
+          EFR_TEST_PAT: ${{ secrets.EFR_TEST_PAT }}
+          EFR_TEST_WORKFLOW_ORG: ${{ vars.EFR_TEST_WORKFLOW_ORG }}
+          EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
+          EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
+          EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
+        run: go test -count=1 -v -timeout=15m ./internal/controller/
+
+  integration-test-app:
+    name: Integration Test (GitHub App)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+
+      - name: Build dashboard (required for go:embed)
+        run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+
+      - name: Write GitHub App private key
+        run: |
+          echo "${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}" > /tmp/efr-test-app-key.pem
+
+      - name: Run controller integration test (GitHub App auth)
+        env:
+          EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
+          EFR_TEST_APP_CLIENT_ID: ${{ secrets.EFR_TEST_APP_CLIENT_ID }}
+          EFR_TEST_APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
+          EFR_TEST_APP_PRIVATE_KEY_PATH: /tmp/efr-test-app-key.pem
+          EFR_TEST_WORKFLOW_ORG: ${{ vars.EFR_TEST_WORKFLOW_ORG }}
+          EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
+          EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
+          EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
+        run: go test -count=1 -v -timeout=15m ./internal/controller/

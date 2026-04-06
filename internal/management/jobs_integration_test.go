@@ -34,6 +34,9 @@ func setupTestStore(t *testing.T) *JobStore {
 }
 
 func TestRecordJobStarted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	store.RecordJobStarted("set-a", "job-1", "runner-1")
@@ -60,6 +63,9 @@ func TestRecordJobStarted(t *testing.T) {
 }
 
 func TestRecordJobCompleted(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	store.RecordJobStarted("set-a", "job-1", "runner-1")
@@ -78,6 +84,9 @@ func TestRecordJobCompleted(t *testing.T) {
 }
 
 func TestRecordJobCompletedUnknownJob(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	// Complete a job that was never started (e.g. daemon restarted)
@@ -99,6 +108,9 @@ func TestRecordJobCompletedUnknownJob(t *testing.T) {
 }
 
 func TestSnapshotOrdering(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	store.RecordJobStarted("set-a", "job-1", "runner-1")
@@ -122,6 +134,9 @@ func TestSnapshotOrdering(t *testing.T) {
 }
 
 func TestSnapshotLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	for i := range 250 {
@@ -135,6 +150,9 @@ func TestSnapshotLimit(t *testing.T) {
 }
 
 func TestUnexpectedResult(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	store.RecordJobStarted("set-a", "job-1", "runner-1")
@@ -150,6 +168,9 @@ func TestUnexpectedResult(t *testing.T) {
 }
 
 func TestConcurrentAccess(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires SQLite")
+	}
 	store := setupTestStore(t)
 
 	var wg sync.WaitGroup

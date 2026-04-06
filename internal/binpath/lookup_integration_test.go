@@ -7,6 +7,14 @@ import (
 )
 
 func TestLookup_findsInPath(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires exec.LookPath")
+	}
+
+	origDirs := wellKnownDirs
+	t.Cleanup(func() { resetForTesting(origDirs) })
+	resetForTesting(nil)
+
 	// "ls" should always be found on any Unix system
 	got := Lookup("ls")
 	if got == "ls" {
@@ -18,18 +26,15 @@ func TestLookup_findsInPath(t *testing.T) {
 }
 
 func TestLookup_fallsBackToWellKnownDirs(t *testing.T) {
-	// Create a temp binary in a well-known dir simulation
-	tmpDir := t.TempDir()
+	if testing.Short() {
+		t.Skip("integration test: requires file system")
+	}
 
-	// Override wellKnownDirs for this test
 	origDirs := wellKnownDirs
-	wellKnownDirs = []string{tmpDir}
-	t.Cleanup(func() { wellKnownDirs = origDirs })
+	t.Cleanup(func() { resetForTesting(origDirs) })
 
-	// Clear cache
-	cacheMu.Lock()
-	delete(cache, "test-fake-bin")
-	cacheMu.Unlock()
+	tmpDir := t.TempDir()
+	resetForTesting([]string{tmpDir})
 
 	fakeBin := filepath.Join(tmpDir, "test-fake-bin")
 	if err := os.WriteFile(fakeBin, []byte("#!/bin/sh\n"), 0o755); err != nil {
@@ -43,9 +48,13 @@ func TestLookup_fallsBackToWellKnownDirs(t *testing.T) {
 }
 
 func TestLookup_returnsBareName_whenNotFound(t *testing.T) {
-	cacheMu.Lock()
-	delete(cache, "nonexistent-binary-xyz-12345")
-	cacheMu.Unlock()
+	if testing.Short() {
+		t.Skip("integration test: requires exec.LookPath")
+	}
+
+	origDirs := wellKnownDirs
+	t.Cleanup(func() { resetForTesting(origDirs) })
+	resetForTesting(nil)
 
 	got := Lookup("nonexistent-binary-xyz-12345")
 	if got != "nonexistent-binary-xyz-12345" {
@@ -54,9 +63,13 @@ func TestLookup_returnsBareName_whenNotFound(t *testing.T) {
 }
 
 func TestLookup_caches(t *testing.T) {
-	cacheMu.Lock()
-	delete(cache, "ls")
-	cacheMu.Unlock()
+	if testing.Short() {
+		t.Skip("integration test: requires exec.LookPath")
+	}
+
+	origDirs := wellKnownDirs
+	t.Cleanup(func() { resetForTesting(origDirs) })
+	resetForTesting(nil)
 
 	first := Lookup("ls")
 	second := Lookup("ls")

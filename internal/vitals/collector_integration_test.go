@@ -6,6 +6,11 @@ import (
 )
 
 func TestCollect_ReturnsValidRanges(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test: requires system metrics")
+	}
+	t.Parallel()
+
 	// First call seeds the CPU counters; second call computes a delta.
 	Collect()
 	time.Sleep(100 * time.Millisecond)

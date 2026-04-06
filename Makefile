@@ -9,12 +9,13 @@ build: build-dashboard
 build-dashboard:
 	cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
-# Run unit tests (requires dashboard/dist/ for embed)
+# Run unit tests only (fast, no external deps)
 unit-test: build-dashboard
-	go test ./...
+	go test -short -count=1 ./...
 
-# Run all tests
-test: unit-test
+# Run all tests including integration
+test: build-dashboard
+	go test -count=1 ./...
 
 # Format Go code
 fmt:
