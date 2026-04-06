@@ -1,0 +1,33 @@
+config/config_test.go
+  bc6d4cc96f499c68 60-61,80,94-95,111-112,365,384-385,405-406,414-415,423-424,426,434
+config/load_integration_test.go
+  bc6d4cc96f499c68 1-223
+internal/binpath/lookup.go
+  bc6d4cc96f499c68 45-54
+internal/controller/controller_integration_test.go
+  bc6d4cc96f499c68 1-8,10-41,43-219,221-308
+.github/workflows/controller-integration-test.yaml
+  bc6d4cc96f499c68 1-90
+Makefile
+  bc6d4cc96f499c68 12,14,16-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "80bda92744f3c280965e2e12dbc47d93aa9e84a9",
+  "prompts": {
+    "bc6d4cc96f499c68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3db87a75-95aa-44af-81d2-0fc69b5447fa",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 755,
+      "total_deletions": 253,
+      "accepted_lines": 651,
+      "overriden_lines": 2
+    }
+  }
+}
