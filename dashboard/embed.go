@@ -4,7 +4,6 @@ import (
 	"embed"
 	"io/fs"
 	"net/http"
-	"net/url"
 )
 
 //go:embed all:dist
@@ -42,13 +41,7 @@ func Handler() http.Handler {
 				return
 			}
 			// SPA client-side route — serve index.html.
-			// Shallow-copy the request to avoid mutating the original.
-			r2 := new(http.Request)
-			*r2 = *r
-			r2.URL = new(url.URL)
-			*r2.URL = *r.URL
-			r2.URL.Path = "/"
-			fileServer.ServeHTTP(w, r2)
+			http.ServeFileFS(w, r, sub, "index.html")
 			return
 		}
 		_ = f.Close()
