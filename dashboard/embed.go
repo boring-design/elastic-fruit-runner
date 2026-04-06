@@ -30,8 +30,13 @@ func Handler() http.Handler {
 		// Check if the requested file exists in the embedded FS.
 		f, err := sub.Open(path[1:])
 		if err != nil {
-			// Static assets (hashed filenames under /assets/, favicon, etc.)
-			// should return 404 when missing, not the SPA shell.
+			// Only serve the SPA fallback for GET/HEAD browser navigation.
+			// Other methods (POST, PUT, DELETE) to unknown paths get 404.
+			if r.Method != http.MethodGet && r.Method != http.MethodHead {
+				http.NotFound(w, r)
+				return
+			}
+			// Vite build assets live under /assets/ — return 404 if missing.
 			if len(path) > 8 && path[:8] == "/assets/" {
 				http.NotFound(w, r)
 				return
