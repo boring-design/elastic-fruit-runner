@@ -1,0 +1,25 @@
+dashboard/embed.go
+  16f490ae5b63293a 8,34-40,55-74
+Makefile
+  16f490ae5b63293a 1,4-6,36,39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "bac99e108144676727ef8e831154de5c23927178",
+  "prompts": {
+    "16f490ae5b63293a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11100ce4-e7e5-4d51-b904-7b7a2ff7e087",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 34,
+      "total_deletions": 11,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    }
+  }
+}
