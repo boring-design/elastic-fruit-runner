@@ -1,0 +1,17 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 50%
+
+ignore:
+  - "cmd/**"
+  - "gen/**"
+  - "dashboard/**"
+  - "internal/management/sqlc/**"
+  - "internal/management/migrations/**"
+  - "internal/tracing/**"

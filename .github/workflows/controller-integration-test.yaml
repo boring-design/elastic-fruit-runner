@@ -47,7 +47,15 @@ jobs:
           EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
           EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
           EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
-        run: go test -count=1 -v -timeout=15m ./internal/controller/
+        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./internal/controller/
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          flags: integration
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   integration-test-app:
     name: Integration Test (GitHub App)
@@ -87,4 +95,12 @@ jobs:
           EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
           EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
           EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
-        run: go test -count=1 -v -timeout=15m ./internal/controller/
+        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./internal/controller/
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          flags: integration
+          token: ${{ secrets.CODECOV_TOKEN }}
