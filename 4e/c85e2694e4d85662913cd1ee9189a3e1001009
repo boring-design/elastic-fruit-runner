@@ -1,0 +1,53 @@
+codecov.yml
+  bc6d4cc96f499c68 1-17
+.github/workflows/controller-integration-test.yaml
+  bc6d4cc96f499c68 50,52-58,98-106
+.github/workflows/golangci-lint.yaml
+  bc6d4cc96f499c68 11,39-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "4ec85e2694e4d85662913cd1ee9189a3e1001009",
+  "prompts": {
+    "4aa683ef7d0860d3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2cd55441-b92e-45c7-b6e2-af634d1449d0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": null,
+      "messages": [],
+      "total_additions": 267,
+      "total_deletions": 18,
+      "accepted_lines": 267,
+      "overriden_lines": 0
+    },
+    "a960109c33d2d6a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7efbb3c-0a60-4398-b4ef-76ddcdf656bb",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 59,
+      "overriden_lines": 0
+    },
+    "bc6d4cc96f499c68": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3db87a75-95aa-44af-81d2-0fc69b5447fa",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 46,
+      "total_deletions": 2,
+      "accepted_lines": 358,
+      "overriden_lines": 0
+    }
+  }
+}
