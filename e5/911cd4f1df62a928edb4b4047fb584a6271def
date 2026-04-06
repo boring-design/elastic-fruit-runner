@@ -1,0 +1,23 @@
+dashboard/embed.go
+  16f490ae5b63293a 44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "e5911cd4f1df62a928edb4b4047fb584a6271def",
+  "prompts": {
+    "16f490ae5b63293a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11100ce4-e7e5-4d51-b904-7b7a2ff7e087",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 8,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
