@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,7 +25,12 @@ import (
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
+	"connectrpc.com/connect"
+
 	"github.com/boring-design/elastic-fruit-runner/config"
+	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
+	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
+	"github.com/boring-design/elastic-fruit-runner/internal/api"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
@@ -64,6 +70,15 @@ type scenarioState struct {
 	scaleSetName   string
 	workflowRunID  int64
 	workflowResult *github.WorkflowRun
+
+	// management service steps
+	mgmtService    *management.Service
+	mgmtCancel     context.CancelFunc
+	vitalsSvc      *vitals.Service
+	apiServer      *http.Server
+	apiClient      controlplanev1connect.ControlPlaneServiceClient
+	runnerSetsResp *controlplanev1.ListRunnerSetsResponse
+	jobRecordsResp *controlplanev1.ListJobRecordsResponse
 }
 
 func initializeScenario(sc *godog.ScenarioContext) {
@@ -622,6 +637,162 @@ func initializeScenario(sc *godog.ScenarioContext) {
 			return fmt.Errorf("timeout waiting for controller shutdown")
 		}
 		return nil
+	})
+
+	// ---- Management service + API steps ----
+	sc.Step(`^a management service config with PAT auth and docker backend$`, func() error {
+		pat := os.Getenv("EFR_TEST_PAT")
+		if pat == "" {
+			return godog.ErrPending
+		}
+		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
+		if configURL == "" {
+			return fmt.Errorf("EFR_TEST_CONFIG_URL not set")
+		}
+
+		// Extract org from config URL (e.g. "https://github.com/myorg" -> "myorg")
+		parts := strings.Split(strings.TrimRight(configURL, "/"), "/")
+		orgName := parts[len(parts)-1]
+
+		image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
+		state.scaleSetName = "efr-test-" + randomSuffix()
+		state.cfg = &config.Config{
+			Orgs: []config.OrgConfig{
+				{
+					Org: orgName,
+					Auth: config.AuthConfig{
+						PATToken: &pat,
+					},
+					RunnerGroup: envOrDefault("EFR_TEST_RUNNER_GROUP", "Default"),
+					RunnerSets: []config.RunnerSetConfig{
+						{
+							Name:       state.scaleSetName,
+							Backend:    "docker",
+							Image:      image,
+							Labels:     []string{"self-hosted", "Linux", "X64"},
+							MaxRunners: 2,
+						},
+					},
+				},
+			},
+			IdleTimeout: 15 * time.Minute,
+			LogLevel:    "debug",
+			DBPath:      filepath.Join(os.TempDir(), fmt.Sprintf("efr-test-%s.db", randomSuffix())),
+		}
+		return nil
+	})
+
+	sc.Step(`^a management service is created from the config$`, func() error {
+		var err error
+		state.mgmtService, err = management.New(state.cfg)
+		if err != nil {
+			return fmt.Errorf("management.New: %w", err)
+		}
+		return nil
+	})
+
+	sc.Step(`^a vitals service is created$`, func() {
+		state.vitalsSvc = vitals.New(time.Now())
+	})
+
+	sc.Step(`^an API server is started$`, func() error {
+		srv := api.NewServer(state.mgmtService, state.vitalsSvc, state.cfg.IdleTimeout, state.cfg.CORS)
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			return fmt.Errorf("listen: %w", err)
+		}
+		state.apiServer = &http.Server{Handler: srv.Handler()}
+		go state.apiServer.Serve(listener)
+
+		baseURL := fmt.Sprintf("http://%s", listener.Addr().String())
+		state.apiClient = controlplanev1connect.NewControlPlaneServiceClient(http.DefaultClient, baseURL)
+		return nil
+	})
+
+	sc.Step(`^the management service is started$`, func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		state.mgmtCancel = cancel
+		state.mgmtService.Start(ctx)
+	})
+
+	sc.Step(`^I query the runner sets API$`, func() error {
+		resp, err := state.apiClient.ListRunnerSets(context.Background(), connect.NewRequest(&controlplanev1.ListRunnerSetsRequest{}))
+		if err != nil {
+			return fmt.Errorf("ListRunnerSets: %w", err)
+		}
+		state.runnerSetsResp = resp.Msg
+		return nil
+	})
+
+	sc.Step(`^the runner sets response should contain (\d+) set$`, func(n int) error {
+		if len(state.runnerSetsResp.RunnerSets) != n {
+			return fmt.Errorf("runner sets count = %d, want %d", len(state.runnerSetsResp.RunnerSets), n)
+		}
+		return nil
+	})
+
+	sc.Step(`^the first runner set should have the configured name$`, func() error {
+		if len(state.runnerSetsResp.RunnerSets) == 0 {
+			return fmt.Errorf("no runner sets in response")
+		}
+		got := state.runnerSetsResp.RunnerSets[0].Name
+		if got != state.scaleSetName {
+			return fmt.Errorf("runner set name = %q, want %q", got, state.scaleSetName)
+		}
+		return nil
+	})
+
+	sc.Step(`^a workflow is dispatched via management$`, func() error {
+		workflowToken := os.Getenv("EFR_TEST_WORKFLOW_TOKEN")
+		workflowOrg := os.Getenv("EFR_TEST_WORKFLOW_ORG")
+		workflowRepo := os.Getenv("EFR_TEST_WORKFLOW_REPO")
+		workflowFile := envOrDefault("EFR_TEST_WORKFLOW_FILE", "test-job.yaml")
+
+		if workflowToken == "" || workflowOrg == "" || workflowRepo == "" {
+			return fmt.Errorf("EFR_TEST_WORKFLOW_TOKEN, EFR_TEST_WORKFLOW_ORG, EFR_TEST_WORKFLOW_REPO must be set")
+		}
+
+		ghClient := github.NewClient(nil).WithAuthToken(workflowToken)
+		runID, err := dispatchAndFindWorkflow(ghClient, workflowOrg, workflowRepo, workflowFile, state.scaleSetName)
+		if err != nil {
+			return err
+		}
+		state.workflowRunID = runID
+		return nil
+	})
+
+	sc.Step(`^I query the job records API$`, func() error {
+		// Wait a bit for jobs to be recorded
+		time.Sleep(10 * time.Second)
+		resp, err := state.apiClient.ListJobRecords(context.Background(), connect.NewRequest(&controlplanev1.ListJobRecordsRequest{}))
+		if err != nil {
+			return fmt.Errorf("ListJobRecords: %w", err)
+		}
+		state.jobRecordsResp = resp.Msg
+		return nil
+	})
+
+	sc.Step(`^there should be at least (\d+) job record$`, func(n int) error {
+		if len(state.jobRecordsResp.JobRecords) < n {
+			return fmt.Errorf("job records count = %d, want at least %d", len(state.jobRecordsResp.JobRecords), n)
+		}
+		return nil
+	})
+
+	sc.Step(`^the management service is stopped$`, func() {
+		if state.apiServer != nil {
+			state.apiServer.Close()
+		}
+		if state.mgmtCancel != nil {
+			state.mgmtCancel()
+		}
+	})
+
+	sc.Step(`^the management service should shut down cleanly$`, func() {
+		if state.mgmtService != nil {
+			state.mgmtService.Wait()
+			state.mgmtService.Close()
+		}
 	})
 }
 
