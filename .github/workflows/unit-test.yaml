@@ -1,4 +1,4 @@
-name: golangci-lint
+name: Unit Test
 
 on:
   push:
@@ -8,10 +8,9 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
-  golangci-lint:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +32,12 @@ jobs:
       - name: Build dashboard (required for go:embed)
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
-      - uses: golangci/golangci-lint-action@v7
+      - name: Run unit tests with coverage
+        run: go test -count=1 -coverpkg=./... -coverprofile=coverage.out ./...
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
         with:
-          version: v2.11
+          files: coverage.out
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
