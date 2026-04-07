@@ -1,0 +1,38 @@
+features/management/full_stack.feature
+  d9c2641ba00f1179 10,16,20-38
+test/integration/steps_test.go
+  d9c2641ba00f1179 573-580
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "e54c735eeca21e57b6cdd28eccc134e5e407e899",
+  "prompts": {
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "d9c2641ba00f1179": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3380ddf-25ff-49e0-a4c6-0e6bc5990608",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 21,
+      "total_deletions": 4,
+      "accepted_lines": 29,
+      "overriden_lines": 0
+    }
+  }
+}
