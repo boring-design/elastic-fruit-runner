@@ -11,16 +11,15 @@ build-dashboard:
 
 # Run unit tests only (fast, no external deps)
 unit-test: build-dashboard
-	go test -short -count=1 ./...
+	go test -count=1 ./...
 
 # Run integration tests (requires .env.integration-test)
 integration-test: build-dashboard
-	@test -f .env.integration-test || (echo "ERROR: .env.integration-test not found. Copy from template and fill in secrets."; exit 1)
-	set -a && . ./.env.integration-test && set +a && go test -v -count=1 -timeout=15m ./test/integration/
+	@test -f .env.integration-test || (echo "ERROR: .env.integration-test not found."; exit 1)
+	set -a && . ./.env.integration-test && set +a && go test -tags=integration -v -count=1 -timeout=15m ./test/integration/
 
-# Run all tests including integration
-test: build-dashboard
-	go test -count=1 ./...
+# Run all tests (unit + integration)
+test: unit-test integration-test
 
 # Format Go code
 fmt:

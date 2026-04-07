@@ -1,3 +1,5 @@
+//go:build integration
+
 package integration_test
 
 import (
@@ -9,13 +11,9 @@ import (
 )
 
 func TestFeatures(t *testing.T) {
-	if testing.Short() {
-		t.Skip("integration tests skipped in short mode")
-	}
-
 	configURL := os.Getenv("EFR_TEST_CONFIG_URL")
 	if configURL == "" {
-		t.Skip("EFR_TEST_CONFIG_URL not set, skipping integration tests")
+		t.Fatal("EFR_TEST_CONFIG_URL not set")
 	}
 
 	opts := godog.Options{
