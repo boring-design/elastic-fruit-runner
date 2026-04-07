@@ -465,14 +465,54 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	})
 
 	// ---- Controller steps (external) ----
-	sc.Step(`^a GitHub scaleset client is configured$`, func() error {
+	sc.Step(`^a GitHub scaleset client is configured using PAT auth$`, func(ctx context.Context) (context.Context, error) {
+		pat := os.Getenv("EFR_TEST_PAT")
+		if pat == "" {
+			return ctx, godog.ErrPending
+		}
 		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
-		client, err := createScalesetClient(configURL)
+		client, err := scaleset.NewClientWithPersonalAccessToken(
+			scaleset.NewClientWithPersonalAccessTokenConfig{
+				GitHubConfigURL:     configURL,
+				PersonalAccessToken: pat,
+			},
+		)
 		if err != nil {
-			return err
+			return ctx, err
 		}
 		state.scalesetClient = client
-		return nil
+		return ctx, nil
+	})
+
+	sc.Step(`^a GitHub scaleset client is configured using GitHub App auth$`, func(ctx context.Context) (context.Context, error) {
+		appClientID := os.Getenv("EFR_TEST_APP_CLIENT_ID")
+		appInstallID := os.Getenv("EFR_TEST_APP_INSTALLATION_ID")
+		appKeyPath := os.Getenv("EFR_TEST_APP_PRIVATE_KEY_PATH")
+		if appClientID == "" || appInstallID == "" || appKeyPath == "" {
+			return ctx, godog.ErrPending
+		}
+		installID, err := strconv.ParseInt(appInstallID, 10, 64)
+		if err != nil {
+			return ctx, fmt.Errorf("invalid EFR_TEST_APP_INSTALLATION_ID: %w", err)
+		}
+		keyBytes, err := os.ReadFile(appKeyPath)
+		if err != nil {
+			return ctx, fmt.Errorf("read private key %s: %w", appKeyPath, err)
+		}
+		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
+		client, err := scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
+			GitHubConfigURL: configURL,
+			GitHubAppAuth: scaleset.GitHubAppAuth{
+				ClientID:       appClientID,
+				InstallationID: installID,
+				PrivateKey:     string(keyBytes),
+			},
+		})
+		if err != nil {
+			return ctx, err
+		}
+		state.scalesetClient = client
+		return ctx, nil
 	})
 
 	sc.Step(`^a Docker backend is initialized$`, func() {
@@ -607,42 +647,6 @@ func randomSuffix() string {
 	var b [3]byte
 	_, _ = rand.Read(b[:])
 	return hex.EncodeToString(b[:])[:5]
-}
-
-func createScalesetClient(configURL string) (*scaleset.Client, error) {
-	appClientID := os.Getenv("EFR_TEST_APP_CLIENT_ID")
-	appInstallID := os.Getenv("EFR_TEST_APP_INSTALLATION_ID")
-	appKeyPath := os.Getenv("EFR_TEST_APP_PRIVATE_KEY_PATH")
-
-	if appClientID != "" && appInstallID != "" && appKeyPath != "" {
-		installID, err := strconv.ParseInt(appInstallID, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid EFR_TEST_APP_INSTALLATION_ID: %w", err)
-		}
-		keyBytes, err := os.ReadFile(appKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("read private key %s: %w", appKeyPath, err)
-		}
-		return scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
-			GitHubConfigURL: configURL,
-			GitHubAppAuth: scaleset.GitHubAppAuth{
-				ClientID:       appClientID,
-				InstallationID: installID,
-				PrivateKey:     string(keyBytes),
-			},
-		})
-	}
-
-	pat := os.Getenv("EFR_TEST_PAT")
-	if pat == "" {
-		return nil, fmt.Errorf("either EFR_TEST_PAT or EFR_TEST_APP_* environment variables must be set")
-	}
-	return scaleset.NewClientWithPersonalAccessToken(
-		scaleset.NewClientWithPersonalAccessTokenConfig{
-			GitHubConfigURL:     configURL,
-			PersonalAccessToken: pat,
-		},
-	)
 }
 
 func dispatchAndFindWorkflow(client *github.Client, org, repo, file, scaleSetName string) (int64, error) {
