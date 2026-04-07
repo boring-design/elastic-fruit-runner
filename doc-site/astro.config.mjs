@@ -29,6 +29,7 @@ export default defineConfig({
 						{ slug: 'how-to/configure-github-app' },
 						{ slug: 'how-to/multiple-orgs-repos' },
 						{ slug: 'how-to/troubleshooting' },
+						{ slug: 'how-to/run-integration-tests' },
 					],
 				},
 				{
