@@ -12,9 +12,19 @@ permissions:
 
 jobs:
   integration-test:
-    name: Integration Test
+    name: Integration Test (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: PAT
+            features: ../../features/config,../../features/binpath,../../features/jobstore,../../features/vitals,../../features/controller/lifecycle_pat.feature,../../features/management
+            needs-app-key: false
+          - name: GitHub App
+            features: ../../features/controller/lifecycle_github_app.feature
+            needs-app-key: true
     steps:
       - uses: actions/checkout@v4
 
@@ -36,10 +46,11 @@ jobs:
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Write GitHub App private key
+        if: matrix.needs-app-key
         run: |
           echo "${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}" > /tmp/efr-test-app-key.pem
 
-      - name: Run integration tests (PAT + GitHub App)
+      - name: Run integration tests
         env:
           EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
           EFR_TEST_WORKFLOW_ORG: ${{ vars.EFR_TEST_WORKFLOW_ORG }}
@@ -49,7 +60,8 @@ jobs:
           EFR_TEST_PAT: ${{ secrets.EFR_TEST_PAT }}
           EFR_TEST_APP_CLIENT_ID: ${{ secrets.EFR_TEST_APP_CLIENT_ID }}
           EFR_TEST_APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
-          EFR_TEST_APP_PRIVATE_KEY_PATH: /tmp/efr-test-app-key.pem
+          EFR_TEST_APP_PRIVATE_KEY_PATH: ${{ matrix.needs-app-key && '/tmp/efr-test-app-key.pem' || '' }}
+          EFR_TEST_FEATURES: ${{ matrix.features }}
         run: go test -tags=integration -count=1 -v -timeout=25m -coverpkg=./... -coverprofile=coverage.out ./test/integration/
 
       - name: Upload coverage to Codecov
@@ -57,5 +69,5 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: coverage.out
-          flags: integration
+          flags: integration-${{ matrix.name }}
           token: ${{ secrets.CODECOV_TOKEN }}

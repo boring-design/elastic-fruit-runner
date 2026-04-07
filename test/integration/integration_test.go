@@ -4,6 +4,7 @@ package integration_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -16,10 +17,15 @@ func TestFeatures(t *testing.T) {
 		t.Fatal("EFR_TEST_CONFIG_URL not set")
 	}
 
+	paths := []string{"../../features"}
+	if envPaths := os.Getenv("EFR_TEST_FEATURES"); envPaths != "" {
+		paths = strings.Split(envPaths, ",")
+	}
+
 	opts := godog.Options{
 		Format:   "pretty",
 		Output:   colors.Colored(os.Stdout),
-		Paths:    []string{"../../features"},
+		Paths:    paths,
 		TestingT: t,
 	}
 
