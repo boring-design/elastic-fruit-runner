@@ -1,0 +1,55 @@
+.github/workflows/controller-integration-test.yaml
+  d9c2641ba00f1179 15,18-27,49,53,63-64,72
+test/integration/integration_test.go
+  d9c2641ba00f1179 7,20-24,28
+features/controller/lifecycle_github_app.feature
+  d9c2641ba00f1179 1-17
+features/controller/lifecycle_pat.feature
+  d9c2641ba00f1179 1-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "ccf49a1d0edd61ecbfbad5f2a9956fa344233ed1",
+  "prompts": {
+    "00b87c09ec33df15": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b88c754a-1d8e-47b4-a4ac-fd892e715afe",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 3,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    },
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "d9c2641ba00f1179": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3380ddf-25ff-49e0-a4c6-0e6bc5990608",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 69,
+      "total_deletions": 16,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    }
+  }
+}
