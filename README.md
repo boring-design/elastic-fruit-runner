@@ -19,8 +19,8 @@ Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 | **Linux** | `docker run ghcr.io/boring-design/elastic-fruit-runner:latest` |
 
 Detailed guides:
-- [macOS Installation & Service Setup](docs/install-macos.md) — Homebrew install, `brew services`, log viewing
-- [Linux Deployment (Docker)](docs/install-linux-docker.md) — Docker / Docker Compose / systemd
+- [macOS Installation & Service Setup](doc-site/src/content/docs/how-to/install-macos.md) — Homebrew install, `brew services`, log viewing
+- [Linux Deployment (Docker)](doc-site/src/content/docs/how-to/install-linux-docker.md) — Docker / Docker Compose / systemd
 
 ## Quick Start (macOS)
 
