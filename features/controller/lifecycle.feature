@@ -1,4 +1,3 @@
-@external
 Feature: Controller full lifecycle
 
   The controller connects to GitHub Actions, registers a runner scale set,

@@ -10,6 +10,8 @@ on:
       - 'internal/backend/**'
       - 'internal/management/**'
       - 'config/**'
+      - 'test/integration/**'
+      - 'features/**'
 
 permissions:
   contents: read
@@ -39,7 +41,7 @@ jobs:
       - name: Build dashboard (required for go:embed)
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
-      - name: Run controller integration test (PAT auth)
+      - name: Run integration test (PAT auth)
         env:
           EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
           EFR_TEST_PAT: ${{ secrets.EFR_TEST_PAT }}
@@ -47,7 +49,7 @@ jobs:
           EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
           EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
           EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
-        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./internal/controller/
+        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./test/integration/
 
       - name: Upload coverage to Codecov
         if: always()
@@ -85,7 +87,7 @@ jobs:
         run: |
           echo "${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}" > /tmp/efr-test-app-key.pem
 
-      - name: Run controller integration test (GitHub App auth)
+      - name: Run integration test (GitHub App auth)
         env:
           EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
           EFR_TEST_APP_CLIENT_ID: ${{ secrets.EFR_TEST_APP_CLIENT_ID }}
@@ -95,7 +97,7 @@ jobs:
           EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
           EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
           EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
-        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./internal/controller/
+        run: go test -count=1 -v -timeout=15m -coverprofile=coverage.out ./test/integration/
 
       - name: Upload coverage to Codecov
         if: always()

@@ -7,3 +7,4 @@ dashboard/dist/
 # /gen/
 github-app-key.pem
 .claude/settings.local.json
+.env.integration-test

@@ -1,4 +1,4 @@
-.PHONY: build build-dashboard run unit-test test bdd-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard run unit-test test integration-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
 # Build dashboard then Go binary
 build: build-dashboard
@@ -13,9 +13,10 @@ build-dashboard:
 unit-test: build-dashboard
 	go test -short -count=1 ./...
 
-# Run BDD integration tests (excludes @external tagged scenarios)
-bdd-test: build-dashboard
-	go test -v -count=1 ./test/bdd/ -run TestFeatures
+# Run integration tests (requires .env.integration-test)
+integration-test: build-dashboard
+	@test -f .env.integration-test || (echo "ERROR: .env.integration-test not found. Copy from template and fill in secrets."; exit 1)
+	set -a && . ./.env.integration-test && set +a && go test -v -count=1 -timeout=15m ./test/integration/
 
 # Run all tests including integration
 test: build-dashboard
@@ -71,7 +72,7 @@ help:
 	@echo "Testing:"
 	@echo "  test        Run all tests"
 	@echo "  unit-test   Run unit tests"
-	@echo "  bdd-test    Run BDD integration tests"
+	@echo "  integration-test  Run integration tests (requires EFR_TEST_CONFIG_URL)"
 	@echo ""
 	@echo "CI:"
 	@echo "  ci          Run all CI checks (fmt-check + vet + build + lint + unit-test)"
