@@ -1,0 +1,55 @@
+internal/vitals/service_test.go
+  d9c2641ba00f1179 1-49
+internal/management/service_test.go
+  d9c2641ba00f1179 1-110
+internal/vitals/types_test.go
+  d9c2641ba00f1179 1-81
+internal/api/server_test.go
+  d9c2641ba00f1179 1-112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "7e6a7204cd1547fccfda83e1e4f60b0b47e67dbf",
+  "prompts": {
+    "6d4defbc5b4358dc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c2cc3970-746d-41c1-8884-6552cd1f950b",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 23,
+      "total_deletions": 6,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    },
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "d9c2641ba00f1179": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3380ddf-25ff-49e0-a4c6-0e6bc5990608",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 367,
+      "total_deletions": 15,
+      "accepted_lines": 352,
+      "overriden_lines": 0
+    }
+  }
+}
