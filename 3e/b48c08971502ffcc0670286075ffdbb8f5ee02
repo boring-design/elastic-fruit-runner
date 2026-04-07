@@ -1,0 +1,31 @@
+.github/workflows/controller-integration-test.yaml
+  71bbfd89506f40ee 59
+test/integration/integration_test.go
+  71bbfd89506f40ee 1-2,16
+.github/workflows/golangci-lint.yaml
+  71bbfd89506f40ee 40
+Makefile
+  71bbfd89506f40ee 14,18-19,21-22
+test/integration/steps_test.go
+  71bbfd89506f40ee 1-2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "3eb48c08971502ffcc0670286075ffdbb8f5ee02",
+  "prompts": {
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 16,
+      "total_deletions": 17,
+      "accepted_lines": 25,
+      "overriden_lines": 1
+    }
+  }
+}
