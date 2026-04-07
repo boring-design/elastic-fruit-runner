@@ -1,0 +1,29 @@
+.gitignore
+  71bbfd89506f40ee 10
+test/integration/steps_test.go
+  71bbfd89506f40ee 1
+.github/workflows/controller-integration-test.yaml
+  71bbfd89506f40ee 13-14,44,52,90,100
+Makefile
+  71bbfd89506f40ee 1,16-19,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "aa6ea6f410e3e6bd66a54e9297f50f3344df719a",
+  "prompts": {
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 49,
+      "accepted_lines": 31,
+      "overriden_lines": 0
+    }
+  }
+}
