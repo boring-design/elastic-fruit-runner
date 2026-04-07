@@ -13,7 +13,7 @@ permissions:
 jobs:
   integration-test:
     name: Integration Test (${{ matrix.name }})
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, arm64]
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -25,6 +25,9 @@ jobs:
           - name: GitHub App
             features: ../../features/management
             needs-app-key: true
+          - name: Tart
+            features: ../../features/tart
+            needs-app-key: false
     steps:
       - uses: actions/checkout@v4
 
