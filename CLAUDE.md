@@ -2,12 +2,9 @@
 
 ## Build
 
-- Build: `make build` (output in `output/`)
-- Test: `make test`
-- Lint: `make lint`
-- Quick local check: `make check` (fmt + vet + build)
-- Full CI checks: `make ci`
-- Show all targets: `make help`
+- `make build` — Build dashboard + Go binary to `output/`
+- `make test` — Run all tests
+- `make check` — Quick local check (fmt + vet + build)
 
 ## Pre-commit
 

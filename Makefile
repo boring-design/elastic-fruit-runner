@@ -37,11 +37,8 @@ vet: build-dashboard
 lint: build-dashboard
 	golangci-lint run
 
-# Run quick local checks before committing (format, vet, build, prek)
-check: fmt vet build prek-all
-
-# Run all CI checks (same as pre-commit)
-ci: fmt-check vet build lint unit-test
+# Run all checks
+check: fmt-check vet build lint prek-all unit-test
 
 # Tidy go modules
 tidy:

@@ -145,9 +145,6 @@ make test
 
 # Quick local check before committing (format, vet, build)
 make check
-
-# Run full CI checks (format-check, vet, build, lint, tests)
-make ci
 ```
 
 ---
