@@ -25,7 +25,7 @@ jobs:
             needs-app-key: false
           - name: GitHub App
             runs-on: [self-hosted, linux, arm64]
-            features: ../../features/management
+            features: ../../features/config,../../features/binpath,../../features/jobstore,../../features/vitals,../../features/management
             needs-app-key: true
           - name: Tart
             runs-on: [self-hosted, macos, arm64]
