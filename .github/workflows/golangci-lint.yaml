@@ -38,7 +38,7 @@ jobs:
           version: v2.11
 
       - name: Run unit tests with coverage
-        run: go test -count=1 -coverprofile=coverage.out ./...
+        run: go test -count=1 -coverpkg=./... -coverprofile=coverage.out ./...
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
