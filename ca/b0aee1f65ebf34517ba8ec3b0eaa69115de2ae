@@ -1,0 +1,25 @@
+doc-site/src/content/docs/how-to/run-integration-tests.md
+  71bbfd89506f40ee 1-103
+doc-site/astro.config.mjs
+  71bbfd89506f40ee 32
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "cab0aee1f65ebf34517ba8ec3b0eaa69115de2ae",
+  "prompts": {
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 193,
+      "total_deletions": 0,
+      "accepted_lines": 117,
+      "overriden_lines": 0
+    }
+  }
+}
