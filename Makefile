@@ -16,7 +16,7 @@ unit-test: build-dashboard
 # Run integration tests (requires .env.integration-test)
 integration-test: build-dashboard
 	@test -f .env.integration-test || (echo "ERROR: .env.integration-test not found."; exit 1)
-	set -a && . ./.env.integration-test && set +a && go test -tags=integration -v -count=1 -timeout=15m ./test/integration/
+	set -a && . ./.env.integration-test && set +a && go test -tags=integration -v -count=1 -timeout=15m -coverpkg=./... -coverprofile=coverage-integration.out ./test/integration/
 
 # Run all tests (unit + integration)
 test: unit-test integration-test
