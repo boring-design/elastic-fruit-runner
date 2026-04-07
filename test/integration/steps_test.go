@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -19,21 +18,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/actions/scaleset"
+	"connectrpc.com/connect"
 	"github.com/cucumber/godog"
 	"github.com/google/go-github/v79/github"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
-	"connectrpc.com/connect"
-
 	"github.com/boring-design/elastic-fruit-runner/config"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/api"
-	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
-	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
@@ -61,22 +56,15 @@ type scenarioState struct {
 	// vitals steps
 	vitalsResult vitals.Vitals
 
-	// controller steps
-	scalesetClient *scaleset.Client
-	dockerBackend  *backend.DockerBackend
-	ctrl           *controller.ScaleSetController
-	ctrlCancel     context.CancelFunc
-	ctrlErrCh      chan error
-	scaleSetName   string
-	workflowRunID  int64
-	workflowResult *github.WorkflowRun
-
-	// management service steps
+	// management service + API steps
 	mgmtService    *management.Service
 	mgmtCancel     context.CancelFunc
 	vitalsSvc      *vitals.Service
 	apiServer      *http.Server
 	apiClient      controlplanev1connect.ControlPlaneServiceClient
+	scaleSetName   string
+	workflowRunID  int64
+	workflowResult *github.WorkflowRun
 	runnerSetsResp *controlplanev1.ListRunnerSetsResponse
 	jobRecordsResp *controlplanev1.ListJobRecordsResponse
 }
@@ -481,27 +469,16 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	// ---- Controller steps (external) ----
-	sc.Step(`^a GitHub scaleset client is configured using PAT auth$`, func(ctx context.Context) (context.Context, error) {
+	// ---- Management service + API steps ----
+	sc.Step(`^a management service config with PAT auth and docker backend$`, func() error {
 		pat := os.Getenv("EFR_TEST_PAT")
 		if pat == "" {
-			return ctx, godog.ErrPending
+			return godog.ErrPending
 		}
-		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
-		client, err := scaleset.NewClientWithPersonalAccessToken(
-			scaleset.NewClientWithPersonalAccessTokenConfig{
-				GitHubConfigURL:     configURL,
-				PersonalAccessToken: pat,
-			},
-		)
-		if err != nil {
-			return ctx, err
-		}
-		state.scalesetClient = client
-		return ctx, nil
+		return state.buildMgmtConfig(config.AuthConfig{PATToken: &pat})
 	})
 
-	sc.Step(`^a GitHub scaleset client is configured using GitHub App auth$`, func(ctx context.Context) (context.Context, error) {
+	sc.Step(`^a management service config with GitHub App auth and docker backend$`, func(ctx context.Context) (context.Context, error) {
 		appClientID := os.Getenv("EFR_TEST_APP_CLIENT_ID")
 		appInstallID := os.Getenv("EFR_TEST_APP_INSTALLATION_ID")
 		appKeyPath := os.Getenv("EFR_TEST_APP_PRIVATE_KEY_PATH")
@@ -512,181 +489,14 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		if err != nil {
 			return ctx, fmt.Errorf("invalid EFR_TEST_APP_INSTALLATION_ID: %w", err)
 		}
-		keyBytes, err := os.ReadFile(appKeyPath)
-		if err != nil {
-			return ctx, fmt.Errorf("read private key %s: %w", appKeyPath, err)
-		}
-		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
-		client, err := scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
-			GitHubConfigURL: configURL,
-			GitHubAppAuth: scaleset.GitHubAppAuth{
+		auth := config.AuthConfig{
+			GitHubApp: &config.GitHubAppConfig{
 				ClientID:       appClientID,
 				InstallationID: installID,
-				PrivateKey:     string(keyBytes),
+				PrivateKeyPath: appKeyPath,
 			},
-		})
-		if err != nil {
-			return ctx, err
 		}
-		state.scalesetClient = client
-		return ctx, nil
-	})
-
-	sc.Step(`^a Docker backend is initialized$`, func() {
-		image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
-		state.dockerBackend = backend.NewDockerBackend(image, "")
-	})
-
-	sc.Step(`^a controller is created with a random scale set name$`, func() {
-		image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
-		state.scaleSetName = "efr-test-" + randomSuffix()
-		rsCfg := &config.RunnerSetConfig{
-			Name:       state.scaleSetName,
-			Backend:    "docker",
-			Image:      image,
-			Labels:     []string{"self-hosted", "Linux", "X64"},
-			MaxRunners: 2,
-		}
-		runnerGroup := envOrDefault("EFR_TEST_RUNNER_GROUP", "Default")
-		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
-		state.ctrl = controller.New(rsCfg, runnerGroup, 15*time.Minute, state.scalesetClient, state.dockerBackend, configURL, state.jobStore)
-	})
-
-	sc.Step(`^the controller is started$`, func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		state.ctrlCancel = cancel
-		state.ctrlErrCh = make(chan error, 1)
-		go func() {
-			state.ctrlErrCh <- state.ctrl.Run(ctx)
-		}()
-	})
-
-	sc.Step(`^the controller connects within (\d+) seconds$`, func(seconds int) error {
-		deadline := time.After(time.Duration(seconds) * time.Second)
-		ticker := time.NewTicker(500 * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-deadline:
-				return fmt.Errorf("timeout waiting for controller to connect after %ds", seconds)
-			case <-ticker.C:
-				if state.mgmtService != nil {
-					// Check via management service: any runner set connected?
-					for _, v := range state.mgmtService.ListRunnerSets() {
-						if v.Connected {
-							return nil
-						}
-					}
-				} else if state.ctrl != nil && state.ctrl.IsConnected() {
-					return nil
-				}
-			}
-		}
-	})
-
-	sc.Step(`^a workflow is dispatched$`, func() error {
-		workflowToken := os.Getenv("EFR_TEST_WORKFLOW_TOKEN")
-		workflowOrg := os.Getenv("EFR_TEST_WORKFLOW_ORG")
-		workflowRepo := os.Getenv("EFR_TEST_WORKFLOW_REPO")
-		workflowFile := envOrDefault("EFR_TEST_WORKFLOW_FILE", "test-job.yaml")
-
-		if workflowToken == "" || workflowOrg == "" || workflowRepo == "" {
-			return fmt.Errorf("EFR_TEST_WORKFLOW_TOKEN, EFR_TEST_WORKFLOW_ORG, EFR_TEST_WORKFLOW_REPO must be set")
-		}
-
-		ghClient := github.NewClient(nil).WithAuthToken(workflowToken)
-		runID, err := dispatchAndFindWorkflow(ghClient, workflowOrg, workflowRepo, workflowFile, state.scaleSetName)
-		if err != nil {
-			return err
-		}
-		state.workflowRunID = runID
-		return nil
-	})
-
-	sc.Step(`^the workflow should complete successfully within (\d+) minutes$`, func(minutes int) error {
-		workflowToken := os.Getenv("EFR_TEST_WORKFLOW_TOKEN")
-		workflowOrg := os.Getenv("EFR_TEST_WORKFLOW_ORG")
-		workflowRepo := os.Getenv("EFR_TEST_WORKFLOW_REPO")
-		ghClient := github.NewClient(nil).WithAuthToken(workflowToken)
-
-		result, err := waitForCompletion(ghClient, workflowOrg, workflowRepo, state.workflowRunID, time.Duration(minutes)*time.Minute)
-		if err != nil {
-			return err
-		}
-		state.workflowResult = result
-
-		if result.GetStatus() != "completed" {
-			return fmt.Errorf("workflow status = %q, want %q", result.GetStatus(), "completed")
-		}
-		if result.GetConclusion() != "success" {
-			return fmt.Errorf("workflow conclusion = %q, want %q", result.GetConclusion(), "success")
-		}
-		return nil
-	})
-
-	sc.Step(`^at least one job should be recorded$`, func() error {
-		time.Sleep(10 * time.Second)
-		jobs := state.jobStore.Snapshot()
-		if len(jobs) == 0 {
-			return fmt.Errorf("expected at least one recorded job, got none")
-		}
-		return nil
-	})
-
-	sc.Step(`^the controller should shut down cleanly$`, func() error {
-		state.ctrlCancel()
-		select {
-		case err := <-state.ctrlErrCh:
-			if err != nil && !errors.Is(err, context.Canceled) {
-				return fmt.Errorf("controller exited with unexpected error: %w", err)
-			}
-		case <-time.After(60 * time.Second):
-			return fmt.Errorf("timeout waiting for controller shutdown")
-		}
-		return nil
-	})
-
-	// ---- Management service + API steps ----
-	sc.Step(`^a management service config with PAT auth and docker backend$`, func() error {
-		pat := os.Getenv("EFR_TEST_PAT")
-		if pat == "" {
-			return godog.ErrPending
-		}
-		configURL := os.Getenv("EFR_TEST_CONFIG_URL")
-		if configURL == "" {
-			return fmt.Errorf("EFR_TEST_CONFIG_URL not set")
-		}
-
-		// Extract org from config URL (e.g. "https://github.com/myorg" -> "myorg")
-		parts := strings.Split(strings.TrimRight(configURL, "/"), "/")
-		orgName := parts[len(parts)-1]
-
-		image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
-		state.scaleSetName = "efr-test-" + randomSuffix()
-		state.cfg = &config.Config{
-			Orgs: []config.OrgConfig{
-				{
-					Org: orgName,
-					Auth: config.AuthConfig{
-						PATToken: &pat,
-					},
-					RunnerGroup: envOrDefault("EFR_TEST_RUNNER_GROUP", "Default"),
-					RunnerSets: []config.RunnerSetConfig{
-						{
-							Name:       state.scaleSetName,
-							Backend:    "docker",
-							Image:      image,
-							Labels:     []string{"self-hosted", "Linux", "X64"},
-							MaxRunners: 2,
-						},
-					},
-				},
-			},
-			IdleTimeout: 15 * time.Minute,
-			LogLevel:    "debug",
-			DBPath:      filepath.Join(os.TempDir(), fmt.Sprintf("efr-test-%s.db", randomSuffix())),
-		}
-		return nil
+		return ctx, state.buildMgmtConfig(auth)
 	})
 
 	sc.Step(`^a management service is created from the config$`, func() error {
@@ -722,6 +532,24 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		state.mgmtService.Start(ctx)
 	})
 
+	sc.Step(`^a controller connects within (\d+) seconds$`, func(seconds int) error {
+		deadline := time.After(time.Duration(seconds) * time.Second)
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-deadline:
+				return fmt.Errorf("timeout waiting for controller to connect after %ds", seconds)
+			case <-ticker.C:
+				for _, v := range state.mgmtService.ListRunnerSets() {
+					if v.Connected {
+						return nil
+					}
+				}
+			}
+		}
+	})
+
 	sc.Step(`^I query the runner sets API$`, func() error {
 		resp, err := state.apiClient.ListRunnerSets(context.Background(), connect.NewRequest(&controlplanev1.ListRunnerSetsRequest{}))
 		if err != nil {
@@ -749,7 +577,7 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		return nil
 	})
 
-	sc.Step(`^a workflow is dispatched via management$`, func() error {
+	sc.Step(`^a workflow is dispatched$`, func() error {
 		workflowToken := os.Getenv("EFR_TEST_WORKFLOW_TOKEN")
 		workflowOrg := os.Getenv("EFR_TEST_WORKFLOW_ORG")
 		workflowRepo := os.Getenv("EFR_TEST_WORKFLOW_REPO")
@@ -768,8 +596,28 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		return nil
 	})
 
+	sc.Step(`^the workflow completes successfully within (\d+) minutes$`, func(minutes int) error {
+		workflowToken := os.Getenv("EFR_TEST_WORKFLOW_TOKEN")
+		workflowOrg := os.Getenv("EFR_TEST_WORKFLOW_ORG")
+		workflowRepo := os.Getenv("EFR_TEST_WORKFLOW_REPO")
+		ghClient := github.NewClient(nil).WithAuthToken(workflowToken)
+
+		result, err := waitForCompletion(ghClient, workflowOrg, workflowRepo, state.workflowRunID, time.Duration(minutes)*time.Minute)
+		if err != nil {
+			return err
+		}
+		state.workflowResult = result
+
+		if result.GetStatus() != "completed" {
+			return fmt.Errorf("workflow status = %q, want %q", result.GetStatus(), "completed")
+		}
+		if result.GetConclusion() != "success" {
+			return fmt.Errorf("workflow conclusion = %q, want %q", result.GetConclusion(), "success")
+		}
+		return nil
+	})
+
 	sc.Step(`^I query the job records API$`, func() error {
-		// Wait a bit for jobs to be recorded
 		time.Sleep(10 * time.Second)
 		resp, err := state.apiClient.ListJobRecords(context.Background(), connect.NewRequest(&controlplanev1.ListJobRecordsRequest{}))
 		if err != nil {
@@ -801,6 +649,42 @@ func initializeScenario(sc *godog.ScenarioContext) {
 			state.mgmtService.Close()
 		}
 	})
+}
+
+// buildMgmtConfig creates a management service config from env vars with the given auth.
+func (s *scenarioState) buildMgmtConfig(auth config.AuthConfig) error {
+	configURL := os.Getenv("EFR_TEST_CONFIG_URL")
+	if configURL == "" {
+		return fmt.Errorf("EFR_TEST_CONFIG_URL not set")
+	}
+
+	parts := strings.Split(strings.TrimRight(configURL, "/"), "/")
+	orgName := parts[len(parts)-1]
+
+	image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
+	s.scaleSetName = "efr-test-" + randomSuffix()
+	s.cfg = &config.Config{
+		Orgs: []config.OrgConfig{
+			{
+				Org:         orgName,
+				Auth:        auth,
+				RunnerGroup: envOrDefault("EFR_TEST_RUNNER_GROUP", "Default"),
+				RunnerSets: []config.RunnerSetConfig{
+					{
+						Name:       s.scaleSetName,
+						Backend:    "docker",
+						Image:      image,
+						Labels:     []string{"self-hosted", "Linux", "X64"},
+						MaxRunners: 2,
+					},
+				},
+			},
+		},
+		IdleTimeout: 15 * time.Minute,
+		LogLevel:    "debug",
+		DBPath:      filepath.Join(os.TempDir(), fmt.Sprintf("efr-test-%s.db", randomSuffix())),
+	}
+	return nil
 }
 
 // setEnv sets an environment variable and records the old value for restoration.
