@@ -2,7 +2,6 @@
 
 Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 
-- **Host mode** — run the GitHub Actions runner directly on the machine, no VM overhead
 - **Tart mode** — ephemeral macOS VMs via [Tart](https://tart.run), one per job, auto-scaled
 - **Linux arm64 / amd64** via Docker (Docker-in-Docker)
 - Powered by the official [GitHub Runner Scale Set Client](https://github.com/actions/scaleset) (Go)

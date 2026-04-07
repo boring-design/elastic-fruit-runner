@@ -34,7 +34,6 @@ elastic-fruit-runner throws all of that away. Install it on any Apple Silicon Ma
 | **macOS arm64** | Tart | Ephemeral macOS VMs via Apple's Virtualization.framework |
 | **Linux arm64** | Docker | Native Linux containers on ARM |
 | **Linux amd64** | Docker | Linux containers via Rosetta 2 emulation |
-| **Host** | Direct | Zero-overhead execution on the bare metal |
 
 Powered by the official [GitHub Runner Scale Set API](https://github.com/actions/scaleset), elastic-fruit-runner fundamentally changes how self-hosted runners work:
 

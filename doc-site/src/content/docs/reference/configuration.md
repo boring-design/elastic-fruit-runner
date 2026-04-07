@@ -111,15 +111,22 @@ Exactly one of `pat_token` or `github_app` must be configured per org/repo. They
 | `pat_token` | string | yes | GitHub PAT (must not be empty) |
 
 **Required PAT scopes:**
-- Organization-level: **Organization > Self-hosted runners: Read and write**
-- Repository-level: **Repository > Administration: Read and write**
+
+For a **classic** token:
+- `admin:org` (Organization > Self-hosted runners: Read and write)
+- `repo` (for repository-level runners)
+
+For a **fine-grained** token:
+- **Resource owner**: your organization
+- **Organization permissions > Self-hosted runners**: Read and write
+- **Repository permissions > Administration**: Read and write (for repository-level runners)
 
 ## Runner set configuration (`runner_sets[]`)
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `name` | string | yes | — | Runner set name (used as `runs-on` label in workflows). Must be unique across all orgs/repos |
-| `backend` | string | yes | — | Backend type: `tart`, `docker`, or `host` |
+| `backend` | string | yes | — | Backend type: `tart` or `docker` |
 | `image` | string | no | — | VM image (Tart) or container image (Docker) |
 | `labels` | list | no | — | Runner labels |
 | `max_runners` | integer | yes | — | Maximum concurrent runners. Must be > 0 |
@@ -140,10 +147,6 @@ For Linux containers. Uses Docker-in-Docker.
 - `image`: Docker image with actions/runner (e.g., `ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest`)
 - `platform`: Specify for cross-architecture (e.g., `linux/amd64` for Rosetta 2 emulation on Apple Silicon)
 - Requires Docker installed and running on the host
-
-### Backend: `host`
-
-Runs the runner directly on the host machine. Zero overhead but ties the runner to the host environment.
 
 ## Environment variables
 

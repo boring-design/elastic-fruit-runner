@@ -3,7 +3,11 @@ title: How to configure GitHub App authentication
 description: Set up GitHub App auth for elastic-fruit-runner instead of a Personal Access Token.
 ---
 
-GitHub App authentication is recommended for organization-wide deployments. It provides fine-grained permissions and doesn't depend on a personal account.
+GitHub App authentication is recommended for organization-wide deployments because it:
+
+- **Doesn't expire** — unlike PATs, no manual rotation needed
+- **Fine-grained permissions** — scoped exactly to what the runner daemon needs
+- **Bound to the org** — not tied to a personal account, survives employee offboarding
 
 ## Step 1: Create a GitHub App
 
@@ -79,3 +83,21 @@ brew services restart elastic-fruit-runner
 # Linux (Docker)
 docker compose restart elastic-fruit-runner
 ```
+
+## Troubleshooting
+
+### Permissions not saved
+
+When creating the GitHub App in the browser, Organization permissions (especially **Self-hosted runners**) may appear as "No access" if the page didn't save correctly. Always verify at:
+
+```
+https://github.com/organizations/YOUR-ORG/settings/apps/APP-NAME/permissions
+```
+
+### Permission changes require re-acceptance
+
+After updating permissions on an existing GitHub App, you must go to the installation page and explicitly **accept the new permissions**. The approval banner will list all new/changed permissions. Until you accept, the App still operates with the old permissions.
+
+### Private key generation may need retry
+
+The "Generate a private key" button on the GitHub App settings page occasionally fails silently. If you don't see a download prompt after clicking, scroll down and try again, or reload the page.
