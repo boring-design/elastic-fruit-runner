@@ -1,0 +1,53 @@
+config/config_test.go
+  00b87c09ec33df15 327
+doc-site/src/content/docs/how-to/configure-github-app.md
+  00b87c09ec33df15 6-10,86-103
+doc-site/src/content/docs/reference/configuration.md
+  00b87c09ec33df15 114-122,129
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "c25100a7a11bebbb3872346734b07ae06f72d129",
+  "prompts": {
+    "00b87c09ec33df15": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b88c754a-1d8e-47b4-a4ac-fd892e715afe",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 11,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    },
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "d9c2641ba00f1179": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3380ddf-25ff-49e0-a4c6-0e6bc5990608",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 1,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}
