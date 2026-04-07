@@ -5,13 +5,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'internal/controller/**'
-      - 'internal/backend/**'
-      - 'internal/management/**'
-      - 'config/**'
-      - 'test/integration/**'
-      - 'features/**'
+  pull_request:
 
 permissions:
   contents: read
