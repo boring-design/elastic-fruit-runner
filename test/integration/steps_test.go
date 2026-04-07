@@ -570,7 +570,14 @@ func initializeScenario(sc *godog.ScenarioContext) {
 			case <-deadline:
 				return fmt.Errorf("timeout waiting for controller to connect after %ds", seconds)
 			case <-ticker.C:
-				if state.ctrl.IsConnected() {
+				if state.mgmtService != nil {
+					// Check via management service: any runner set connected?
+					for _, v := range state.mgmtService.ListRunnerSets() {
+						if v.Connected {
+							return nil
+						}
+					}
+				} else if state.ctrl != nil && state.ctrl.IsConnected() {
 					return nil
 				}
 			}

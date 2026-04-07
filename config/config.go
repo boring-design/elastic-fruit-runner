@@ -235,8 +235,8 @@ func validateRunnerSet(rs *RunnerSetConfig, prefix string, seen map[string]struc
 	if rs.Backend == "" {
 		return fmt.Errorf("%s.backend is required", prefix)
 	}
-	if rs.Backend != "tart" && rs.Backend != "docker" && rs.Backend != "host" {
-		return fmt.Errorf("%s.backend must be 'tart', 'docker', or 'host', got %q", prefix, rs.Backend)
+	if rs.Backend != "tart" && rs.Backend != "docker" {
+		return fmt.Errorf("%s.backend must be 'tart' or 'docker', got %q", prefix, rs.Backend)
 	}
 	if rs.MaxRunners <= 0 {
 		return fmt.Errorf("%s.max_runners must be > 0", prefix)
