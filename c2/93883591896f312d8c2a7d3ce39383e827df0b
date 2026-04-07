@@ -1,0 +1,40 @@
+.github/workflows/golangci-lint.yaml
+  d9c2641ba00f1179 41
+Makefile
+  d9c2641ba00f1179 19
+.github/workflows/controller-integration-test.yaml
+  d9c2641ba00f1179 59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.5",
+  "base_commit_sha": "c293883591896f312d8c2a7d3ce39383e827df0b",
+  "prompts": {
+    "71bbfd89506f40ee": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "133941e0-10f7-4ae4-a98d-4289ffbaaae7",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 13,
+      "overriden_lines": 0
+    },
+    "d9c2641ba00f1179": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e3380ddf-25ff-49e0-a4c6-0e6bc5990608",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
