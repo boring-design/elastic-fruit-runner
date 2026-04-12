@@ -1,0 +1,23 @@
+doc-site/src/content/docs/how-to/prevent-macos-sleep.md
+  2c8220043ae66dc7 8-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "8e52039e1f3bb86f8d21f3d534ee4b1e4271a70e",
+  "prompts": {
+    "2c8220043ae66dc7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "faa78927-dfb1-4574-9441-d09b0d96c8bf",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 0,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  }
+}
