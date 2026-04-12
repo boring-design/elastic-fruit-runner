@@ -5,6 +5,18 @@ description: Keep a MacBook awake as a runner host using pmset plus caffeinate.
 
 `pmset` alone is **not** enough on a MacBook — the system still sleeps on lid-close or idle user-session timeouts. You need `pmset` (persistent settings) **and** a long-running `caffeinate -simdu` (active sleep assertion).
 
+## TL;DR
+
+```sh
+sudo pmset -a sleep 0 disksleep 0 hibernatemode 0 standby 0 autopoweroff 0 powernap 0
+sudo pmset -a disablesleep 1
+
+brew install tmux
+tmux new -d -s caffeinate 'caffeinate -simdu'
+```
+
+Read on for what each piece does and alternatives to `tmux`.
+
 ## 1. Persistent settings with `pmset`
 
 Plug in AC power, then:
