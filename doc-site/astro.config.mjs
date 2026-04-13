@@ -4,6 +4,7 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://elastic-fruit-runner.boringboring.design',
 	integrations: [
 		starlight({
 			title: 'Elastic Fruit Runner',
