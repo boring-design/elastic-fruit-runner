@@ -32,7 +32,10 @@ func NewJobStore(db *sql.DB) *JobStore {
 }
 
 // knownJobResults is the set of valid result strings from the GitHub Actions API.
+// GitHub sends these in lowercase ("succeeded", "failed").
 var knownJobResults = map[string]struct{}{
+	"succeeded": {},
+	"failed":    {},
 	"Succeeded": {},
 	"Failed":    {},
 }
