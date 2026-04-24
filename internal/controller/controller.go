@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +25,51 @@ var (
 	Version   = "dev"
 	CommitSHA = "unknown"
 )
+
+func init() {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		applyBuildInfoFallback(info)
+	}
+}
+
+func applyBuildInfoFallback(info *debug.BuildInfo) {
+	if info == nil {
+		return
+	}
+	if shouldUseBuildInfoVersion(Version) && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		Version = info.Main.Version
+	}
+	if shouldUseBuildInfoCommit(CommitSHA) {
+		if revision := buildSetting(info, "vcs.revision"); revision != "" {
+			CommitSHA = shortCommit(revision)
+		}
+	}
+}
+
+func shouldUseBuildInfoVersion(version string) bool {
+	return version == "" || version == "dev" || version == "unknown"
+}
+
+func shouldUseBuildInfoCommit(commit string) bool {
+	return commit == "" || commit == "unknown"
+}
+
+func buildSetting(info *debug.BuildInfo, key string) string {
+	for _, setting := range info.Settings {
+		if setting.Key == key {
+			return setting.Value
+		}
+	}
+	return ""
+}
+
+func shortCommit(commit string) string {
+	const shortSHAChars = 7
+	if len(commit) <= shortSHAChars {
+		return commit
+	}
+	return commit[:shortSHAChars]
+}
 
 // ScaleSetController registers a GitHub Actions Runner Scale Set, polls for
 // job assignments via the listener, and manages the lifecycle of ephemeral
