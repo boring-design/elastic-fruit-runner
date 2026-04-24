@@ -1,0 +1,29 @@
+dashboard/src/App.tsx
+  8b554626b55bae31 11-16,36-37,66
+internal/controller/controller.go
+  8b554626b55bae31 8,29-72
+Makefile
+  8b554626b55bae31 3-6,10
+internal/controller/controller_test.go
+  8b554626b55bae31 1-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "8e851be11f49afe0e0cb4cf2ea1107df22164271",
+  "prompts": {
+    "8b554626b55bae31": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dbdda-958d-72d3-8471-606ee8419357",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 142,
+      "total_deletions": 6,
+      "accepted_lines": 138,
+      "overriden_lines": 0
+    }
+  }
+}
