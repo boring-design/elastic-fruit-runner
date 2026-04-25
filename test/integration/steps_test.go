@@ -682,6 +682,13 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		if err != nil {
 			return err
 		}
+		if imageRefUsesDigest(image) {
+			name := state.tartPrefix + "-image-check-" + randomSuffix()
+			if err := state.tartMgr.Clone(context.Background(), image, name); err != nil {
+				return fmt.Errorf("verify digest-pinned image %q by cloning %q: %w", image, name, err)
+			}
+			return cleanupTartVM(context.Background(), state.tartMgr, name)
+		}
 		exists, err := state.tartMgr.ImageExists(context.Background(), image)
 		if err != nil {
 			return fmt.Errorf("check image exists: %w", err)
@@ -797,6 +804,10 @@ func tartTestImage() (string, error) {
 		return "", fmt.Errorf("EFR_TEST_TART_IMAGE must be pinned to a fixed tag or digest, got %q", image)
 	}
 	return image, nil
+}
+
+func imageRefUsesDigest(image string) bool {
+	return strings.Contains(image, "@sha256:")
 }
 
 func cleanupTartVMs(ctx context.Context, state *scenarioState) error {

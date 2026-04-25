@@ -14,7 +14,7 @@ jobs:
   integration-test:
     name: Integration Test (${{ matrix.name }})
     runs-on: ${{ matrix.runs-on }}
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -88,7 +88,7 @@ jobs:
           EFR_TEST_APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
           EFR_TEST_APP_PRIVATE_KEY_PATH: ${{ matrix.needs-app-key && '/tmp/efr-test-app-key.pem' || '' }}
           EFR_TEST_FEATURES: ${{ matrix.features }}
-        run: go test -tags=integration -count=1 -v -timeout=25m -coverpkg=./... -coverprofile=coverage.out ./test/integration/
+        run: go test -tags=integration -count=1 -v -timeout=55m -coverpkg=./... -coverprofile=coverage.out ./test/integration/
 
       - name: Upload coverage to Codecov
         if: always()
