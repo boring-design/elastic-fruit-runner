@@ -51,6 +51,14 @@ jobs:
       - name: Build dashboard (required for go:embed)
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
+      - name: Install Tart integration dependencies
+        if: matrix.name == 'Tart'
+        run: |
+          brew install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
+          tart --version
+          sshpass -V
+          gpg --version
+
       - name: Write GitHub App private key
         if: matrix.needs-app-key
         run: |
