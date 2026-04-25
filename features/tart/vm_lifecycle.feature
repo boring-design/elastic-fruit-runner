@@ -19,7 +19,8 @@ Feature: Tart VM lifecycle
 
   Scenario: list and cleanup orphaned VMs
     Given a tart manager
-    When I clone a VM with a random name
+    When I pull the VM image
+    And I clone a VM with a random name
     And I start the cloned VM
     Then listing local VMs should include the cloned VM
     When I cleanup all VMs with the test prefix

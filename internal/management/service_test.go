@@ -66,7 +66,7 @@ func TestOpenJobsDB_JobStoreOperations(t *testing.T) {
 	store := NewJobStore(db)
 
 	store.RecordJobStarted("set-1", "job-1", "runner-1")
-	store.RecordJobCompleted("job-1", "Succeeded")
+	store.RecordJobCompleted("job-1", "succeeded")
 
 	jobs := store.Snapshot()
 	if len(jobs) != 1 {
@@ -75,8 +75,8 @@ func TestOpenJobsDB_JobStoreOperations(t *testing.T) {
 	if jobs[0].ID != "job-1" {
 		t.Errorf("job ID = %q, want %q", jobs[0].ID, "job-1")
 	}
-	if jobs[0].Result != "Succeeded" {
-		t.Errorf("job result = %q, want %q", jobs[0].Result, "Succeeded")
+	if jobs[0].Result != "succeeded" {
+		t.Errorf("job result = %q, want %q", jobs[0].Result, "succeeded")
 	}
 	if jobs[0].CompletedAt == nil {
 		t.Error("expected CompletedAt to be set")

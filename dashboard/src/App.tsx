@@ -25,6 +25,7 @@ export default function App() {
     utilPct,
     successCount,
     failureCount,
+    canceledCount,
     mood,
   } = useDashboardDerived()
 
@@ -178,9 +179,9 @@ export default function App() {
             </div>
             <div>
               <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>SUCCESS RATE</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: successCount + failureCount > 0 && failureCount / (successCount + failureCount) > 0.2 ? '#ff9500' : '#f0f0f0' }}>
-                {successCount + failureCount > 0
-                  ? `${Math.round(successCount / (successCount + failureCount) * 100)}%`
+              <div style={{ fontSize: 16, fontWeight: 700, color: successCount + failureCount + canceledCount > 0 && (failureCount + canceledCount) / (successCount + failureCount + canceledCount) > 0.2 ? '#ff9500' : '#f0f0f0' }}>
+                {successCount + failureCount + canceledCount > 0
+                  ? `${Math.round(successCount / (successCount + failureCount + canceledCount) * 100)}%`
                   : '—'}
               </div>
             </div>
@@ -229,8 +230,9 @@ export default function App() {
           { label: 'PREPARING', value: preparing,    color: '#aaa' },
           { label: 'IDLE',      value: idle,         color: '#888' },
           { label: 'BUSY',      value: busy,         color: '#f0f0f0' },
-          { label: 'COMPLETED', value: successCount, color: '#f0f0f0' },
+          { label: 'SUCCEEDED', value: successCount, color: '#f0f0f0' },
           { label: 'FAILED',    value: failureCount, color: failureCount > 0 ? '#ff3b30' : '#444' },
+          { label: 'CANCELED',  value: canceledCount, color: canceledCount > 0 ? '#ff9500' : '#444' },
         ].map((stat) => (
           <div key={stat.label} className="cell">
             <div className="label">{stat.label}</div>

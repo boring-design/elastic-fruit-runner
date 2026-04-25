@@ -108,6 +108,7 @@ enum JobResult {
   JOB_RESULT_RUNNING = 1;
   JOB_RESULT_SUCCESS = 2;
   JOB_RESULT_FAILURE = 3;
+  JOB_RESULT_CANCELED = 4;
 }
 
 message JobRecord {

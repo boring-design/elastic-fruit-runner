@@ -29,6 +29,7 @@ const JOB_RESULT_MAP: Record<string, JobRecord['result']> = {
   JOB_RESULT_RUNNING: 'running',
   JOB_RESULT_SUCCESS: 'success',
   JOB_RESULT_FAILURE: 'failure',
+  JOB_RESULT_CANCELED: 'canceled',
 }
 
 interface ServiceInfoResponse {
