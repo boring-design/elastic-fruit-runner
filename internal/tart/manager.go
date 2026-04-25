@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 )
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/tart")
+
+const ipAddressWaitSeconds = 180
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
@@ -121,7 +124,7 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 	return nil
 }
 
-// IPAddress waits up to 60 s for the VM to get a DHCP address and returns it.
+// IPAddress waits for the VM to get a DHCP address and returns it.
 func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	ctx, span := tracer.Start(ctx, "tart.ip_address",
 		trace.WithAttributes(attribute.String("vm.name", name)),
@@ -129,10 +132,10 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	defer span.End()
 
 	slog.Info("waiting for VM IP", "name", name)
-	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", "60")
-	out, err := cmd.Output()
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", strconv.Itoa(ipAddressWaitSeconds))
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		err = fmt.Errorf("tart ip %s: %w", name, err)
+		err = fmt.Errorf("tart ip %s: %w\n%s", name, err, out)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return "", err
