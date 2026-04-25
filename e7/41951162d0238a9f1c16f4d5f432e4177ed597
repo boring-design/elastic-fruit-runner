@@ -1,0 +1,23 @@
+.github/workflows/controller-integration-test.yaml
+  a7c7443ce95eabdc 54-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "e741951162d0238a9f1c16f4d5f432e4177ed597",
+  "prompts": {
+    "a7c7443ce95eabdc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dc6b4-9963-7e92-b051-e7299a7ebdef",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    }
+  }
+}
