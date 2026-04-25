@@ -54,10 +54,22 @@ jobs:
       - name: Install Tart integration dependencies
         if: matrix.name == 'Tart'
         run: |
-          brew install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
-          tart --version
-          sshpass -V
-          gpg --version
+          if [ -x /opt/homebrew/bin/brew ]; then
+            brew_bin=/opt/homebrew/bin/brew
+          elif [ -x /usr/local/bin/brew ]; then
+            brew_bin=/usr/local/bin/brew
+          else
+            echo "::error::Homebrew is required for Tart integration tests"
+            exit 1
+          fi
+
+          brew_prefix="$("$brew_bin" --prefix)"
+          echo "$brew_prefix/bin" >> "$GITHUB_PATH"
+
+          "$brew_bin" install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
+          "$brew_prefix/bin/tart" --version
+          "$brew_prefix/bin/sshpass" -V
+          "$brew_prefix/bin/gpg" --version
 
       - name: Write GitHub App private key
         if: matrix.needs-app-key
