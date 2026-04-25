@@ -1,0 +1,23 @@
+internal/tart/manager.go
+  a7c7443ce95eabdc 10,23-24,127,135-136,138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4236a46e623b07ace6b023163189f3f6c799be19",
+  "prompts": {
+    "a7c7443ce95eabdc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dc6b4-9963-7e92-b051-e7299a7ebdef",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 4,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
