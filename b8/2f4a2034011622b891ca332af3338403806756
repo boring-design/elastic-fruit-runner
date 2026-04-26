@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "b82f4a2034011622b891ca332af3338403806756",
+  "prompts": {
+    "a7c7443ce95eabdc": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dc6b4-9963-7e92-b051-e7299a7ebdef",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 1,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
