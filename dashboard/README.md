@@ -52,7 +52,7 @@ const { daemonStatus, runnerSets, recentJobs } = await fetch('/api/status').then
 The data shape expected by the dashboard:
 
 ```ts
-DaemonStatus   // version, commitSha, startedAt, githubConnected, idleTimeout
+DaemonStatus   // buildInfo, startedAt, githubConnected, idleTimeout
 RunnerSet[]    // name, backend, image, labels, maxRunners, scope, runners[]
 JobRecord[]    // id, runnerName, runnerSetName, result, startedAt, completedAt
 ```
