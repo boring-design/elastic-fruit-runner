@@ -71,9 +71,14 @@ jobs:
           "$brew_prefix/bin/sshpass" -V
           "$brew_prefix/bin/gpg" --version
 
-          security create-keychain -p '' login.keychain || true
-          security unlock-keychain -p '' login.keychain
-          security login-keychain -s login.keychain
+          tart_keychain="$RUNNER_TEMP/tart-login.keychain"
+          rm -f "$tart_keychain" "$tart_keychain-db"
+          security create-keychain -p '' "$tart_keychain"
+          security unlock-keychain -p '' "$tart_keychain"
+          security set-keychain-settings -lut 21600 "$tart_keychain"
+          security list-keychains -d user -s "$tart_keychain"
+          security default-keychain -s "$tart_keychain"
+          security login-keychain -s "$tart_keychain"
 
           if sudo -n true 2>/dev/null; then
             sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetSharing.default.plist bootpd -dict DHCPLeaseTimeSecs -int 600
