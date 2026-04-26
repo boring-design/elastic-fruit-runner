@@ -1,0 +1,27 @@
+doc-site/src/content/docs/devlog/2026-04-26-launchd-lc-uuid.md
+  093e22f3a05cbb0c 2-137
+doc-site/src/content/docs/devlog/index.md
+  093e22f3a05cbb0c 1-19
+doc-site/astro.config.mjs
+  093e22f3a05cbb0c 49-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "109fc8f6aea7b86f685361abacb5fe1a4fc4eab2",
+  "prompts": {
+    "093e22f3a05cbb0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b5edc921-f9fd-49b9-8101-a54139a9b5b5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 120,
+      "total_deletions": 31,
+      "accepted_lines": 120,
+      "overriden_lines": 0
+    }
+  }
+}
