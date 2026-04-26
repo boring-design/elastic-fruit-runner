@@ -824,7 +824,17 @@ type JobRecord struct {
 	// When the job started.
 	StartedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
 	// When the job finished. Absent if still running.
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	CompletedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	// GitHub repository in "owner/repo" form. Captured at job-start time.
+	// Empty for jobs whose start event was missed (e.g. daemon restarted).
+	Repository string `protobuf:"bytes,7,opt,name=repository,proto3" json:"repository,omitempty"`
+	// Human-readable workflow name (e.g. "Unit Test"). Best-effort, may
+	// contain the workflow file basename if the display name is not surfaced.
+	WorkflowName string `protobuf:"bytes,8,opt,name=workflow_name,json=workflowName,proto3" json:"workflow_name,omitempty"`
+	// GitHub Actions workflow run identifier. Empty when the start event
+	// was missed. Combined with repository, this builds an Actions URL like
+	// https://github.com/{repository}/actions/runs/{workflow_run_id}.
+	WorkflowRunId string `protobuf:"bytes,9,opt,name=workflow_run_id,json=workflowRunId,proto3" json:"workflow_run_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -899,6 +909,27 @@ func (x *JobRecord) GetCompletedAt() *timestamppb.Timestamp {
 		return x.CompletedAt
 	}
 	return nil
+}
+
+func (x *JobRecord) GetRepository() string {
+	if x != nil {
+		return x.Repository
+	}
+	return ""
+}
+
+func (x *JobRecord) GetWorkflowName() string {
+	if x != nil {
+		return x.WorkflowName
+	}
+	return ""
+}
+
+func (x *JobRecord) GetWorkflowRunId() string {
+	if x != nil {
+		return x.WorkflowRunId
+	}
+	return ""
 }
 
 type GetMachineVitalsRequest struct {
@@ -1057,7 +1088,7 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x15ListJobRecordsRequest\"U\n" +
 	"\x16ListJobRecordsResponse\x12;\n" +
 	"\vjob_records\x18\x01 \x03(\v2\x1a.controlplane.v1.JobRecordR\n" +
-	"jobRecords\"\xa8\x02\n" +
+	"jobRecords\"\x95\x03\n" +
 	"\tJobRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vrunner_name\x18\x02 \x01(\tR\n" +
@@ -1066,7 +1097,12 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x06result\x18\x04 \x01(\x0e2\x1a.controlplane.v1.JobResultR\x06result\x129\n" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12B\n" +
-	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01B\x0f\n" +
+	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01\x12\x1e\n" +
+	"\n" +
+	"repository\x18\a \x01(\tR\n" +
+	"repository\x12#\n" +
+	"\rworkflow_name\x18\b \x01(\tR\fworkflowName\x12&\n" +
+	"\x0fworkflow_run_id\x18\t \x01(\tR\rworkflowRunIdB\x0f\n" +
 	"\r_completed_at\"\x19\n" +
 	"\x17GetMachineVitalsRequest\"\xd7\x01\n" +
 	"\x18GetMachineVitalsResponse\x12*\n" +
