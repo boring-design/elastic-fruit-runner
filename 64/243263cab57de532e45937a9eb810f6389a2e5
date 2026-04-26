@@ -1,0 +1,33 @@
+internal/buildinfo/buildinfo_test.go
+  3720870c151cfda3 1-45
+internal/api/server.go
+  3720870c151cfda3 67
+internal/controller/controller.go
+  3720870c151cfda3 18,114,118-119
+internal/buildinfo/buildinfo.go
+  3720870c151cfda3 1-50
+gen/controlplane/v1/controlplanev1connect/controlplane.connect.go
+  3720870c151cfda3 8,11
+proto/controlplane/v1/controlplane.proto
+  3720870c151cfda3 34-35,37,39-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "64243263cab57de532e45937a9eb810f6389a2e5",
+  "prompts": {
+    "3720870c151cfda3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dc6b8-d0b2-75f3-b404-6326b1b23010",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 178,
+      "total_deletions": 63,
+      "accepted_lines": 134,
+      "overriden_lines": 0
+    }
+  }
+}
