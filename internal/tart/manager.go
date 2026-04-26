@@ -193,7 +193,19 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 // waitForSSH verifies the actual SSH transport used by Exec instead of only
 // probing TCP port 22. On macOS launchd services, raw Go TCP dials can fail
 // against Tart bridge addresses even when ssh can connect successfully.
+//
+// On entry it logs a one-shot route diagnostic for ip so launchd-vs-shell
+// routing differences (issue #73) are visible at info level. On timeout the
+// returned error embeds both the last SSH probe failure and the route output.
 func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
+	route := describeRouteTo(ctx, ip)
+	slog.Info("readiness probe starting",
+		"name", name,
+		"ip", ip,
+		"max_wait", sshReadyMaxWait,
+		"route", route,
+	)
+
 	deadline := time.Now().Add(sshReadyMaxWait)
 	backoff := sshReadyInitialBackoff
 	var lastErr error
@@ -206,7 +218,11 @@ func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
 		lastErr = err
 
 		if time.Now().After(deadline) {
-			return fmt.Errorf("SSH not reachable on %s (%s:22) after %s: last error: %w", name, ip, sshReadyMaxWait, lastErr)
+			finalRoute := describeRouteTo(ctx, ip)
+			return fmt.Errorf(
+				"SSH not reachable on %s (%s:22) after %s: last error: %w (route: %s)",
+				name, ip, sshReadyMaxWait, lastErr, finalRoute,
+			)
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -238,6 +254,46 @@ func (m *Manager) probeSSH(ctx context.Context, name, ip string) error {
 		return fmt.Errorf("ssh readiness probe %s (%s): %w", name, ip, err)
 	}
 	return nil
+}
+
+// describeRouteTo returns a single-line summary of how the host kernel would
+// route packets to ip. It shells out to the system `route` binary (always
+// present at /sbin/route on macOS), which is exempt from the macOS local
+// network privacy gate that affects the LaunchAgent-spawned Go binary itself
+// — making this useful even when raw Go dials would fail.
+//
+// The output is best-effort: if `route` is missing or fails the function
+// returns a short error description rather than failing the caller. The
+// extracted line is intentionally compact (interface, gateway) so it fits
+// in a single log field without dominating the message.
+func describeRouteTo(ctx context.Context, ip string) string {
+	routeBin := binpath.Lookup("route")
+	cmd := exec.CommandContext(ctx, routeBin, "-n", "get", ip)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Sprintf("route lookup failed for %s: %v", ip, err)
+	}
+	var iface, gateway string
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "interface:"):
+			iface = strings.TrimSpace(strings.TrimPrefix(line, "interface:"))
+		case strings.HasPrefix(line, "gateway:"):
+			gateway = strings.TrimSpace(strings.TrimPrefix(line, "gateway:"))
+		}
+	}
+	if iface == "" && gateway == "" {
+		return "route lookup returned no interface/gateway info"
+	}
+	parts := make([]string, 0, 2)
+	if iface != "" {
+		parts = append(parts, "iface="+iface)
+	}
+	if gateway != "" {
+		parts = append(parts, "gateway="+gateway)
+	}
+	return strings.Join(parts, " ")
 }
 
 // Stop halts a running VM.

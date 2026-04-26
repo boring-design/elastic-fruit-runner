@@ -46,6 +46,7 @@ export default defineConfig({
 					label: 'Explanation',
 					items: [
 						{ slug: 'explanation/what-is-elastic-fruit-runner' },
+						{ slug: 'explanation/launchd-network-privacy' },
 					],
 				},
 			],

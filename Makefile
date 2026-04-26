@@ -1,9 +1,14 @@
 .PHONY: build build-dashboard run unit-test test integration-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
 # Build dashboard then Go binary
+# `-B gobuildid` derives a Mach-O LC_UUID load command from the Go build ID
+# on darwin builds. macOS 15+ Local Network Privacy keys off LC_UUID when
+# deciding whether a launchd-spawned binary can reach private subnets such as
+# the Tart bridge (192.168.64.x). Without it, brew services daemons hit
+# "no route to host". See https://github.com/golang/go/issues/68678.
 build: build-dashboard
 	@mkdir -p output
-	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
+	go build -ldflags="-B gobuildid" -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
 # Build the React dashboard
 build-dashboard:

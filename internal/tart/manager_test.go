@@ -50,6 +50,14 @@ func TestWaitForSSHReportsLastReadinessError(t *testing.T) {
 echo "connect: no route to host" >&2
 exit 255
 `)
+	writeFakeRoute(t, dir, `
+echo "   route to: 192.168.64.3"
+echo "destination: 192.168.64.0"
+echo "       mask: 255.255.255.0"
+echo "  interface: bridge101"
+echo "    gateway: 192.168.64.1"
+exit 0
+`)
 	resetBinpath(t, dir)
 	restore := setSSHReadyTimings(15*time.Millisecond, time.Millisecond, time.Millisecond, 10*time.Millisecond)
 	t.Cleanup(restore)
@@ -63,10 +71,56 @@ exit 255
 		"SSH not reachable on vm-1 (192.168.64.3:22)",
 		"last error",
 		"connect: no route to host",
+		"route:",
+		"iface=bridge101",
+		"gateway=192.168.64.1",
 	} {
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("waitForSSH() error missing %q:\n%v", want, err)
 		}
+	}
+}
+
+func TestDescribeRouteToParsesMacOSRouteOutput(t *testing.T) {
+	dir := t.TempDir()
+	writeFakeRoute(t, dir, `
+echo "   route to: 192.168.64.3"
+echo "destination: 192.168.64.0"
+echo "       mask: 255.255.255.0"
+echo "  interface: bridge101"
+echo "    gateway: 192.168.64.1"
+exit 0
+`)
+	resetBinpath(t, dir)
+
+	got := describeRouteTo(context.Background(), "192.168.64.3")
+	for _, want := range []string{"iface=bridge101", "gateway=192.168.64.1"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("describeRouteTo() = %q, missing %q", got, want)
+		}
+	}
+}
+
+func TestDescribeRouteToReturnsDiagnosticOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	writeFakeRoute(t, dir, `
+echo "route: writing to routing socket: not in table" >&2
+exit 1
+`)
+	resetBinpath(t, dir)
+
+	got := describeRouteTo(context.Background(), "10.0.0.99")
+	if !strings.Contains(got, "route lookup failed") {
+		t.Fatalf("describeRouteTo() = %q, want failure description", got)
+	}
+}
+
+func writeFakeRoute(t *testing.T, dir, body string) {
+	t.Helper()
+	path := filepath.Join(dir, "route")
+	script := "#!/bin/sh\n" + body
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake route: %v", err)
 	}
 }
 

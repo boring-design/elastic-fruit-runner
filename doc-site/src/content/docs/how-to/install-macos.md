@@ -72,6 +72,12 @@ If the Mac is used as a dedicated runner host (e.g. a Mac mini or a MacBook with
 brew services start elastic-fruit-runner
 ```
 
+:::caution[macOS 15+ Local Network Privacy]
+Starting with macOS 15 (Sequoia), background services launched by `brew services` (LaunchAgents) are subject to Local Network Privacy. This affects the Tart backend, which speaks to VMs over the `bridge101` interface (`192.168.64.x`).
+
+The runner ships with the `-B gobuildid` linker flag so the binary carries a Mach-O `LC_UUID` load command that the kernel needs to make routing decisions. If you still see `SSH not reachable ... last error: ... no route to host` in the logs after upgrading, see [Troubleshooting: launchd cannot reach the Tart bridge](/how-to/troubleshooting/#tart-vms-fail-to-start-from-brew-services-no-route-to-host).
+:::
+
 Check status:
 
 ```sh
