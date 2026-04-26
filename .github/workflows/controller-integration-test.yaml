@@ -78,7 +78,6 @@ jobs:
           security set-keychain-settings -lut 21600 "$tart_keychain"
           security list-keychains -d user -s "$tart_keychain"
           security default-keychain -s "$tart_keychain"
-          security login-keychain -s "$tart_keychain"
 
           if sudo -n true 2>/dev/null; then
             sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetSharing.default.plist bootpd -dict DHCPLeaseTimeSecs -int 600
