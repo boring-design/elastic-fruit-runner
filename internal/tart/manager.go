@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -113,6 +114,8 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 
 	slog.Info("starting VM", "name", name)
 	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "run", name, "--no-graphics")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		err = fmt.Errorf("start VM %s: %w", name, err)
 		span.RecordError(err)

@@ -71,6 +71,17 @@ jobs:
           "$brew_prefix/bin/sshpass" -V
           "$brew_prefix/bin/gpg" --version
 
+          security create-keychain -p '' login.keychain || true
+          security unlock-keychain -p '' login.keychain
+          security login-keychain -s login.keychain
+
+          if sudo -n true 2>/dev/null; then
+            sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetSharing.default.plist bootpd -dict DHCPLeaseTimeSecs -int 600
+            sudo rm -f /var/db/dhcpd_leases
+          else
+            echo "::warning::Passwordless sudo is unavailable; skipping Tart DHCP cleanup"
+          fi
+
       - name: Write GitHub App private key
         if: matrix.needs-app-key
         run: |
