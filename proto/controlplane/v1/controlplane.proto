@@ -31,9 +31,9 @@ service ControlPlaneService {
 message GetServiceInfoRequest {}
 
 message GetServiceInfoResponse {
-  // Semantic version set at build time via -ldflags.
+  // Semantic version from Go build info.
   string version = 1;
-  // Git commit hash set at build time via -ldflags.
+  // Git commit hash from Go build info.
   string commit_sha = 2;
   // When the daemon process started.
   google.protobuf.Timestamp started_at = 3;

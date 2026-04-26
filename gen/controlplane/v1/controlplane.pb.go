@@ -214,9 +214,9 @@ func (*GetServiceInfoRequest) Descriptor() ([]byte, []int) {
 
 type GetServiceInfoResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Semantic version set at build time via -ldflags.
+	// Semantic version from Go build info.
 	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	// Git commit hash set at build time via -ldflags.
+	// Git commit hash from Go build info.
 	CommitSha string `protobuf:"bytes,2,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
 	// When the daemon process started.
 	StartedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`

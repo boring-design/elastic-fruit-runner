@@ -14,6 +14,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/dashboard"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
+	"github.com/boring-design/elastic-fruit-runner/internal/buildinfo"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
@@ -61,9 +62,10 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
+	build := buildinfo.Current()
 	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
-		Version:            controller.Version,
-		CommitSha:          controller.CommitSHA,
+		Version:            build.Version,
+		CommitSha:          build.CommitSHA,
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 	}), nil
