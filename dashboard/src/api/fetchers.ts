@@ -81,6 +81,9 @@ interface JobRecordsResponse {
     result: string
     startedAt: string
     completedAt?: string
+    repository?: string
+    workflowName?: string
+    workflowRunId?: string
   }>
 }
 
@@ -159,6 +162,9 @@ export async function fetchRecentJobs(): Promise<JobRecord[]> {
     result: JOB_RESULT_MAP[j.result] ?? (j.completedAt ? 'failure' : 'running'),
     startedAt: new Date(j.startedAt),
     completedAt: j.completedAt ? new Date(j.completedAt) : null,
+    repository: j.repository ?? '',
+    workflowName: j.workflowName ?? '',
+    workflowRunId: j.workflowRunId ?? '',
   }))
 }
 

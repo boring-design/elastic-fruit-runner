@@ -26,6 +26,12 @@ export interface JobRecord {
   result: JobResult
   startedAt: Date
   completedAt: Date | null
+  /** GitHub repository in "owner/repo" form. Empty when the job-start event was missed. */
+  repository: string
+  /** Human-readable workflow name (e.g. "Unit Test"). Empty when not surfaced. */
+  workflowName: string
+  /** GitHub Actions workflow run identifier as a string. Empty when not surfaced. */
+  workflowRunId: string
 }
 
 export interface DaemonStatus {

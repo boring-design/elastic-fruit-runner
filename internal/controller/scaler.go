@@ -62,8 +62,21 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	defer span.End()
 
 	d.runners.markBusy(job.RunnerName)
-	d.jobRecorder.RecordJobStarted(d.rsCfg.Name, job.JobID, job.RunnerName)
-	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
+	d.jobRecorder.RecordJobStarted(JobStart{
+		RunnerSetName: d.rsCfg.Name,
+		JobID:         job.JobID,
+		RunnerName:    job.RunnerName,
+		Repository:    repositoryFromJobMessage(job.OwnerName, job.RepositoryName),
+		WorkflowName:  workflowNameFromJobMessage(job.JobDisplayName, job.JobWorkflowRef),
+		WorkflowRunID: workflowRunIDFromJobMessage(job.WorkflowRunID),
+	})
+	d.logger.Info("job started",
+		"runner", job.RunnerName,
+		"id", job.RunnerID,
+		"repository", job.RepositoryName,
+		"workflow", job.JobDisplayName,
+		"workflow_run_id", job.WorkflowRunID,
+	)
 	return nil
 }
 

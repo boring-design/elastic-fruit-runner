@@ -244,6 +244,51 @@ html, body, #root {
   border-bottom: none;
 }
 
+/* Inline links to GitHub UIs */
+.runner-set-link,
+.job-link {
+  text-decoration: none;
+  border-bottom: 1px dotted transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.runner-set-link:hover,
+.runner-set-link:focus-visible {
+  color: #ffffff;
+  border-bottom-color: var(--text-dim);
+  outline: none;
+}
+
+.job-link:hover,
+.job-link:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--text-dim);
+  outline: none;
+}
+
+.job-context {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.job-context-line {
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.job-context-runner {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
