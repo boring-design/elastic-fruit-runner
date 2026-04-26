@@ -2,30 +2,48 @@ import { useEffect } from 'react'
 import useSWR from 'swr'
 import { useDashboardStore } from '../store/useDashboardStore'
 import { fetchDaemonStatus, fetchRunnerSets, fetchRecentJobs, fetchMachineVitals } from '../api/fetchers'
-
-const REFRESH_INTERVAL = 5000
+import { REFRESH_INTERVAL_MS } from '../config'
 
 export function useDashboardSync() {
-  const { setDaemonStatus, setRunnerSets, setRecentJobs, setMachineVitals, tick } = useDashboardStore()
+  const {
+    setDaemonStatus,
+    setRunnerSets,
+    setRecentJobs,
+    setMachineVitals,
+    markSynced,
+    tick,
+  } = useDashboardStore()
 
   const status = useSWR('daemonStatus', fetchDaemonStatus, {
-    refreshInterval: REFRESH_INTERVAL,
-    onSuccess: setDaemonStatus,
+    refreshInterval: REFRESH_INTERVAL_MS,
+    onSuccess: (data) => {
+      setDaemonStatus(data)
+      markSynced()
+    },
   })
 
   const sets = useSWR('runnerSets', fetchRunnerSets, {
-    refreshInterval: REFRESH_INTERVAL,
-    onSuccess: setRunnerSets,
+    refreshInterval: REFRESH_INTERVAL_MS,
+    onSuccess: (data) => {
+      setRunnerSets(data)
+      markSynced()
+    },
   })
 
   const jobs = useSWR('recentJobs', fetchRecentJobs, {
-    refreshInterval: REFRESH_INTERVAL,
-    onSuccess: setRecentJobs,
+    refreshInterval: REFRESH_INTERVAL_MS,
+    onSuccess: (data) => {
+      setRecentJobs(data)
+      markSynced()
+    },
   })
 
   const vitals = useSWR('machineVitals', fetchMachineVitals, {
-    refreshInterval: REFRESH_INTERVAL,
-    onSuccess: setMachineVitals,
+    refreshInterval: REFRESH_INTERVAL_MS,
+    onSuccess: (data) => {
+      setMachineVitals(data)
+      markSynced()
+    },
   })
 
   useEffect(() => {
