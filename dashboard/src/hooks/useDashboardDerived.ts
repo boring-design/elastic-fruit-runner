@@ -19,6 +19,11 @@ export function useDashboardDerived() {
   const successCount = completedJobs.filter(j => j.result === 'success').length
   const failureCount = completedJobs.filter(j => j.result === 'failure').length
   const canceledCount = completedJobs.filter(j => j.result === 'canceled').length
+  // Jobs whose result string the daemon could not classify. They are
+  // counted as completed (so the COMPLETED total moves forward) but
+  // deliberately excluded from the success/failure split — see issue #68
+  // where "unknown" results were silently treated as failures.
+  const unknownCount = completedJobs.filter(j => j.result === 'unknown').length
 
   const mood: PetMood =
     preparing > 0 ? 'alert' :
@@ -42,6 +47,7 @@ export function useDashboardDerived() {
     successCount,
     failureCount,
     canceledCount,
+    unknownCount,
     mood,
   }
 }
