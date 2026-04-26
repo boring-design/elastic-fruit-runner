@@ -1,0 +1,35 @@
+dashboard/src/store/useDashboardStore.ts
+  093e22f3a05cbb0c 11-13,19,31,37
+dashboard/src/components/RunnerSetPanel.tsx
+  093e22f3a05cbb0c 54-63
+dashboard/src/derived/status.ts
+  093e22f3a05cbb0c 1-99
+dashboard/src/App.tsx
+  093e22f3a05cbb0c 10-17,44-46,98-99,102,284-287
+dashboard/src/config.ts
+  093e22f3a05cbb0c 1-5
+dashboard/src/hooks/useDashboardSync.ts
+  093e22f3a05cbb0c 5,8-15,18-22,26-30,34-38,42-46
+dashboard/src/hooks/useDashboardDerived.ts
+  093e22f3a05cbb0c 3,5,8,31-42,60-62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "2259b6d5ef3327c6ad317fdb413f0b0c937c5144",
+  "prompts": {
+    "093e22f3a05cbb0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b5edc921-f9fd-49b9-8101-a54139a9b5b5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 188,
+      "total_deletions": 31,
+      "accepted_lines": 185,
+      "overriden_lines": 0
+    }
+  }
+}
