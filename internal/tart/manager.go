@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -21,7 +20,7 @@ import (
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/tart")
 
-const ipAddressWaitSeconds = 180
+const ipAddressWaitSeconds = "180"
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
@@ -135,7 +134,7 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	defer span.End()
 
 	slog.Info("waiting for VM IP", "name", name)
-	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", strconv.Itoa(ipAddressWaitSeconds))
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", ipAddressWaitSeconds)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		err = fmt.Errorf("tart ip %s: %w\n%s", name, err, out)
