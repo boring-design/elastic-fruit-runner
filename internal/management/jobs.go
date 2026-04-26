@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"strings"
 	"time"
 
 	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
@@ -31,13 +32,13 @@ func NewJobStore(db *sql.DB) *JobStore {
 	}
 }
 
-// knownJobResults is the set of valid result strings from the GitHub Actions API.
-// GitHub sends these in lowercase ("succeeded", "failed").
+// knownJobResults is the set of valid result strings from the GitHub Scale Set API.
+// GitHub may send these in mixed case (e.g. "Succeeded"); callers should lower-case
+// before looking up.
 var knownJobResults = map[string]struct{}{
 	"succeeded": {},
 	"failed":    {},
-	"Succeeded": {},
-	"Failed":    {},
+	"canceled":  {},
 }
 
 // RecordJobStarted inserts a new job with result "running".
@@ -57,16 +58,19 @@ func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
 
 // RecordJobCompleted finds an existing job by ID and updates its result.
 // If the job does not exist, inserts a completed-only record.
+// The result is normalized to lowercase so downstream consumers see a stable canonical form.
 func (s *JobStore) RecordJobCompleted(jobID, result string) {
-	if _, ok := knownJobResults[result]; !ok {
-		slog.Warn("unexpected job result from scale-set API, recording as-is", "job_id", jobID, "result", result)
+	normalized := strings.ToLower(result)
+	if _, ok := knownJobResults[normalized]; !ok {
+		slog.Error("unexpected job result from scale-set API, refusing to record invalid state", "job_id", jobID, "result", result)
+		return
 	}
 
 	ctx := context.Background()
 	now := time.Now()
 
 	res, err := s.queries.UpdateJobCompleted(ctx, sqlcdb.UpdateJobCompletedParams{
-		Result:      result,
+		Result:      normalized,
 		CompletedAt: sql.NullTime{Time: now, Valid: true},
 		ID:          jobID,
 	})
@@ -85,7 +89,7 @@ func (s *JobStore) RecordJobCompleted(jobID, result string) {
 		// Job was never recorded (e.g. daemon restarted). Insert a completed-only record.
 		err = s.queries.InsertCompletedJob(ctx, sqlcdb.InsertCompletedJobParams{
 			ID:          jobID,
-			Result:      result,
+			Result:      normalized,
 			StartedAt:   now,
 			CompletedAt: sql.NullTime{Time: now, Valid: true},
 		})

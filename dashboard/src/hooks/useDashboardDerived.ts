@@ -18,6 +18,7 @@ export function useDashboardDerived() {
   const completedJobs = recentJobs.filter(j => j.result !== 'running')
   const successCount = completedJobs.filter(j => j.result === 'success').length
   const failureCount = completedJobs.filter(j => j.result === 'failure').length
+  const canceledCount = completedJobs.filter(j => j.result === 'canceled').length
 
   const mood: PetMood =
     preparing > 0 ? 'alert' :
@@ -40,6 +41,7 @@ export function useDashboardDerived() {
     utilPct,
     successCount,
     failureCount,
+    canceledCount,
     mood,
   }
 }

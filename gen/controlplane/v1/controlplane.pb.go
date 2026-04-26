@@ -131,6 +131,7 @@ const (
 	JobResult_JOB_RESULT_RUNNING     JobResult = 1
 	JobResult_JOB_RESULT_SUCCESS     JobResult = 2
 	JobResult_JOB_RESULT_FAILURE     JobResult = 3
+	JobResult_JOB_RESULT_CANCELED    JobResult = 4
 )
 
 // Enum value maps for JobResult.
@@ -140,12 +141,14 @@ var (
 		1: "JOB_RESULT_RUNNING",
 		2: "JOB_RESULT_SUCCESS",
 		3: "JOB_RESULT_FAILURE",
+		4: "JOB_RESULT_CANCELED",
 	}
 	JobResult_value = map[string]int32{
 		"JOB_RESULT_UNSPECIFIED": 0,
 		"JOB_RESULT_RUNNING":     1,
 		"JOB_RESULT_SUCCESS":     2,
 		"JOB_RESULT_FAILURE":     3,
+		"JOB_RESULT_CANCELED":    4,
 	}
 )
 
@@ -214,14 +217,12 @@ func (*GetServiceInfoRequest) Descriptor() ([]byte, []int) {
 
 type GetServiceInfoResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Semantic version set at build time via -ldflags.
-	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	// Git commit hash set at build time via -ldflags.
-	CommitSha string `protobuf:"bytes,2,opt,name=commit_sha,json=commitSha,proto3" json:"commit_sha,omitempty"`
+	// Go build metadata embedded in the daemon binary.
+	BuildInfo *BuildInfo `protobuf:"bytes,1,opt,name=build_info,json=buildInfo,proto3" json:"build_info,omitempty"`
 	// When the daemon process started.
-	StartedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
+	StartedAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
 	// Configured idle runner timeout in seconds.
-	IdleTimeoutSeconds int32 `protobuf:"varint,4,opt,name=idle_timeout_seconds,json=idleTimeoutSeconds,proto3" json:"idle_timeout_seconds,omitempty"`
+	IdleTimeoutSeconds int32 `protobuf:"varint,3,opt,name=idle_timeout_seconds,json=idleTimeoutSeconds,proto3" json:"idle_timeout_seconds,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -256,18 +257,11 @@ func (*GetServiceInfoResponse) Descriptor() ([]byte, []int) {
 	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetServiceInfoResponse) GetVersion() string {
+func (x *GetServiceInfoResponse) GetBuildInfo() *BuildInfo {
 	if x != nil {
-		return x.Version
+		return x.BuildInfo
 	}
-	return ""
-}
-
-func (x *GetServiceInfoResponse) GetCommitSha() string {
-	if x != nil {
-		return x.CommitSha
-	}
-	return ""
+	return nil
 }
 
 func (x *GetServiceInfoResponse) GetStartedAt() *timestamppb.Timestamp {
@@ -284,6 +278,207 @@ func (x *GetServiceInfoResponse) GetIdleTimeoutSeconds() int32 {
 	return 0
 }
 
+type BuildInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Go toolchain version used to build the binary.
+	GoVersion string `protobuf:"bytes,1,opt,name=go_version,json=goVersion,proto3" json:"go_version,omitempty"`
+	// Main package path.
+	Path string `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	// Main module.
+	Main *Module `protobuf:"bytes,3,opt,name=main,proto3" json:"main,omitempty"`
+	// Dependency modules.
+	Deps []*Module `protobuf:"bytes,4,rep,name=deps,proto3" json:"deps,omitempty"`
+	// Build settings such as VCS metadata.
+	Settings      []*BuildSetting `protobuf:"bytes,5,rep,name=settings,proto3" json:"settings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BuildInfo) Reset() {
+	*x = BuildInfo{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BuildInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BuildInfo) ProtoMessage() {}
+
+func (x *BuildInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BuildInfo.ProtoReflect.Descriptor instead.
+func (*BuildInfo) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *BuildInfo) GetGoVersion() string {
+	if x != nil {
+		return x.GoVersion
+	}
+	return ""
+}
+
+func (x *BuildInfo) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *BuildInfo) GetMain() *Module {
+	if x != nil {
+		return x.Main
+	}
+	return nil
+}
+
+func (x *BuildInfo) GetDeps() []*Module {
+	if x != nil {
+		return x.Deps
+	}
+	return nil
+}
+
+func (x *BuildInfo) GetSettings() []*BuildSetting {
+	if x != nil {
+		return x.Settings
+	}
+	return nil
+}
+
+type Module struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Version       string                 `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
+	Sum           string                 `protobuf:"bytes,3,opt,name=sum,proto3" json:"sum,omitempty"`
+	Replace       *Module                `protobuf:"bytes,4,opt,name=replace,proto3" json:"replace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Module) Reset() {
+	*x = Module{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Module) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Module) ProtoMessage() {}
+
+func (x *Module) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Module.ProtoReflect.Descriptor instead.
+func (*Module) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Module) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Module) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *Module) GetSum() string {
+	if x != nil {
+		return x.Sum
+	}
+	return ""
+}
+
+func (x *Module) GetReplace() *Module {
+	if x != nil {
+		return x.Replace
+	}
+	return nil
+}
+
+type BuildSetting struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Key           string                 `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
+	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BuildSetting) Reset() {
+	*x = BuildSetting{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BuildSetting) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BuildSetting) ProtoMessage() {}
+
+func (x *BuildSetting) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BuildSetting.ProtoReflect.Descriptor instead.
+func (*BuildSetting) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *BuildSetting) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *BuildSetting) GetValue() string {
+	if x != nil {
+		return x.Value
+	}
+	return ""
+}
+
 type ListRunnerSetsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -292,7 +487,7 @@ type ListRunnerSetsRequest struct {
 
 func (x *ListRunnerSetsRequest) Reset() {
 	*x = ListRunnerSetsRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[2]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +499,7 @@ func (x *ListRunnerSetsRequest) String() string {
 func (*ListRunnerSetsRequest) ProtoMessage() {}
 
 func (x *ListRunnerSetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[2]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +512,7 @@ func (x *ListRunnerSetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunnerSetsRequest.ProtoReflect.Descriptor instead.
 func (*ListRunnerSetsRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{2}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{5}
 }
 
 type ListRunnerSetsResponse struct {
@@ -329,7 +524,7 @@ type ListRunnerSetsResponse struct {
 
 func (x *ListRunnerSetsResponse) Reset() {
 	*x = ListRunnerSetsResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[3]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -341,7 +536,7 @@ func (x *ListRunnerSetsResponse) String() string {
 func (*ListRunnerSetsResponse) ProtoMessage() {}
 
 func (x *ListRunnerSetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[3]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -354,7 +549,7 @@ func (x *ListRunnerSetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRunnerSetsResponse.ProtoReflect.Descriptor instead.
 func (*ListRunnerSetsResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{3}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListRunnerSetsResponse) GetRunnerSets() []*RunnerSet {
@@ -389,7 +584,7 @@ type RunnerSet struct {
 
 func (x *RunnerSet) Reset() {
 	*x = RunnerSet{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[4]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -401,7 +596,7 @@ func (x *RunnerSet) String() string {
 func (*RunnerSet) ProtoMessage() {}
 
 func (x *RunnerSet) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[4]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -414,7 +609,7 @@ func (x *RunnerSet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunnerSet.ProtoReflect.Descriptor instead.
 func (*RunnerSet) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{4}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RunnerSet) GetName() string {
@@ -487,7 +682,7 @@ type Runner struct {
 
 func (x *Runner) Reset() {
 	*x = Runner{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[5]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -499,7 +694,7 @@ func (x *Runner) String() string {
 func (*Runner) ProtoMessage() {}
 
 func (x *Runner) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[5]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -512,7 +707,7 @@ func (x *Runner) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Runner.ProtoReflect.Descriptor instead.
 func (*Runner) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{5}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Runner) GetName() string {
@@ -544,7 +739,7 @@ type ListJobRecordsRequest struct {
 
 func (x *ListJobRecordsRequest) Reset() {
 	*x = ListJobRecordsRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[6]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -556,7 +751,7 @@ func (x *ListJobRecordsRequest) String() string {
 func (*ListJobRecordsRequest) ProtoMessage() {}
 
 func (x *ListJobRecordsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[6]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -569,7 +764,7 @@ func (x *ListJobRecordsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJobRecordsRequest.ProtoReflect.Descriptor instead.
 func (*ListJobRecordsRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{6}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{9}
 }
 
 type ListJobRecordsResponse struct {
@@ -581,7 +776,7 @@ type ListJobRecordsResponse struct {
 
 func (x *ListJobRecordsResponse) Reset() {
 	*x = ListJobRecordsResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[7]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +788,7 @@ func (x *ListJobRecordsResponse) String() string {
 func (*ListJobRecordsResponse) ProtoMessage() {}
 
 func (x *ListJobRecordsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[7]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +801,7 @@ func (x *ListJobRecordsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListJobRecordsResponse.ProtoReflect.Descriptor instead.
 func (*ListJobRecordsResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{7}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListJobRecordsResponse) GetJobRecords() []*JobRecord {
@@ -636,7 +831,7 @@ type JobRecord struct {
 
 func (x *JobRecord) Reset() {
 	*x = JobRecord{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[8]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -648,7 +843,7 @@ func (x *JobRecord) String() string {
 func (*JobRecord) ProtoMessage() {}
 
 func (x *JobRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[8]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -661,7 +856,7 @@ func (x *JobRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JobRecord.ProtoReflect.Descriptor instead.
 func (*JobRecord) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{8}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *JobRecord) GetId() string {
@@ -714,7 +909,7 @@ type GetMachineVitalsRequest struct {
 
 func (x *GetMachineVitalsRequest) Reset() {
 	*x = GetMachineVitalsRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[9]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -726,7 +921,7 @@ func (x *GetMachineVitalsRequest) String() string {
 func (*GetMachineVitalsRequest) ProtoMessage() {}
 
 func (x *GetMachineVitalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[9]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -739,7 +934,7 @@ func (x *GetMachineVitalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMachineVitalsRequest.ProtoReflect.Descriptor instead.
 func (*GetMachineVitalsRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{9}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{12}
 }
 
 type GetMachineVitalsResponse struct {
@@ -758,7 +953,7 @@ type GetMachineVitalsResponse struct {
 
 func (x *GetMachineVitalsResponse) Reset() {
 	*x = GetMachineVitalsResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[10]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -770,7 +965,7 @@ func (x *GetMachineVitalsResponse) String() string {
 func (*GetMachineVitalsResponse) ProtoMessage() {}
 
 func (x *GetMachineVitalsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[10]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -783,7 +978,7 @@ func (x *GetMachineVitalsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMachineVitalsResponse.ProtoReflect.Descriptor instead.
 func (*GetMachineVitalsResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{10}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetMachineVitalsResponse) GetCpuUsagePercent() float32 {
@@ -819,14 +1014,28 @@ var File_controlplane_v1_controlplane_proto protoreflect.FileDescriptor
 const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\n" +
 	"\"controlplane/v1/controlplane.proto\x12\x0fcontrolplane.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x17\n" +
-	"\x15GetServiceInfoRequest\"\xbe\x01\n" +
-	"\x16GetServiceInfoResponse\x12\x18\n" +
-	"\aversion\x18\x01 \x01(\tR\aversion\x12\x1d\n" +
+	"\x15GetServiceInfoRequest\"\xc0\x01\n" +
+	"\x16GetServiceInfoResponse\x129\n" +
 	"\n" +
-	"commit_sha\x18\x02 \x01(\tR\tcommitSha\x129\n" +
+	"build_info\x18\x01 \x01(\v2\x1a.controlplane.v1.BuildInfoR\tbuildInfo\x129\n" +
 	"\n" +
-	"started_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x120\n" +
-	"\x14idle_timeout_seconds\x18\x04 \x01(\x05R\x12idleTimeoutSeconds\"\x17\n" +
+	"started_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x120\n" +
+	"\x14idle_timeout_seconds\x18\x03 \x01(\x05R\x12idleTimeoutSeconds\"\xd3\x01\n" +
+	"\tBuildInfo\x12\x1d\n" +
+	"\n" +
+	"go_version\x18\x01 \x01(\tR\tgoVersion\x12\x12\n" +
+	"\x04path\x18\x02 \x01(\tR\x04path\x12+\n" +
+	"\x04main\x18\x03 \x01(\v2\x17.controlplane.v1.ModuleR\x04main\x12+\n" +
+	"\x04deps\x18\x04 \x03(\v2\x17.controlplane.v1.ModuleR\x04deps\x129\n" +
+	"\bsettings\x18\x05 \x03(\v2\x1d.controlplane.v1.BuildSettingR\bsettings\"{\n" +
+	"\x06Module\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\tR\aversion\x12\x10\n" +
+	"\x03sum\x18\x03 \x01(\tR\x03sum\x121\n" +
+	"\areplace\x18\x04 \x01(\v2\x17.controlplane.v1.ModuleR\areplace\"6\n" +
+	"\fBuildSetting\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\x17\n" +
 	"\x15ListRunnerSetsRequest\"U\n" +
 	"\x16ListRunnerSetsResponse\x12;\n" +
 	"\vrunner_sets\x18\x01 \x03(\v2\x1a.controlplane.v1.RunnerSetR\n" +
@@ -873,12 +1082,13 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x18RUNNER_STATE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16RUNNER_STATE_PREPARING\x10\x01\x12\x15\n" +
 	"\x11RUNNER_STATE_IDLE\x10\x02\x12\x15\n" +
-	"\x11RUNNER_STATE_BUSY\x10\x03*o\n" +
+	"\x11RUNNER_STATE_BUSY\x10\x03*\x88\x01\n" +
 	"\tJobResult\x12\x1a\n" +
 	"\x16JOB_RESULT_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12JOB_RESULT_RUNNING\x10\x01\x12\x16\n" +
 	"\x12JOB_RESULT_SUCCESS\x10\x02\x12\x16\n" +
-	"\x12JOB_RESULT_FAILURE\x10\x032\xa7\x03\n" +
+	"\x12JOB_RESULT_FAILURE\x10\x03\x12\x17\n" +
+	"\x13JOB_RESULT_CANCELED\x10\x042\xa7\x03\n" +
 	"\x13ControlPlaneService\x12a\n" +
 	"\x0eGetServiceInfo\x12&.controlplane.v1.GetServiceInfoRequest\x1a'.controlplane.v1.GetServiceInfoResponse\x12a\n" +
 	"\x0eListRunnerSets\x12&.controlplane.v1.ListRunnerSetsRequest\x1a'.controlplane.v1.ListRunnerSetsResponse\x12a\n" +
@@ -898,48 +1108,56 @@ func file_controlplane_v1_controlplane_proto_rawDescGZIP() []byte {
 }
 
 var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_controlplane_v1_controlplane_proto_goTypes = []any{
 	(Backend)(0),                     // 0: controlplane.v1.Backend
 	(RunnerState)(0),                 // 1: controlplane.v1.RunnerState
 	(JobResult)(0),                   // 2: controlplane.v1.JobResult
 	(*GetServiceInfoRequest)(nil),    // 3: controlplane.v1.GetServiceInfoRequest
 	(*GetServiceInfoResponse)(nil),   // 4: controlplane.v1.GetServiceInfoResponse
-	(*ListRunnerSetsRequest)(nil),    // 5: controlplane.v1.ListRunnerSetsRequest
-	(*ListRunnerSetsResponse)(nil),   // 6: controlplane.v1.ListRunnerSetsResponse
-	(*RunnerSet)(nil),                // 7: controlplane.v1.RunnerSet
-	(*Runner)(nil),                   // 8: controlplane.v1.Runner
-	(*ListJobRecordsRequest)(nil),    // 9: controlplane.v1.ListJobRecordsRequest
-	(*ListJobRecordsResponse)(nil),   // 10: controlplane.v1.ListJobRecordsResponse
-	(*JobRecord)(nil),                // 11: controlplane.v1.JobRecord
-	(*GetMachineVitalsRequest)(nil),  // 12: controlplane.v1.GetMachineVitalsRequest
-	(*GetMachineVitalsResponse)(nil), // 13: controlplane.v1.GetMachineVitalsResponse
-	(*timestamppb.Timestamp)(nil),    // 14: google.protobuf.Timestamp
+	(*BuildInfo)(nil),                // 5: controlplane.v1.BuildInfo
+	(*Module)(nil),                   // 6: controlplane.v1.Module
+	(*BuildSetting)(nil),             // 7: controlplane.v1.BuildSetting
+	(*ListRunnerSetsRequest)(nil),    // 8: controlplane.v1.ListRunnerSetsRequest
+	(*ListRunnerSetsResponse)(nil),   // 9: controlplane.v1.ListRunnerSetsResponse
+	(*RunnerSet)(nil),                // 10: controlplane.v1.RunnerSet
+	(*Runner)(nil),                   // 11: controlplane.v1.Runner
+	(*ListJobRecordsRequest)(nil),    // 12: controlplane.v1.ListJobRecordsRequest
+	(*ListJobRecordsResponse)(nil),   // 13: controlplane.v1.ListJobRecordsResponse
+	(*JobRecord)(nil),                // 14: controlplane.v1.JobRecord
+	(*GetMachineVitalsRequest)(nil),  // 15: controlplane.v1.GetMachineVitalsRequest
+	(*GetMachineVitalsResponse)(nil), // 16: controlplane.v1.GetMachineVitalsResponse
+	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
 }
 var file_controlplane_v1_controlplane_proto_depIdxs = []int32{
-	14, // 0: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
-	7,  // 1: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
-	0,  // 2: controlplane.v1.RunnerSet.backend:type_name -> controlplane.v1.Backend
-	8,  // 3: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
-	1,  // 4: controlplane.v1.Runner.state:type_name -> controlplane.v1.RunnerState
-	14, // 5: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
-	11, // 6: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
-	2,  // 7: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
-	14, // 8: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
-	14, // 9: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
-	3,  // 10: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
-	5,  // 11: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
-	9,  // 12: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
-	12, // 13: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
-	4,  // 14: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
-	6,  // 15: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
-	10, // 16: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
-	13, // 17: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
-	14, // [14:18] is the sub-list for method output_type
-	10, // [10:14] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	5,  // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
+	17, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
+	6,  // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
+	6,  // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
+	7,  // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
+	6,  // 5: controlplane.v1.Module.replace:type_name -> controlplane.v1.Module
+	10, // 6: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
+	0,  // 7: controlplane.v1.RunnerSet.backend:type_name -> controlplane.v1.Backend
+	11, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
+	1,  // 9: controlplane.v1.Runner.state:type_name -> controlplane.v1.RunnerState
+	17, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
+	14, // 11: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
+	2,  // 12: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
+	17, // 13: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
+	17, // 14: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
+	3,  // 15: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
+	8,  // 16: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
+	12, // 17: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
+	15, // 18: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
+	4,  // 19: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
+	9,  // 20: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
+	13, // 21: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
+	16, // 22: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
+	19, // [19:23] is the sub-list for method output_type
+	15, // [15:19] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_controlplane_v1_controlplane_proto_init() }
@@ -947,14 +1165,14 @@ func file_controlplane_v1_controlplane_proto_init() {
 	if File_controlplane_v1_controlplane_proto != nil {
 		return
 	}
-	file_controlplane_v1_controlplane_proto_msgTypes[8].OneofWrappers = []any{}
+	file_controlplane_v1_controlplane_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_controlplane_v1_controlplane_proto_rawDesc), len(file_controlplane_v1_controlplane_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

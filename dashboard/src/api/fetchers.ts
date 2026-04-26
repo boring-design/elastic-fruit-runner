@@ -1,4 +1,4 @@
-import type { DaemonStatus, RunnerSet, JobRecord, Runner, MachineVitals } from '../types'
+import type { DaemonStatus, RunnerSet, JobRecord, Runner, MachineVitals, BuildInfo, Module } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? ''
 
@@ -29,13 +29,31 @@ const JOB_RESULT_MAP: Record<string, JobRecord['result']> = {
   JOB_RESULT_RUNNING: 'running',
   JOB_RESULT_SUCCESS: 'success',
   JOB_RESULT_FAILURE: 'failure',
+  JOB_RESULT_CANCELED: 'canceled',
 }
 
 interface ServiceInfoResponse {
-  version: string
-  commitSha: string
+  buildInfo?: BuildInfoResponse
   startedAt: string
   idleTimeoutSeconds: number
+}
+
+interface BuildInfoResponse {
+  goVersion?: string
+  path?: string
+  main?: ModuleResponse
+  deps?: ModuleResponse[]
+  settings?: Array<{
+    key?: string
+    value?: string
+  }>
+}
+
+interface ModuleResponse {
+  path?: string
+  version?: string
+  sum?: string
+  replace?: ModuleResponse
 }
 
 interface RunnerSetsResponse {
@@ -83,11 +101,32 @@ export async function fetchDaemonStatus(): Promise<DaemonStatus> {
     ? cachedRunnerSets.every(rs => rs.connected)
     : null
   return {
-    version: data.version,
-    commitSha: data.commitSha,
+    buildInfo: data.buildInfo ? toBuildInfo(data.buildInfo) : null,
     startedAt: new Date(data.startedAt),
     githubConnected,
     idleTimeout: data.idleTimeoutSeconds,
+  }
+}
+
+function toBuildInfo(data: BuildInfoResponse): BuildInfo {
+  return {
+    goVersion: data.goVersion ?? '',
+    path: data.path ?? '',
+    main: data.main ? toModule(data.main) : null,
+    deps: (data.deps ?? []).map(toModule),
+    settings: (data.settings ?? []).map(setting => ({
+      key: setting.key ?? '',
+      value: setting.value ?? '',
+    })),
+  }
+}
+
+function toModule(data: ModuleResponse): Module {
+  return {
+    path: data.path ?? '',
+    version: data.version ?? '',
+    sum: data.sum ?? '',
+    replace: data.replace ? toModule(data.replace) : null,
   }
 }
 

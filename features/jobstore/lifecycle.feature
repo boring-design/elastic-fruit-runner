@@ -17,13 +17,13 @@ Feature: Job store lifecycle
 
   Scenario: recording a job completion
     Given job "job-1" was started on runner "runner-1" in set "set-a"
-    When I record job "job-1" completed with result "Succeeded"
-    Then job "job-1" should have result "Succeeded"
+    When I record job "job-1" completed with result "succeeded"
+    Then job "job-1" should have result "succeeded"
     And job "job-1" should have a completion time
 
   Scenario: completing an unknown job (orphan)
-    When I record job "orphan-job" completed with result "Failed"
-    Then job "orphan-job" should have result "Failed"
+    When I record job "orphan-job" completed with result "failed"
+    Then job "orphan-job" should have result "failed"
     And job "orphan-job" should have runner name ""
 
   Scenario: snapshot returns jobs in most-recent-first order
@@ -38,10 +38,11 @@ Feature: Job store lifecycle
     Given 250 jobs were started in set "set-a"
     Then the snapshot should contain 200 jobs
 
-  Scenario: recording a job with unexpected result
+  Scenario: rejecting a job completion with unexpected result
     Given job "job-1" was started on runner "runner-1" in set "set-a"
-    When I record job "job-1" completed with result "Cancelled"
-    Then job "job-1" should have result "Cancelled"
+    When I record job "job-1" completed with result "cancelled"
+    Then job "job-1" should have result "running"
+    And job "job-1" should not have a completion time
 
   Scenario: concurrent access is safe
     When 50 jobs are started and completed concurrently in set "set-a"

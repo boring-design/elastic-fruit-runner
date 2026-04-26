@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/dashboard"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
+	"github.com/boring-design/elastic-fruit-runner/internal/buildinfo"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
@@ -61,12 +63,50 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
+	build := buildinfo.Current()
 	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
-		Version:            controller.Version,
-		CommitSha:          controller.CommitSHA,
+		BuildInfo:          toProtoBuildInfo(build),
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 	}), nil
+}
+
+func toProtoBuildInfo(bi *debug.BuildInfo) *controlplanev1.BuildInfo {
+	if bi == nil {
+		return nil
+	}
+
+	deps := make([]*controlplanev1.Module, 0, len(bi.Deps))
+	for _, dep := range bi.Deps {
+		deps = append(deps, toProtoModule(dep))
+	}
+	settings := make([]*controlplanev1.BuildSetting, 0, len(bi.Settings))
+	for _, setting := range bi.Settings {
+		settings = append(settings, &controlplanev1.BuildSetting{
+			Key:   setting.Key,
+			Value: setting.Value,
+		})
+	}
+
+	return &controlplanev1.BuildInfo{
+		GoVersion: bi.GoVersion,
+		Path:      bi.Path,
+		Main:      toProtoModule(&bi.Main),
+		Deps:      deps,
+		Settings:  settings,
+	}
+}
+
+func toProtoModule(module *debug.Module) *controlplanev1.Module {
+	if module == nil {
+		return nil
+	}
+	return &controlplanev1.Module{
+		Path:    module.Path,
+		Version: module.Version,
+		Sum:     module.Sum,
+		Replace: toProtoModule(module.Replace),
+	}
 }
 
 func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlplanev1.ListRunnerSetsRequest]) (*connect.Response[controlplanev1.ListRunnerSetsResponse], error) {
@@ -160,6 +200,8 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 		return controlplanev1.JobResult_JOB_RESULT_SUCCESS
 	case "failed":
 		return controlplanev1.JobResult_JOB_RESULT_FAILURE
+	case "canceled":
+		return controlplanev1.JobResult_JOB_RESULT_CANCELED
 	default:
 		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
 	}

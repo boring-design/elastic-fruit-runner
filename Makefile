@@ -1,13 +1,9 @@
 .PHONY: build build-dashboard run unit-test test integration-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
-COMMIT_SHA ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
-LDFLAGS := -X github.com/boring-design/elastic-fruit-runner/internal/controller.Version=$(VERSION) -X github.com/boring-design/elastic-fruit-runner/internal/controller.CommitSHA=$(COMMIT_SHA)
-
 # Build dashboard then Go binary
 build: build-dashboard
 	@mkdir -p output
-	go build -ldflags "$(LDFLAGS)" -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
+	go build -o output/elastic-fruit-runner ./cmd/elastic-fruit-runner/
 
 # Build the React dashboard
 build-dashboard:

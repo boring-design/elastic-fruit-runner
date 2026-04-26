@@ -31,14 +31,37 @@ service ControlPlaneService {
 message GetServiceInfoRequest {}
 
 message GetServiceInfoResponse {
-  // Semantic version set at build time via -ldflags.
-  string version = 1;
-  // Git commit hash set at build time via -ldflags.
-  string commit_sha = 2;
+  // Go build metadata embedded in the daemon binary.
+  BuildInfo build_info = 1;
   // When the daemon process started.
-  google.protobuf.Timestamp started_at = 3;
+  google.protobuf.Timestamp started_at = 2;
   // Configured idle runner timeout in seconds.
-  int32 idle_timeout_seconds = 4;
+  int32 idle_timeout_seconds = 3;
+}
+
+message BuildInfo {
+  // Go toolchain version used to build the binary.
+  string go_version = 1;
+  // Main package path.
+  string path = 2;
+  // Main module.
+  Module main = 3;
+  // Dependency modules.
+  repeated Module deps = 4;
+  // Build settings such as VCS metadata.
+  repeated BuildSetting settings = 5;
+}
+
+message Module {
+  string path = 1;
+  string version = 2;
+  string sum = 3;
+  Module replace = 4;
+}
+
+message BuildSetting {
+  string key = 1;
+  string value = 2;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +131,7 @@ enum JobResult {
   JOB_RESULT_RUNNING = 1;
   JOB_RESULT_SUCCESS = 2;
   JOB_RESULT_FAILURE = 3;
+  JOB_RESULT_CANCELED = 4;
 }
 
 message JobRecord {

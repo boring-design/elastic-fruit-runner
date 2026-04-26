@@ -1,6 +1,6 @@
 export type RunnerState = 'preparing' | 'idle' | 'busy' | 'unknown'
 export type Backend = 'tart' | 'docker' | 'unknown'
-export type JobResult = 'success' | 'failure' | 'running'
+export type JobResult = 'success' | 'failure' | 'canceled' | 'running'
 
 export interface Runner {
   name: string
@@ -29,12 +29,31 @@ export interface JobRecord {
 }
 
 export interface DaemonStatus {
-  version: string
-  commitSha: string
+  buildInfo: BuildInfo | null
   startedAt: Date
   // null while runner set data has not been fetched yet (loading state)
   githubConnected: boolean | null
   idleTimeout: number
+}
+
+export interface BuildInfo {
+  goVersion: string
+  path: string
+  main: Module | null
+  deps: Module[]
+  settings: BuildSetting[]
+}
+
+export interface Module {
+  path: string
+  version: string
+  sum: string
+  replace: Module | null
+}
+
+export interface BuildSetting {
+  key: string
+  value: string
 }
 
 export interface MachineVitals {
