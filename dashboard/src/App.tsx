@@ -7,6 +7,14 @@ import { SystemVitals } from './components/SystemVitals'
 import { RunnerSetPanel } from './components/RunnerSetPanel'
 import { JobRow } from './components/JobRow'
 import { ConnectionStatus } from './components/ConnectionStatus'
+import type { DashboardStatus } from './derived/status'
+
+const STATUS_TONE_COLOR: Record<DashboardStatus['tone'], string> = {
+  neutral: '#f0f0f0',
+  active: '#f0f0f0',
+  warning: '#ff9500',
+  error: '#ff3b30',
+}
 
 function formatBuildVersion(version: string) {
   if (!version) return 'unknown'
@@ -33,6 +41,9 @@ export default function App() {
     failureCount,
     canceledCount,
     mood,
+    status,
+    refreshIntervalSeconds,
+    secondsUntilRefresh,
   } = useDashboardDerived()
 
   if (error) {
@@ -84,26 +95,16 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
             <div className="spinner" />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4, color: '#f0f0f0' }}>
-                LISTENING FOR JOBS
+              <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4, color: STATUS_TONE_COLOR[status.tone] }}>
+                {status.label}
               </div>
               <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.1em' }}>
-                GITHUB SCALE SET API
+                {status.detail}
               </div>
             </div>
           </div>
 
           <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Scope */}
-            <div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>CONNECTED TO</div>
-              {runnerSets.map(rs => (
-                <div key={rs.name} style={{ fontSize: 11, color: '#888', letterSpacing: '0.04em' }}>
-                  {rs.scope}
-                </div>
-              )).filter((_, i) => i === 0)}
-            </div>
-
             {/* Auth + Sets */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
@@ -280,9 +281,10 @@ export default function App() {
       </div>
 
       {/* ── Footer ── */}
-      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', color: '#333', fontSize: 10, letterSpacing: '0.12em' }}>
-        <span>SCOPE: {runnerSets[0]?.scope.toUpperCase()}</span>
-        <span>AUTO-REFRESH 1S<span className="blink">_</span></span>
+      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end', color: '#333', fontSize: 10, letterSpacing: '0.12em' }}>
+        <span>
+          AUTO-REFRESH {refreshIntervalSeconds}S · NEXT IN {secondsUntilRefresh}S<span className="blink">_</span>
+        </span>
       </div>
     </div>
   )
