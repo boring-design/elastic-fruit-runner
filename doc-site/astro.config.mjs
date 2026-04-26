@@ -46,7 +46,14 @@ export default defineConfig({
 					label: 'Explanation',
 					items: [
 						{ slug: 'explanation/what-is-elastic-fruit-runner' },
-						{ slug: 'explanation/launchd-network-privacy' },
+					],
+				},
+				{
+					label: 'Devlog',
+					collapsed: true,
+					items: [
+						{ slug: 'devlog' },
+						{ slug: 'devlog/2026-04-26-launchd-lc-uuid' },
 					],
 				},
 			],
