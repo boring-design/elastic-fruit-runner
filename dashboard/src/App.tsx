@@ -8,6 +8,12 @@ import { RunnerSetPanel } from './components/RunnerSetPanel'
 import { JobRow } from './components/JobRow'
 import { ConnectionStatus } from './components/ConnectionStatus'
 
+function formatBuildVersion(version: string) {
+  if (!version) return 'unknown'
+  if (version === 'dev' || version === 'unknown' || version.startsWith('v')) return version
+  return `v${version}`
+}
+
 export default function App() {
   const { isLoading, error } = useDashboardSync()
   const {
@@ -61,7 +67,7 @@ export default function App() {
             ELASTIC-FRUIT-RUNNER
           </span>
           <span style={{ color: '#555', fontSize: 11, letterSpacing: '0.08em' }}>
-            v{version} · {vcsRevision}
+            {formatBuildVersion(version)} · {vcsRevision}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

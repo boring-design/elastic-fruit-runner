@@ -111,4 +111,5 @@ jobs:
         with:
           files: coverage.out
           flags: integration-${{ matrix.name }}
+          skip_validation: ${{ matrix.name == 'Tart' }}
           token: ${{ secrets.CODECOV_TOKEN }}

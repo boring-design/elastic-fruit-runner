@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net"
 	"os"
 	"os/exec"
 	"strings"
@@ -21,6 +20,13 @@ import (
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/tart")
 
 const ipAddressWaitSeconds = "180"
+
+var (
+	sshReadyMaxWait        = 120 * time.Second
+	sshReadyInitialBackoff = 1 * time.Second
+	sshReadyMaxBackoff     = 16 * time.Second
+	sshReadyAttemptTimeout = 5 * time.Second
+)
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
@@ -184,36 +190,54 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	return nil
 }
 
-// waitForSSH probes TCP port 22 with exponential backoff until SSH is reachable
-// or the context is cancelled. Backoff: 1s, 2s, 4s, 8s, 16s... capped at 120s total.
+// waitForSSH verifies the actual SSH transport used by Exec instead of only
+// probing TCP port 22. On macOS launchd services, raw Go TCP dials can fail
+// against Tart bridge addresses even when ssh can connect successfully.
 func (m *Manager) waitForSSH(ctx context.Context, name, ip string) error {
-	const maxWait = 120 * time.Second
-	deadline := time.Now().Add(maxWait)
-	backoff := 1 * time.Second
+	deadline := time.Now().Add(sshReadyMaxWait)
+	backoff := sshReadyInitialBackoff
+	var lastErr error
 
 	for {
-		dialer := net.Dialer{Timeout: 2 * time.Second}
-		conn, err := dialer.DialContext(ctx, "tcp", ip+":22")
+		err := m.probeSSH(ctx, name, ip)
 		if err == nil {
-			conn.Close()
 			return nil
 		}
+		lastErr = err
 
 		if time.Now().After(deadline) {
-			return fmt.Errorf("SSH not reachable on %s (%s:22) after %s", name, ip, maxWait)
+			return fmt.Errorf("SSH not reachable on %s (%s:22) after %s: last error: %w", name, ip, sshReadyMaxWait, lastErr)
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		slog.Info("waiting for SSH", "name", name, "ip", ip, "retry_in", backoff)
+		slog.Info("waiting for SSH", "name", name, "ip", ip, "retry_in", backoff, "err", lastErr)
 		select {
 		case <-time.After(backoff):
 		case <-ctx.Done():
 			return ctx.Err()
 		}
-		backoff = min(backoff*2, 16*time.Second)
+		backoff = min(backoff*2, sshReadyMaxBackoff)
 	}
+}
+
+func (m *Manager) probeSSH(ctx context.Context, name, ip string) error {
+	attemptCtx, cancel := context.WithTimeout(ctx, sshReadyAttemptTimeout)
+	defer cancel()
+
+	var buf bytes.Buffer
+	cmd := exec.CommandContext(attemptCtx, binpath.Lookup("sshpass"), m.buildSSHArgs(ip, "true")...)
+	cmd.Stdout = &buf
+	cmd.Stderr = &buf
+	if err := cmd.Run(); err != nil {
+		output := strings.TrimSpace(buf.String())
+		if output != "" {
+			return fmt.Errorf("ssh readiness probe %s (%s): %w: %s", name, ip, err, output)
+		}
+		return fmt.Errorf("ssh readiness probe %s (%s): %w", name, ip, err)
+	}
+	return nil
 }
 
 // Stop halts a running VM.
@@ -257,6 +281,8 @@ func (m *Manager) buildSSHArgs(ip string, args ...string) []string {
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		"-o", "LogLevel=ERROR",
+		"-o", "ConnectTimeout=5",
+		"-o", "ConnectionAttempts=1",
 		"admin@" + ip,
 	}
 	return append(sshArgs, args...)
