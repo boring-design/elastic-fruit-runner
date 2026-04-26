@@ -1,0 +1,33 @@
+internal/controller/scaler.go
+  093e22f3a05cbb0c 83
+internal/management/service_test.go
+  093e22f3a05cbb0c 69
+internal/controller/types.go
+  093e22f3a05cbb0c 32-36,39
+internal/management/sqlc/queries.sql
+  093e22f3a05cbb0c 12
+internal/management/jobs_test.go
+  093e22f3a05cbb0c 1-148
+internal/management/jobs.go
+  093e22f3a05cbb0c 7,35-37,44-50,62-67,72-87,99-105,111-116,120-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "85c203b52dee500effc4e48397f3b76b06a0a90e",
+  "prompts": {
+    "093e22f3a05cbb0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b5edc921-f9fd-49b9-8101-a54139a9b5b5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 469,
+      "total_deletions": 52,
+      "accepted_lines": 227,
+      "overriden_lines": 13
+    }
+  }
+}
