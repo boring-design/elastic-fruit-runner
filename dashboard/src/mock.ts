@@ -4,8 +4,20 @@ const now = new Date()
 const ago = (s: number) => new Date(now.getTime() - s * 1000)
 
 export const daemonStatus: DaemonStatus = {
-  version: '0.2.1',
-  commitSha: 'a3f2c1d',
+  buildInfo: {
+    goVersion: 'go1.25.7',
+    path: 'github.com/boring-design/elastic-fruit-runner/cmd/elastic-fruit-runner',
+    main: {
+      path: 'github.com/boring-design/elastic-fruit-runner',
+      version: 'v0.2.1',
+      sum: '',
+      replace: null,
+    },
+    deps: [],
+    settings: [
+      { key: 'vcs.revision', value: 'a3f2c1d' },
+    ],
+  },
   startedAt: ago(9252),
   githubConnected: true,
   idleTimeout: 900,

@@ -15,15 +15,10 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
+	"github.com/boring-design/elastic-fruit-runner/internal/buildinfo"
 )
 
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/controller")
-
-// Version and CommitSHA are set at build time via -ldflags.
-var (
-	Version   = "dev"
-	CommitSHA = "unknown"
-)
 
 // ScaleSetController registers a GitHub Actions Runner Scale Set, polls for
 // job assignments via the listener, and manages the lifecycle of ephemeral
@@ -116,11 +111,12 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.scaleSetID = ss.ID
 	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
+	build := buildinfo.Current()
 	d.client.SetSystemInfo(scaleset.SystemInfo{
 		System:     "elastic-fruit-runner",
 		Subsystem:  "controller",
-		Version:    Version,
-		CommitSHA:  CommitSHA,
+		Version:    buildinfo.MainVersion(build),
+		CommitSHA:  buildinfo.VCSRevision(build),
 		ScaleSetID: ss.ID,
 	})
 

@@ -45,6 +45,11 @@ export default function App() {
     )
   }
 
+  const version = daemonStatus.buildInfo?.main?.version && daemonStatus.buildInfo.main.version !== '(devel)'
+    ? daemonStatus.buildInfo.main.version
+    : 'dev'
+  const vcsRevision = daemonStatus.buildInfo?.settings.find(setting => setting.key === 'vcs.revision')?.value ?? 'unknown'
+
   return (
     <div className="app-container">
 
@@ -55,7 +60,7 @@ export default function App() {
             ELASTIC-FRUIT-RUNNER
           </span>
           <span style={{ color: '#555', fontSize: 11, letterSpacing: '0.08em' }}>
-            v{daemonStatus.version} · {daemonStatus.commitSha}
+            v{version} · {vcsRevision}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
