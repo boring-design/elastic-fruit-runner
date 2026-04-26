@@ -1,0 +1,73 @@
+proto/controlplane/v1/controlplane.proto
+  3720870c151cfda3 34,36
+internal/buildinfo/buildinfo.go
+  3720870c151cfda3 1-50
+internal/controller/controller.go
+  4cd1096b4b1a8b4c 1,7,13,21-22,115-117,120-134,136-137
+  3720870c151cfda3 18,114,118-119
+  f1a7e0a3c05bca24 25,30,78-81,84,87,89,100,135,146,160-161
+  a960109c33d2d6a0 41,43,154
+internal/buildinfo/buildinfo_test.go
+  3720870c151cfda3 1-45
+internal/api/server.go
+  3720870c151cfda3 16,64,66-67
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "c638acb73ecbb09ff39ba09d7cbc815fbbdc22d9",
+  "prompts": {
+    "3720870c151cfda3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dc6b8-d0b2-75f3-b404-6326b1b23010",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 12,
+      "accepted_lines": 105,
+      "overriden_lines": 0
+    },
+    "4cd1096b4b1a8b4c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "bd7518a7-c7a5-44ca-bf15-b16043c99b69",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 6,
+      "accepted_lines": 25,
+      "overriden_lines": 0
+    },
+    "a960109c33d2d6a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c7efbb3c-0a60-4398-b4ef-76ddcdf656bb",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 1,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    },
+    "f1a7e0a3c05bca24": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5b0581b3-1aa5-4193-9136-bf772a0a2183",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Zhiqiang ZHOU <im@strrl.dev>",
+      "messages": [],
+      "total_additions": 181,
+      "total_deletions": 45,
+      "accepted_lines": 14,
+      "overriden_lines": 0
+    }
+  }
+}
