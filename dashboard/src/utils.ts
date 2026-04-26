@@ -19,11 +19,16 @@ export function fmtUptime(seconds: number): string {
   return `${String(h).padStart(2, '0')}h:${String(m).padStart(2, '0')}m:${String(s).padStart(2, '0')}s`
 }
 
-export function shortName(name: string): string {
+export function shortName(name: string | null | undefined): string {
+  // Guard against missing names — the API can omit runnerName for orphan
+  // completion records (job completed but daemon never saw the start event).
+  // Crashing the entire dashboard for a single missing field is far worse
+  // than rendering a placeholder. See issue #69.
+  if (!name) return '—'
   const parts = name.split('-')
   const suffix = parts[parts.length - 1]
   const prefix = parts.slice(0, -1).join('-')
   const max = 20
   const trimmed = prefix.length > max ? '...' + prefix.slice(-(max - 3)) : prefix
-  return `${trimmed}-${suffix}`
+  return prefix ? `${trimmed}-${suffix}` : suffix
 }

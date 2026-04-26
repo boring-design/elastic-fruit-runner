@@ -1,6 +1,6 @@
 export type RunnerState = 'preparing' | 'idle' | 'busy' | 'unknown'
 export type Backend = 'tart' | 'docker' | 'unknown'
-export type JobResult = 'success' | 'failure' | 'canceled' | 'running'
+export type JobResult = 'success' | 'failure' | 'canceled' | 'running' | 'unknown'
 
 export interface Runner {
   name: string

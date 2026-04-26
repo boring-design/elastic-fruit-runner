@@ -9,7 +9,7 @@ WHERE id = ?;
 
 -- name: InsertCompletedJob :exec
 INSERT OR IGNORE INTO jobs (id, runner_name, runner_set_name, result, started_at, completed_at)
-VALUES (?, '', '', ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: ListRecentJobs :many
 SELECT id, runner_name, runner_set_name, result, started_at, completed_at

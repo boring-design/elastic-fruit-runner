@@ -80,7 +80,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 
 	name := job.RunnerName
 	d.runners.markDone(name)
-	d.jobRecorder.RecordJobCompleted(job.JobID, job.Result)
+	d.jobRecorder.RecordJobCompleted(d.rsCfg.Name, job.JobID, name, job.Result)
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
 	go func() {

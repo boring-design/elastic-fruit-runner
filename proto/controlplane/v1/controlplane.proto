@@ -127,11 +127,18 @@ message ListJobRecordsResponse {
 }
 
 enum JobResult {
+  // The default zero value indicates the result was never recorded
+  // (e.g. malformed row, server bug). It is omitted by JSON serialization,
+  // so consumers must guard against missing values.
   JOB_RESULT_UNSPECIFIED = 0;
   JOB_RESULT_RUNNING = 1;
   JOB_RESULT_SUCCESS = 2;
   JOB_RESULT_FAILURE = 3;
   JOB_RESULT_CANCELED = 4;
+  // The Scale Set API returned a result string the server does not recognize.
+  // The job is complete but its outcome cannot be classified — surfaced
+  // explicitly so the dashboard does not silently treat it as a failure.
+  JOB_RESULT_UNKNOWN = 5;
 }
 
 message JobRecord {
