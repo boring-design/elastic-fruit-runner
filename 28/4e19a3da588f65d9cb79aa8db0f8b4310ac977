@@ -1,0 +1,23 @@
+Makefile
+  5b96687df8724ff1 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "284e19a3da588f65d9cb79aa8db0f8b4310ac977",
+  "prompts": {
+    "5b96687df8724ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19a9c519-7515-4ded-b535-65112161a929",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 5,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
