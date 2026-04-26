@@ -1,0 +1,23 @@
+internal/management/jobs.go
+  5b96687df8724ff1 59,68,87
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "50203d4580ca8cddac3bf70fb395b78ba9854088",
+  "prompts": {
+    "5b96687df8724ff1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "19a9c519-7515-4ded-b535-65112161a929",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 8,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
