@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
-	"strings"
 	"time"
 
 	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
@@ -33,8 +32,6 @@ func NewJobStore(db *sql.DB) *JobStore {
 }
 
 // knownJobResults is the set of valid result strings from the GitHub Scale Set API.
-// GitHub may send these in mixed case (e.g. "Succeeded"); callers should lower-case
-// before looking up.
 var knownJobResults = map[string]struct{}{
 	"succeeded": {},
 	"failed":    {},
@@ -58,10 +55,8 @@ func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
 
 // RecordJobCompleted finds an existing job by ID and updates its result.
 // If the job does not exist, inserts a completed-only record.
-// The result is normalized to lowercase so downstream consumers see a stable canonical form.
 func (s *JobStore) RecordJobCompleted(jobID, result string) {
-	normalized := strings.ToLower(result)
-	if _, ok := knownJobResults[normalized]; !ok {
+	if _, ok := knownJobResults[result]; !ok {
 		slog.Error("unexpected job result from scale-set API, refusing to record invalid state", "job_id", jobID, "result", result)
 		return
 	}
@@ -70,7 +65,7 @@ func (s *JobStore) RecordJobCompleted(jobID, result string) {
 	now := time.Now()
 
 	res, err := s.queries.UpdateJobCompleted(ctx, sqlcdb.UpdateJobCompletedParams{
-		Result:      normalized,
+		Result:      result,
 		CompletedAt: sql.NullTime{Time: now, Valid: true},
 		ID:          jobID,
 	})
@@ -89,7 +84,7 @@ func (s *JobStore) RecordJobCompleted(jobID, result string) {
 		// Job was never recorded (e.g. daemon restarted). Insert a completed-only record.
 		err = s.queries.InsertCompletedJob(ctx, sqlcdb.InsertCompletedJobParams{
 			ID:          jobID,
-			Result:      normalized,
+			Result:      result,
 			StartedAt:   now,
 			CompletedAt: sql.NullTime{Time: now, Valid: true},
 		})
