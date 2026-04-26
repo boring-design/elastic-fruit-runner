@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -31,6 +32,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
+	"github.com/boring-design/elastic-fruit-runner/internal/tart"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
@@ -67,6 +69,12 @@ type scenarioState struct {
 	workflowResult *github.WorkflowRun
 	runnerSetsResp *controlplanev1.ListRunnerSetsResponse
 	jobRecordsResp *controlplanev1.ListJobRecordsResponse
+
+	// tart steps
+	tartMgr    *tart.Manager
+	tartVMName string
+	tartVMIP   string
+	tartPrefix string
 }
 
 func initializeScenario(sc *godog.ScenarioContext) {
@@ -76,6 +84,7 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	}
 
 	sc.After(func(ctx context.Context, sc *godog.Scenario, err error) (context.Context, error) {
+		cleanupErr := cleanupTartVMs(ctx, state)
 		// restore env vars
 		for key, old := range state.oldEnvVars {
 			if old == "\x00" {
@@ -92,7 +101,7 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		if state.db != nil {
 			state.db.Close()
 		}
-		return ctx, nil
+		return ctx, cleanupErr
 	})
 
 	// ---- Config steps ----
@@ -432,7 +441,7 @@ func initializeScenario(sc *godog.ScenarioContext) {
 				defer wg.Done()
 				id := fmt.Sprintf("job-%d", idx)
 				state.jobStore.RecordJobStarted(set, id, fmt.Sprintf("runner-%d", idx))
-				state.jobStore.RecordJobCompleted(id, "Succeeded")
+				state.jobStore.RecordJobCompleted(id, "succeeded")
 			}(i)
 		}
 		wg.Wait()
@@ -649,6 +658,188 @@ func initializeScenario(sc *godog.ScenarioContext) {
 			state.mgmtService.Close()
 		}
 	})
+
+	// ---- Tart VM steps ----
+	sc.Step(`^a tart manager$`, func(ctx context.Context) (context.Context, error) {
+		if binpath.Lookup("tart") == "tart" {
+			return ctx, fmt.Errorf("tart binary not found in PATH; install via `brew install cirruslabs/cli/tart`")
+		}
+		state.tartMgr = tart.NewManager()
+		state.tartPrefix = "efr-tart-test"
+		return ctx, nil
+	})
+
+	sc.Step(`^I pull the VM image$`, func() error {
+		image, err := tartTestImage()
+		if err != nil {
+			return err
+		}
+		return state.tartMgr.Pull(context.Background(), image)
+	})
+
+	sc.Step(`^the VM image should exist locally$`, func() error {
+		image, err := tartTestImage()
+		if err != nil {
+			return err
+		}
+		if imageRefUsesDigest(image) {
+			name := state.tartPrefix + "-image-check-" + randomSuffix()
+			if err := state.tartMgr.Clone(context.Background(), image, name); err != nil {
+				return fmt.Errorf("verify digest-pinned image %q by cloning %q: %w", image, name, err)
+			}
+			return cleanupTartVM(context.Background(), state.tartMgr, name)
+		}
+		exists, err := state.tartMgr.ImageExists(context.Background(), image)
+		if err != nil {
+			return fmt.Errorf("check image exists: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("image %q not found locally after pull", image)
+		}
+		return nil
+	})
+
+	sc.Step(`^I clone a VM with a random name$`, func() error {
+		image, err := tartTestImage()
+		if err != nil {
+			return err
+		}
+		state.tartVMName = state.tartPrefix + "-" + randomSuffix()
+		return state.tartMgr.Clone(context.Background(), image, state.tartVMName)
+	})
+
+	sc.Step(`^I start the cloned VM$`, func() error {
+		return state.tartMgr.Start(context.Background(), state.tartVMName)
+	})
+
+	sc.Step(`^I wait for the VM IP address$`, func() error {
+		ip, err := state.tartMgr.IPAddress(context.Background(), state.tartVMName)
+		if err != nil {
+			return err
+		}
+		state.tartVMIP = ip
+		return nil
+	})
+
+	sc.Step(`^the VM IP should be a valid address$`, func() error {
+		if net.ParseIP(state.tartVMIP) == nil {
+			return fmt.Errorf("invalid IP address: %q", state.tartVMIP)
+		}
+		return nil
+	})
+
+	sc.Step(`^I exec "([^"]*)" in the VM$`, func(cmd string) error {
+		return state.tartMgr.Exec(context.Background(), state.tartVMName, "bash", "-c", cmd)
+	})
+
+	sc.Step(`^the exec should succeed$`, func() error {
+		// The step above already returns error on failure
+		return nil
+	})
+
+	sc.Step(`^I stop and delete the VM$`, func() error {
+		return cleanupTartVM(context.Background(), state.tartMgr, state.tartVMName)
+	})
+
+	sc.Step(`^the VM should no longer exist$`, func() error {
+		vms, err := state.tartMgr.List(context.Background())
+		if err != nil {
+			return err
+		}
+		for _, name := range vms {
+			if name == state.tartVMName {
+				return fmt.Errorf("VM %q still exists after delete", state.tartVMName)
+			}
+		}
+		return nil
+	})
+
+	sc.Step(`^listing local VMs should include the cloned VM$`, func() error {
+		vms, err := state.tartMgr.List(context.Background())
+		if err != nil {
+			return err
+		}
+		for _, name := range vms {
+			if name == state.tartVMName {
+				return nil
+			}
+		}
+		return fmt.Errorf("VM %q not found in list", state.tartVMName)
+	})
+
+	sc.Step(`^I cleanup all VMs with the test prefix$`, func() error {
+		vms, err := state.tartMgr.List(context.Background())
+		if err != nil {
+			return err
+		}
+		for _, name := range vms {
+			if strings.HasPrefix(name, state.tartPrefix+"-") {
+				if err := cleanupTartVM(context.Background(), state.tartMgr, name); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+
+	sc.Step(`^listing local VMs should not include the cloned VM$`, func() error {
+		vms, err := state.tartMgr.List(context.Background())
+		if err != nil {
+			return err
+		}
+		for _, name := range vms {
+			if name == state.tartVMName {
+				return fmt.Errorf("VM %q still exists after cleanup", state.tartVMName)
+			}
+		}
+		return nil
+	})
+}
+
+const defaultTartTestImage = "ghcr.io/cirruslabs/macos-tahoe-base@sha256:6abd551a46da4e595b6a9f678535a8f1bbd61bdc275a363265cd39281d3abdef"
+
+func tartTestImage() (string, error) {
+	image := envOrDefault("EFR_TEST_TART_IMAGE", defaultTartTestImage)
+	if strings.Contains(image, ":latest") {
+		return "", fmt.Errorf("EFR_TEST_TART_IMAGE must be pinned to a fixed tag or digest, got %q", image)
+	}
+	return image, nil
+}
+
+func imageRefUsesDigest(image string) bool {
+	return strings.Contains(image, "@sha256:")
+}
+
+func cleanupTartVMs(ctx context.Context, state *scenarioState) error {
+	if state.tartMgr == nil || state.tartPrefix == "" {
+		return nil
+	}
+	vms, err := state.tartMgr.List(ctx)
+	if err != nil {
+		return fmt.Errorf("list tart VMs during cleanup: %w", err)
+	}
+	var cleanupErr error
+	for _, name := range vms {
+		if strings.HasPrefix(name, state.tartPrefix+"-") {
+			cleanupErr = errors.Join(cleanupErr, cleanupTartVM(ctx, state.tartMgr, name))
+		}
+	}
+	return cleanupErr
+}
+
+func cleanupTartVM(ctx context.Context, mgr *tart.Manager, name string) error {
+	stopErr := mgr.Stop(ctx, name)
+	deleteErr := mgr.Delete(ctx, name)
+	if deleteErr == nil {
+		return nil
+	}
+	if stopErr != nil {
+		return errors.Join(
+			fmt.Errorf("stop tart VM %q: %w", name, stopErr),
+			fmt.Errorf("delete tart VM %q: %w", name, deleteErr),
+		)
+	}
+	return fmt.Errorf("delete tart VM %q: %w", name, deleteErr)
 }
 
 // buildMgmtConfig creates a management service config from env vars with the given auth.

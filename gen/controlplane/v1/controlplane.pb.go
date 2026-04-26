@@ -131,6 +131,7 @@ const (
 	JobResult_JOB_RESULT_RUNNING     JobResult = 1
 	JobResult_JOB_RESULT_SUCCESS     JobResult = 2
 	JobResult_JOB_RESULT_FAILURE     JobResult = 3
+	JobResult_JOB_RESULT_CANCELED    JobResult = 4
 )
 
 // Enum value maps for JobResult.
@@ -140,12 +141,14 @@ var (
 		1: "JOB_RESULT_RUNNING",
 		2: "JOB_RESULT_SUCCESS",
 		3: "JOB_RESULT_FAILURE",
+		4: "JOB_RESULT_CANCELED",
 	}
 	JobResult_value = map[string]int32{
 		"JOB_RESULT_UNSPECIFIED": 0,
 		"JOB_RESULT_RUNNING":     1,
 		"JOB_RESULT_SUCCESS":     2,
 		"JOB_RESULT_FAILURE":     3,
+		"JOB_RESULT_CANCELED":    4,
 	}
 )
 
@@ -1079,12 +1082,13 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x18RUNNER_STATE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16RUNNER_STATE_PREPARING\x10\x01\x12\x15\n" +
 	"\x11RUNNER_STATE_IDLE\x10\x02\x12\x15\n" +
-	"\x11RUNNER_STATE_BUSY\x10\x03*o\n" +
+	"\x11RUNNER_STATE_BUSY\x10\x03*\x88\x01\n" +
 	"\tJobResult\x12\x1a\n" +
 	"\x16JOB_RESULT_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12JOB_RESULT_RUNNING\x10\x01\x12\x16\n" +
 	"\x12JOB_RESULT_SUCCESS\x10\x02\x12\x16\n" +
-	"\x12JOB_RESULT_FAILURE\x10\x032\xa7\x03\n" +
+	"\x12JOB_RESULT_FAILURE\x10\x03\x12\x17\n" +
+	"\x13JOB_RESULT_CANCELED\x10\x042\xa7\x03\n" +
 	"\x13ControlPlaneService\x12a\n" +
 	"\x0eGetServiceInfo\x12&.controlplane.v1.GetServiceInfoRequest\x1a'.controlplane.v1.GetServiceInfoResponse\x12a\n" +
 	"\x0eListRunnerSets\x12&.controlplane.v1.ListRunnerSetsRequest\x1a'.controlplane.v1.ListRunnerSetsResponse\x12a\n" +

@@ -13,19 +13,22 @@ permissions:
 jobs:
   integration-test:
     name: Integration Test (${{ matrix.name }})
-    runs-on: [self-hosted, linux, arm64]
-    timeout-minutes: 30
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: PAT
+            runs-on: [self-hosted, linux, arm64]
             features: ../../features/config,../../features/binpath,../../features/jobstore,../../features/vitals,../../features/management
             needs-app-key: false
           - name: GitHub App
-            features: ../../features/management
+            runs-on: [self-hosted, linux, arm64]
+            features: ../../features/config,../../features/binpath,../../features/jobstore,../../features/vitals,../../features/management
             needs-app-key: true
           - name: Tart
+            runs-on: [self-hosted, macos, arm64]
             features: ../../features/tart
             needs-app-key: false
     steps:
@@ -48,6 +51,41 @@ jobs:
       - name: Build dashboard (required for go:embed)
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
+      - name: Install Tart integration dependencies
+        if: matrix.name == 'Tart'
+        run: |
+          if [ -x /opt/homebrew/bin/brew ]; then
+            brew_bin=/opt/homebrew/bin/brew
+          elif [ -x /usr/local/bin/brew ]; then
+            brew_bin=/usr/local/bin/brew
+          else
+            echo "::error::Homebrew is required for Tart integration tests"
+            exit 1
+          fi
+
+          brew_prefix="$("$brew_bin" --prefix)"
+          echo "$brew_prefix/bin" >> "$GITHUB_PATH"
+
+          "$brew_bin" install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
+          "$brew_prefix/bin/tart" --version
+          "$brew_prefix/bin/sshpass" -V
+          "$brew_prefix/bin/gpg" --version
+
+          tart_keychain="$RUNNER_TEMP/tart-login.keychain"
+          rm -f "$tart_keychain" "$tart_keychain-db"
+          security create-keychain -p '' "$tart_keychain"
+          security unlock-keychain -p '' "$tart_keychain"
+          security set-keychain-settings -lut 21600 "$tart_keychain"
+          security list-keychains -d user -s "$tart_keychain"
+          security default-keychain -s "$tart_keychain"
+
+          if sudo -n true 2>/dev/null; then
+            sudo defaults write /Library/Preferences/SystemConfiguration/com.apple.InternetSharing.default.plist bootpd -dict DHCPLeaseTimeSecs -int 600
+            sudo rm -f /var/db/dhcpd_leases
+          else
+            echo "::warning::Passwordless sudo is unavailable; skipping Tart DHCP cleanup"
+          fi
+
       - name: Write GitHub App private key
         if: matrix.needs-app-key
         run: |
@@ -65,7 +103,7 @@ jobs:
           EFR_TEST_APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
           EFR_TEST_APP_PRIVATE_KEY_PATH: ${{ matrix.needs-app-key && '/tmp/efr-test-app-key.pem' || '' }}
           EFR_TEST_FEATURES: ${{ matrix.features }}
-        run: go test -tags=integration -count=1 -v -timeout=25m -coverpkg=./... -coverprofile=coverage.out ./test/integration/
+        run: go test -tags=integration -count=1 -v -timeout=55m -coverpkg=./... -coverprofile=coverage.out ./test/integration/
 
       - name: Upload coverage to Codecov
         if: always()

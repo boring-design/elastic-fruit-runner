@@ -42,7 +42,7 @@ html, body, #root {
 
 .grid-stats {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   background: var(--border);
   gap: 1px;
   border: 1px solid var(--border);
@@ -82,7 +82,7 @@ html, body, #root {
     grid-template-columns: 1fr;
   }
   .grid-stats {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
 }
 
@@ -114,9 +114,6 @@ html, body, #root {
   }
   .grid-stats {
     grid-template-columns: repeat(3, 1fr);
-  }
-  .grid-stats > .cell:last-child {
-    grid-column: span 2;
   }
   .cell {
     padding: 16px;

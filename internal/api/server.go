@@ -195,10 +195,12 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 	switch r {
 	case "running":
 		return controlplanev1.JobResult_JOB_RESULT_RUNNING
-	case "Succeeded":
+	case "succeeded":
 		return controlplanev1.JobResult_JOB_RESULT_SUCCESS
-	case "Failed":
+	case "failed":
 		return controlplanev1.JobResult_JOB_RESULT_FAILURE
+	case "canceled":
+		return controlplanev1.JobResult_JOB_RESULT_CANCELED
 	default:
 		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
 	}

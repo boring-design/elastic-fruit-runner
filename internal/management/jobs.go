@@ -31,10 +31,11 @@ func NewJobStore(db *sql.DB) *JobStore {
 	}
 }
 
-// knownJobResults is the set of valid result strings from the GitHub Actions API.
+// knownJobResults is the set of valid result strings from the GitHub Scale Set API.
 var knownJobResults = map[string]struct{}{
-	"Succeeded": {},
-	"Failed":    {},
+	"succeeded": {},
+	"failed":    {},
+	"canceled":  {},
 }
 
 // RecordJobStarted inserts a new job with result "running".
@@ -56,7 +57,8 @@ func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
 // If the job does not exist, inserts a completed-only record.
 func (s *JobStore) RecordJobCompleted(jobID, result string) {
 	if _, ok := knownJobResults[result]; !ok {
-		slog.Warn("unexpected job result from scale-set API, recording as-is", "job_id", jobID, "result", result)
+		slog.Error("unexpected job result from scale-set API, refusing to record invalid state", "job_id", jobID, "result", result)
+		return
 	}
 
 	ctx := context.Background()

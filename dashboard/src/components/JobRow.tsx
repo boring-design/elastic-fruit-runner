@@ -11,6 +11,8 @@ export function JobRow({ job, now }: { job: JobRecord; now: Date }) {
     ? <span style={{ color: '#aaa', fontSize: 10, letterSpacing: '0.08em' }} className="pulse">RUN</span>
     : job.result === 'success'
     ? <span style={{ color: '#f0f0f0', fontSize: 10, letterSpacing: '0.08em' }}>OK</span>
+    : job.result === 'canceled'
+    ? <span style={{ color: '#ff9500', fontSize: 10, letterSpacing: '0.08em' }}>CXL</span>
     : <span style={{ color: '#ff3b30', fontSize: 10, letterSpacing: '0.08em' }}>FAIL</span>
 
   return (
