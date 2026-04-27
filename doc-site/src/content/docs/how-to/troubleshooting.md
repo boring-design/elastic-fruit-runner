@@ -39,13 +39,15 @@ ssh readiness probe ... ssh: connect to host 192.168.64.X port 22: No route to h
 
 Crucially, running `sshpass ssh admin@192.168.64.X true` from an interactive Terminal at the same time **succeeds**.
 
-**Cause**: macOS 15 introduced [Local Network Privacy](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy). Daemons started under launchd as **LaunchAgents** (which is what `brew services start` produces when run without `sudo`) need a Mach-O `LC_UUID` load command for the kernel to identify the binary and route packets to private subnets such as `192.168.64.0/24` (the Tart bridge).
+**Cause**: macOS 15 introduced [Local Network Privacy](https://developer.apple.com/documentation/technotes/tn3179-understanding-local-network-privacy). LaunchAgents need a stable identity for the kernel's NECP subsystem to route packets to private subnets such as `192.168.64.0/24` (the Tart bridge).
 
-Older Go toolchains produced binaries without `LC_UUID`, which is why `ssh` (Apple-signed system binary) worked while the Go binary failed with `connect: no route to host`. See [golang/go#68678](https://github.com/golang/go/issues/68678) and [cirruslabs/orchard#221](https://github.com/cirruslabs/orchard/issues/221) for the upstream context.
+Identity comes from one of two sources: the binary's Mach-O `LC_UUID` load command, or the launchd plist's `AssociatedBundleIdentifiers` key. Older Go toolchains produced binaries without `LC_UUID`, and Homebrew's default `brew services` plist generator does not populate `AssociatedBundleIdentifiers`. The combination meant the agent had no identity at all, and NECP refused the connection with `connect: no route to host` while Apple-signed `ssh` (which has its own `LC_UUID` and is exempt) succeeded. See [golang/go#68678](https://github.com/golang/go/issues/68678) and [cirruslabs/orchard#221](https://github.com/cirruslabs/orchard/issues/221) for the upstream context.
+
+The current formula ships both: the binary is linked with `-B gobuildid` (so `LC_UUID` is present and stable per build), and the formula's `install` step writes a custom plist with `AssociatedBundleIdentifiers = design.boringboring.elastic-fruit-runner` into the keg. `brew services start` finds and uses that plist as-is, so the LNP grant persists across upgrades — you should be prompted only once on first run.
 
 **Fix**:
 
-1. **Upgrade**: builds since the fix carry the `-B gobuildid` ldflag and embed `LC_UUID`.
+1. **Upgrade**: builds since the fix carry the `-B gobuildid` ldflag and ship the bundle-id plist.
 
    ```sh
    brew update && brew upgrade elastic-fruit-runner
@@ -60,7 +62,15 @@ Older Go toolchains produced binaries without `LC_UUID`, which is why `ssh` (App
 
    You should see a `cmd LC_UUID` entry. If it is missing, the binary will not work as a LaunchAgent on macOS 15+.
 
-3. **Workaround — run as a system LaunchDaemon**: LaunchDaemons (`/Library/LaunchDaemons/`, loaded as root) bypass Local Network Privacy entirely. Stop the per-user agent and start the service as root:
+3. **Verify the plist has `AssociatedBundleIdentifiers`**:
+
+   ```sh
+   plutil -p ~/Library/LaunchAgents/design.boringboring.elastic-fruit-runner.plist | grep -A2 Associated
+   ```
+
+   You should see the bundle id `design.boringboring.elastic-fruit-runner` in the array.
+
+4. **Workaround — run as a system LaunchDaemon**: LaunchDaemons (`/Library/LaunchDaemons/`, loaded as root) bypass Local Network Privacy entirely. Stop the per-user agent and start the service as root:
 
    ```sh
    brew services stop elastic-fruit-runner
@@ -71,6 +81,8 @@ Older Go toolchains produced binaries without `LC_UUID`, which is why `ssh` (App
    `sudo brew services start` installs a system-wide LaunchDaemon under `/Library/LaunchDaemons/` and runs the binary as root. This makes the network restriction go away but means the runner has root privileges. Pick whichever trade-off fits your security posture.
    :::
 
-4. **Diagnose with the preserve-failed-VMs debug knob**: if you still hit the failure mode after the upgrade, set `EFR_TART_PRESERVE_FAILED_VMS=true` in the service environment and restart. Failed VMs will not be deleted, so you can `tart ip <vm>` and `tart ssh <vm>` to inspect them, and `route -n get <vm-ip>` from inside the daemon's environment to confirm what interface it picks.
+5. **Diagnose with the preserve-failed-VMs debug knob**: if you still hit the failure mode after the upgrade, set `EFR_TART_PRESERVE_FAILED_VMS=true` in the service environment and restart. Failed VMs will not be deleted, so you can `tart ip <vm>` and `tart ssh <vm>` to inspect them, and `route -n get <vm-ip>` from inside the daemon's environment to confirm what interface it picks.
 
    See [environment variables reference](/reference/environment-variables/).
+
+For the full investigation see the [devlog post](/devlog/2026-04-26-launchd-lc-uuid/).

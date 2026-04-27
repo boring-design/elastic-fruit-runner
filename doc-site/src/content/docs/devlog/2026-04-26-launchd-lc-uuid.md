@@ -116,6 +116,59 @@ The probe loop now also logs the kernel's chosen route to the VM (`route -n get 
 - **Build flags are part of correctness.** A missing linker flag silently changed observable runtime behaviour.
 - **`tcpdump` lied to us in a useful way.** The "wrong source address" SYN was a symptom of the kernel rejecting the bind, not of an interface misconfiguration. We chased the symptom for hours.
 
+## Coda: making the grant stick across upgrades
+
+The `LC_UUID` fix gets the connection through the kernel, but it has a UX consequence we initially shrugged at: `gobuildid` is *content-addressed*, so every release of `elastic-fruit-runner` produces a different UUID. macOS sees a different UUID as a different program, so the user gets re-prompted for Local Network Privacy on every upgrade. One click, but annoying enough to ask: is there a way for the grant to persist?
+
+TN3179 has the answer: launchd plists can carry an `AssociatedBundleIdentifiers` key, and macOS will use the bundle id rather than `LC_UUID` as the identity for permission lookups. A bundle id is a stable string we choose; it doesn't change when source code does. Grant once, never re-prompt.
+
+We hit a wall at the next layer: **Homebrew's `service do … end` DSL doesn't support `AssociatedBundleIdentifiers`.** The keys it emits into the plist are hardcoded in `Homebrew::Service#to_plist` (`Label`, `ProgramArguments`, `WorkingDirectory`, `KeepAlive`, …) with no extension point. `brew services start` regenerates the plist from the formula on every invocation, so post-install patching gets clobbered.
+
+We almost went down a much heavier path here — a custom `elastic-fruit-runner launchd install` subcommand that managed its own plist out of band of `brew services`. We started building it. Then we re-read the brew services source.
+
+The thing we missed first time: `Homebrew::Services::Cli.install_service_file` (`/opt/homebrew/Library/Homebrew/services/cli.rb:383`) treats `service.service_file.exist?` as authoritative. If a file at `<keg>/<plist_name>.plist` already exists, brew services *reads it verbatim* and copies it to `~/Library/LaunchAgents/`. The DSL's `to_plist` is never called. The DSL is only the fallback for formulas that don't ship their own plist.
+
+So the recipe is simple: have the formula ship a plist into the keg with whatever keys we want.
+
+```ruby
+install do
+  bin.install "elastic-fruit-runner"
+  (prefix/"design.boringboring.elastic-fruit-runner.plist").write <<~EOS
+    <?xml version="1.0" encoding="UTF-8"?>
+    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "...">
+    <plist version="1.0">
+    <dict>
+      <key>Label</key>
+      <string>design.boringboring.elastic-fruit-runner</string>
+      ...
+      <key>AssociatedBundleIdentifiers</key>
+      <array>
+        <string>design.boringboring.elastic-fruit-runner</string>
+      </array>
+    </dict>
+    </plist>
+  EOS
+end
+
+service do
+  name macos: "design.boringboring.elastic-fruit-runner"
+  run [opt_bin/"elastic-fruit-runner"]
+  keep_alive true
+  ...
+end
+```
+
+`name macos:` makes brew look for `<keg>/design.boringboring.elastic-fruit-runner.plist` (instead of the default `homebrew.mxcl.elastic-fruit-runner.plist`). Our `install` block writes exactly that file. brew services finds it, copies it to `~/Library/LaunchAgents/`, and `launchctl bootstrap`s it. End-to-end.
+
+The user-facing flow is unchanged from before: `brew services start elastic-fruit-runner`. No new commands, no migration. The grant prompt fires once on first run; subsequent `brew upgrade`s do not re-prompt because the bundle id is stable, even though `LC_UUID` continues to change per build.
+
+A few alternatives we considered and rejected:
+
+- **Pinning `LC_UUID` to a fixed value.** Stable across builds, but breaks crash symbolication and `dSYM` matching, and Quinn warns that two programs sharing a UUID confuses NECP. The whole point of `gobuildid` is content-addressed identity — pinning it manually defeats that.
+- **Patching Homebrew upstream.** The right long-term fix; we may still file an issue. But it's months away through review, merge, release, user upgrade. The shipped-plist trick works today and stays working even if upstream eventually adds the DSL key.
+- **`brew services start --file=<our plist>`.** Functionally equivalent, but every user has to remember the `--file=` flag every time. Onboarding becomes "start the service with this 100-character command" — not great. Shipping the file inside the keg lets the regular `brew services start` pick it up.
+- **A custom subcommand managing its own plist.** ~1100 lines of Go we'd own forever, plus a non-standard service-management UX. We almost shipped this; we're glad we didn't.
+
 ## Fallback: run as a LaunchDaemon
 
 LaunchDaemons (loaded into `/Library/LaunchDaemons/`, run as root) are exempt from Local Network Privacy entirely. If you can't upgrade for some reason, switch from the per-user agent to a system daemon:
