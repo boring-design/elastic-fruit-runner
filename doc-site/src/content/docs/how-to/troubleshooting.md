@@ -81,8 +81,4 @@ The current formula ships both: the binary is linked with `-B gobuildid` (so `LC
    `sudo brew services start` installs a system-wide LaunchDaemon under `/Library/LaunchDaemons/` and runs the binary as root. This makes the network restriction go away but means the runner has root privileges. Pick whichever trade-off fits your security posture.
    :::
 
-5. **Diagnose with the preserve-failed-VMs debug knob**: if you still hit the failure mode after the upgrade, set `EFR_TART_PRESERVE_FAILED_VMS=true` in the service environment and restart. Failed VMs will not be deleted, so you can `tart ip <vm>` and `tart ssh <vm>` to inspect them, and `route -n get <vm-ip>` from inside the daemon's environment to confirm what interface it picks.
-
-   See [environment variables reference](/reference/environment-variables/).
-
 For the full investigation see the [devlog post](/devlog/2026-04-26-launchd-lc-uuid/).
