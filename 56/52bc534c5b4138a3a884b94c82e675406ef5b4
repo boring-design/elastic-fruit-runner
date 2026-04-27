@@ -1,0 +1,23 @@
+cmd/elastic-fruit-runner/launchd.go
+  093e22f3a05cbb0c 88-95
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "5652bc534c5b4138a3a884b94c82e675406ef5b4",
+  "prompts": {
+    "093e22f3a05cbb0c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b5edc921-f9fd-49b9-8101-a54139a9b5b5",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Zhiqiang ZHOU",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 6,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}
