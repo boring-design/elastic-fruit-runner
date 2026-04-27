@@ -4,6 +4,16 @@ builds:
   - main: ./cmd/elastic-fruit-runner
     env:
       - CGO_ENABLED=0
+    # `-B gobuildid` makes the linker derive a stable Mach-O LC_UUID load
+    # command from the Go build ID. macOS 15 (Sequoia) Local Network Privacy
+    # uses LC_UUID as the binary identity for routing decisions on private
+    # subnets. Without it, daemons launched via launchd / brew services fail
+    # with "no route to host" when dialing the Tart bridge (192.168.64.x via
+    # bridge101) even though `ssh` and interactive shells succeed.
+    # See: https://github.com/golang/go/issues/68678 and
+    #      https://github.com/cirruslabs/orchard/issues/221
+    ldflags:
+      - -B gobuildid
     goos:
       - darwin
       - linux
@@ -34,7 +44,50 @@ brews:
       - name: sshpass
     install: |
       bin.install "elastic-fruit-runner"
+
+      # Ship a custom launchd plist into the keg so brew services reads it
+      # verbatim (see Homebrew::Services::Cli.install_service_file). This
+      # is the only way to get AssociatedBundleIdentifiers, which Homebrew's
+      # Service.to_plist DSL does not expose. The bundle id anchors the
+      # macOS Local Network Privacy grant on a stable identifier so users
+      # do not get re-prompted on every release; the LC_UUID fix alone
+      # gets the connection through, this keeps the grant durable.
+      # See https://elastic-fruit-runner.boringboring.design/devlog/2026-04-26-launchd-lc-uuid/
+      (prefix/"design.boringboring.elastic-fruit-runner.plist").write <<~EOS
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>Label</key>
+          <string>design.boringboring.elastic-fruit-runner</string>
+          <key>ProgramArguments</key>
+          <array>
+            <string>#{opt_bin}/elastic-fruit-runner</string>
+          </array>
+          <key>RunAtLoad</key>
+          <true/>
+          <key>KeepAlive</key>
+          <true/>
+          <key>WorkingDirectory</key>
+          <string>#{var}/elastic-fruit-runner</string>
+          <key>StandardOutPath</key>
+          <string>#{var}/log/elastic-fruit-runner.log</string>
+          <key>StandardErrorPath</key>
+          <string>#{var}/log/elastic-fruit-runner.log</string>
+          <key>EnvironmentVariables</key>
+          <dict>
+            <key>PATH</key>
+            <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+          </dict>
+          <key>AssociatedBundleIdentifiers</key>
+          <array>
+            <string>design.boringboring.elastic-fruit-runner</string>
+          </array>
+        </dict>
+        </plist>
+      EOS
     service: |
+      name macos: "design.boringboring.elastic-fruit-runner"
       run [opt_bin/"elastic-fruit-runner"]
       keep_alive true
       working_dir var/"elastic-fruit-runner"

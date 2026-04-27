@@ -72,6 +72,15 @@ If the Mac is used as a dedicated runner host (e.g. a Mac mini or a MacBook with
 brew services start elastic-fruit-runner
 ```
 
+:::note[macOS 15+ Local Network Privacy]
+Starting with macOS 15 (Sequoia), LaunchAgents need a stable identity for the kernel's NECP subsystem to authorize traffic to private subnets like the Tart bridge (`192.168.64.x`). This formula handles that with two pieces:
+
+1. The binary is linked with `-B gobuildid`, so it carries a Mach-O `LC_UUID` load command (older Go toolchains omitted it, which broke the connection entirely on macOS 15+).
+2. The Homebrew formula ships a custom plist with `AssociatedBundleIdentifiers = design.boringboring.elastic-fruit-runner`, so the user's "Allow local network access" grant persists across upgrades. macOS will prompt **once** on first run; subsequent `brew upgrade` cycles do not re-prompt.
+
+If you still see `SSH not reachable ... last error: ... no route to host` after upgrading, see [Troubleshooting: launchd cannot reach the Tart bridge](/how-to/troubleshooting/#tart-vms-fail-to-start-from-brew-services-no-route-to-host).
+:::
+
 Check status:
 
 ```sh
