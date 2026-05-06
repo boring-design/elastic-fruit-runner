@@ -69,14 +69,16 @@ func (m *Manager) Pull(ctx context.Context, image string) error {
 	return nil
 }
 
-// ImageExists checks whether a VM image is available locally.
+// ImageExists checks whether a VM image is available locally or as a pulled OCI
+// image. Tart reports pulled registry images with source OCI, so restricting the
+// query to source=local would make every remote image look missing.
 func (m *Manager) ImageExists(ctx context.Context, image string) (bool, error) {
 	ctx, span := tracer.Start(ctx, "tart.image_exists",
 		trace.WithAttributes(attribute.String("vm.image", image)),
 	)
 	defer span.End()
 
-	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "list", "--source", "local", "--quiet")
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "list", "--quiet")
 	out, err := cmd.Output()
 	if err != nil {
 		span.RecordError(err)

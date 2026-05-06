@@ -28,8 +28,10 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	_, span := tracer.Start(ctx, "controller.HandleDesiredRunnerCount")
 	defer span.End()
 
-	current := d.runners.count()
-	needed := min(count, d.rsCfg.MaxRunners) - current
+	counts := d.runners.counts()
+	allocated := counts.total()
+	current := counts.idle + counts.busy
+	needed := min(count, d.rsCfg.MaxRunners) - allocated
 	if needed < 0 {
 		needed = 0
 	}
@@ -37,9 +39,17 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	span.SetAttributes(
 		attribute.Int("runner.desired", count),
 		attribute.Int("runner.current", current),
+		attribute.Int("runner.preparing", counts.preparing),
+		attribute.Int("runner.allocated", allocated),
 		attribute.Int("runner.spawning", needed),
 	)
-	d.logger.Info("scaling", "desired", count, "current", current, "spawning", needed)
+	d.logger.Info("scaling",
+		"desired", count,
+		"current", current,
+		"preparing", counts.preparing,
+		"allocated", allocated,
+		"spawning", needed,
+	)
 
 	runnerCtx := d.runners.getRunnerCtx()
 	for range needed {
@@ -246,6 +256,16 @@ type runnerState struct {
 	busy      map[string]time.Time
 }
 
+type runnerCounts struct {
+	preparing int
+	idle      int
+	busy      int
+}
+
+func (c runnerCounts) total() int {
+	return c.preparing + c.idle + c.busy
+}
+
 func (r *runnerState) setRunnerCtx(ctx context.Context) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -259,9 +279,17 @@ func (r *runnerState) getRunnerCtx() context.Context {
 }
 
 func (r *runnerState) count() int {
+	return r.counts().total()
+}
+
+func (r *runnerState) counts() runnerCounts {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return len(r.preparing) + len(r.idle) + len(r.busy)
+	return runnerCounts{
+		preparing: len(r.preparing),
+		idle:      len(r.idle),
+		busy:      len(r.busy),
+	}
 }
 
 // randSuffix returns a short random hex string (5 chars), similar to

@@ -70,12 +70,54 @@ exit 255
 	}
 }
 
+func TestImageExistsIncludesPulledOCIImages(t *testing.T) {
+	dir := t.TempDir()
+	argsFile := filepath.Join(dir, "tart.args")
+	writeFakeTart(t, dir, `
+printf '%s\n' "$@" > "`+argsFile+`"
+if [ "$1" = "list" ] && [ "$2" = "--quiet" ]; then
+  printf '%s\n' "ghcr.io/cirruslabs/macos-tahoe-xcode:latest"
+  printf '%s\n' "local-template"
+  exit 0
+fi
+exit 64
+`)
+	resetBinpath(t, dir)
+
+	m := NewManager()
+	exists, err := m.ImageExists(context.Background(), "ghcr.io/cirruslabs/macos-tahoe-xcode:latest")
+	if err != nil {
+		t.Fatalf("ImageExists() error = %v", err)
+	}
+	if !exists {
+		t.Fatal("ImageExists() = false, want true for pulled OCI image")
+	}
+
+	argsBytes, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatalf("read tart args: %v", err)
+	}
+	args := string(argsBytes)
+	if strings.Contains(args, "--source") {
+		t.Fatalf("ImageExists() should not restrict tart list source:\n%s", args)
+	}
+}
+
 func writeFakeSSHPass(t *testing.T, dir, body string) {
 	t.Helper()
 	path := filepath.Join(dir, "sshpass")
 	script := "#!/bin/sh\n" + body
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatalf("write fake sshpass: %v", err)
+	}
+}
+
+func writeFakeTart(t *testing.T, dir, body string) {
+	t.Helper()
+	path := filepath.Join(dir, "tart")
+	script := "#!/bin/sh\n" + body
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake tart: %v", err)
 	}
 }
 
