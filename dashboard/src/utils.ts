@@ -19,11 +19,13 @@ export function fmtUptime(seconds: number): string {
   return `${String(h).padStart(2, '0')}h:${String(m).padStart(2, '0')}m:${String(s).padStart(2, '0')}s`
 }
 
-export function shortName(name: string): string {
+export function shortName(name: string, max = 32): string {
+  if (name.length <= max) return name
   const parts = name.split('-')
+  if (parts.length < 2) return `${name.slice(0, max - 1)}…`
   const suffix = parts[parts.length - 1]
   const prefix = parts.slice(0, -1).join('-')
-  const max = 20
-  const trimmed = prefix.length > max ? '...' + prefix.slice(-(max - 3)) : prefix
-  return `${trimmed}-${suffix}`
+  const room = max - suffix.length - 2
+  if (room <= 0) return `…${suffix}`
+  return `${prefix.slice(0, room)}…${suffix}`
 }
