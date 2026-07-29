@@ -1,55 +1,48 @@
 ---
 title: CLI Reference
-description: Command-line flags for elastic-fruit-runner.
+description: Commands and flags supported by the Elastic Fruit Runner binary.
 ---
 
-## Usage
+## Run the daemon
 
-```
-elastic-fruit-runner [flags]
+```text
+elastic-fruit-runner [--config PATH]
 ```
 
-## Flags
+The daemon loads config, starts runner controllers, starts the Console, and waits for jobs.
 
 | Flag | Default | Description |
-|------|---------|-------------|
-| `--config PATH` | (see search paths below) | Path to the YAML configuration file |
+|---|---|---|
+| `--config PATH` | Config search paths | Select one YAML config file |
 
-### Config file search paths
+Without `--config`, see [Configuration Reference](/reference/configuration/) for the search order.
 
-When `--config` is not specified, the following paths are searched in order:
-
-1. `~/.elastic-fruit-runner/config.yaml`
-2. `/opt/homebrew/var/elastic-fruit-runner/config.yaml`
-3. `/usr/local/var/elastic-fruit-runner/config.yaml`
-4. `/etc/elastic-fruit-runner/config.yaml`
-
-## Examples
-
-Run with default config file search:
+Example:
 
 ```sh
-elastic-fruit-runner
+elastic-fruit-runner --config /etc/elastic-fruit-runner/config.yaml
 ```
 
-Run with a specific config file:
+## Reset the Console password
+
+```text
+elastic-fruit-runner reset-password [--config PATH]
+```
+
+The command opens the configured SQLite database, removes the local admin password, and removes every Console session.
+
+Stop the daemon before running this command. Start it again to create a new setup code.
+
+Example:
 
 ```sh
-elastic-fruit-runner --config /path/to/config.yaml
+elastic-fruit-runner reset-password --config /etc/elastic-fruit-runner/config.yaml
 ```
 
-Override log level via environment variable:
+See [How to reset the Console password](/how-to/reset-console-password/) for service specific steps.
 
-```sh
-LOG_LEVEL=debug elastic-fruit-runner
-```
+## Exit behavior
 
-## Reset the console password
+The daemon listens for `SIGINT` and `SIGTERM`. It stops the HTTP server and runner controllers before exit.
 
-Stop the daemon before resetting the password:
-
-```sh
-elastic-fruit-runner reset-password --config /path/to/config.yaml
-```
-
-This removes the admin password and all console sessions. Start the daemon again and use the new setup code from the local log.
+Startup errors are written as JSON logs and return a nonzero exit status.

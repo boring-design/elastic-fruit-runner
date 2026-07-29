@@ -33,13 +33,13 @@ You should see a version number.
 brew install boring-design/tap/elastic-fruit-runner
 ```
 
-Check the installed command:
+Check the installed path:
 
 ```sh
-elastic-fruit-runner --help
+command -v elastic-fruit-runner
 ```
 
-The command should print its available options.
+The command should print the Homebrew binary path.
 
 ## Create the config
 

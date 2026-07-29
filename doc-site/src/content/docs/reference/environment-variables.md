@@ -3,7 +3,7 @@ title: Environment Variables Reference
 description: Environment variables supported by elastic-fruit-runner.
 ---
 
-elastic-fruit-runner is primarily configured through its YAML config file. Only one environment variable is supported:
+Elastic Fruit Runner is configured through its YAML file. Only one environment variable is supported:
 
 | Variable | Config file equivalent | Description |
 |----------|----------------------|-------------|
@@ -15,4 +15,6 @@ elastic-fruit-runner is primarily configured through its YAML config file. Only 
 LOG_LEVEL=debug elastic-fruit-runner
 ```
 
-All other settings (orgs, repos, auth, runner sets, idle timeout) must be configured in the YAML config file. See the [configuration reference](/reference/configuration/) for details.
+`LOG_LEVEL` has higher priority than the YAML `log_level` field.
+
+All other settings must be configured in the YAML file. See [Configuration Reference](/reference/configuration/).

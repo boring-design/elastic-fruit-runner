@@ -1,32 +1,28 @@
 ---
 title: Configuration Reference
-description: Complete reference for all elastic-fruit-runner configuration options.
+description: YAML fields, defaults, limits, and validation rules for Elastic Fruit Runner.
 ---
 
-All configuration is done through a YAML config file. The only CLI flag is `--config` to specify the file path.
+Elastic Fruit Runner reads one YAML config file. Unknown fields, duplicate keys, and multiple YAML documents are errors.
 
-## Config file search paths
+## Config file search
 
-If `--config` is not specified, the following paths are searched in order:
+Without `--config`, the daemon checks these paths in order:
 
 1. `~/.elastic-fruit-runner/config.yaml`
 2. `/opt/homebrew/var/elastic-fruit-runner/config.yaml`
 3. `/usr/local/var/elastic-fruit-runner/config.yaml`
 4. `/etc/elastic-fruit-runner/config.yaml`
 
-## Full example
+Use `--config PATH` to select another file.
+
+## Complete example
 
 ```yaml
 orgs:
   - org: your-org
     auth:
-      # Option A: GitHub App (recommended)
-      github_app:
-        client_id: Iv1.xxxxxxxxxxxxxxxx
-        installation_id: 12345678
-        private_key_path: /path/to/private-key.pem
-      # Option B: Personal Access Token (uncomment and remove github_app above)
-      # pat_token: ghp_xxx
+      pat_token: ghp_replace_me
     runner_group: Default
     runner_sets:
       - name: efr-macos-arm64
@@ -34,140 +30,171 @@ orgs:
         image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
         labels: [self-hosted, macos, arm64]
         max_runners: 2
-      - name: efr-linux-arm64
+
+repos:
+  - repo: your-org/your-repo
+    auth:
+      pat_token: ghp_replace_me
+    runner_sets:
+      - name: efr-repo-linux-arm64
         backend: docker
         image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
         labels: [self-hosted, linux, arm64]
         max_runners: 4
         platform: linux/arm64
-      - name: efr-linux-amd64
-        backend: docker
-        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-        labels: [self-hosted, linux, amd64]
-        max_runners: 4
-        platform: linux/amd64
-
-repos:
-  - repo: your-org/your-repo
-    auth:
-      pat_token: ghp_xxx
-    runner_sets:
-      - name: repo-runner
-        backend: docker
-        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-        labels: [self-hosted, linux, arm64]
-        max_runners: 2
 
 idle_timeout: 15m
 log_level: info
+api_addr: 127.0.0.1:8080
+db_path: ./jobs.db
+log_path: ./elastic-fruit-runner.log
+
+cors:
+  allow_origin: "https://runner-console.example.com"
+  allow_methods: "GET, POST, OPTIONS"
+  allow_headers: "Content-Type, Connect-Protocol-Version, X-CSRF-Token"
+  expose_headers: "Connect-Protocol-Version"
+  allow_credentials: true
+  max_age: 3600
 ```
 
-## Top-level fields
+At least one item must exist in `orgs` or `repos`.
 
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `orgs` | list | — | Organization-level runner set configurations |
-| `repos` | list | — | Repository-level runner set configurations |
-| `idle_timeout` | duration | `15m` | Time after which idle runners are reaped. Must be > 0 |
-| `log_level` | string | `info` | Log level: `debug`, `info`, `warn`, `error` |
-| `api_addr` | string | `:8080` | Console listen address |
-| `db_path` | string | local data directory | SQLite path for job, auth, and host data |
-| `log_path` | string | empty | Optional writable log path used for path validation |
-| `cors` | object | local defaults | Console CORS settings |
+## Top level fields
 
-At least one of `orgs` or `repos` must be configured.
+| Field | Type | Default | Rules |
+|---|---|---|---|
+| `orgs` | list | empty | Organization runner scopes |
+| `repos` | list | empty | Repository runner scopes |
+| `idle_timeout` | duration | `15m` | Greater than zero and no more than `24h` |
+| `log_level` | string | `info` | `debug`, `info`, `warn`, or `error` |
+| `api_addr` | string | `:8080` | Host and port accepted by the Go network listener |
+| `db_path` | string | `~/.elastic-fruit-runner/jobs.db` | Writable file path or `:memory:` |
+| `log_path` | string | empty | Optional writable log file. Empty sends logs to standard output |
+| `cors` | object | runtime defaults | CORS response settings |
 
-## Organization configuration (`orgs[]`)
+## Organization fields
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `org` | string | yes | — | GitHub organization name |
-| `auth` | object | yes | — | Authentication configuration |
-| `runner_group` | string | no | `Default` | Runner group name |
-| `runner_sets` | list | yes | — | At least one runner set |
+Each `orgs[]` item supports:
 
-## Repository configuration (`repos[]`)
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `repo` | string | yes | Repository in `owner/repo` format |
-| `auth` | object | yes | Authentication configuration |
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `org` | string | yes | Valid GitHub organization name |
+| `auth` | object | yes | Exactly one auth method |
+| `runner_group` | string | no | Defaults to `Default` |
 | `runner_sets` | list | yes | At least one runner set |
 
-Repository-level runners always use the default runner group.
+An organization name uses GitHub owner rules. It contains 1 to 39 letters, numbers, or single hyphen characters. It cannot start or end with a hyphen.
 
-## Authentication (`auth`)
+## Repository fields
 
-Exactly one of `pat_token` or `github_app` must be configured per org/repo. They are mutually exclusive.
+Each `repos[]` item supports:
 
-### GitHub App
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `repo` | string | yes | `owner/repository` |
+| `auth` | object | yes | Exactly one auth method |
+| `runner_sets` | list | yes | At least one runner set |
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `github_app.client_id` | string | yes | GitHub App Client ID (starts with `Iv1.`) |
-| `github_app.installation_id` | integer | yes | Installation ID |
-| `github_app.private_key_path` | string | yes | Path to the private key `.pem` file |
+The repository part contains 1 to 100 letters, numbers, dots, underscores, or hyphen characters.
+
+Repository runner sets use the default runner group.
+
+## Auth fields
+
+Configure exactly one of `pat_token` or `github_app`. They are mutually exclusive.
 
 ### Personal Access Token
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `pat_token` | string | yes | GitHub PAT (must not be empty) |
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `pat_token` | string | yes | Nonempty |
 
-**Required PAT scopes:**
+For an organization scope, the token needs Organization Self hosted runners read and write access.
 
-For a **classic** token:
-- `admin:org` (Organization > Self-hosted runners: Read and write)
-- `repo` (for repository-level runners)
+For a repository scope, the token also needs repository Administration read and write access.
 
-For a **fine-grained** token:
-- **Resource owner**: your organization
-- **Organization permissions > Self-hosted runners**: Read and write
-- **Repository permissions > Administration**: Read and write (for repository-level runners)
+### GitHub App
 
-## Runner set configuration (`runner_sets[]`)
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `github_app.client_id` | string | yes | Nonempty |
+| `github_app.installation_id` | integer | yes | Greater than zero |
+| `github_app.private_key_path` | string | yes | Readable PEM private key file |
 
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `name` | string | yes | — | Runner set name (used as `runs-on` label in workflows). Must be unique across all orgs/repos |
-| `backend` | string | yes | — | Backend type: `tart` or `docker` |
-| `image` | string | no | — | VM image (Tart) or container image (Docker) |
-| `labels` | list | no | — | Runner labels |
-| `max_runners` | integer | yes | — | Maximum concurrent runners. Must be > 0 |
-| `platform` | string | no | — | Docker platform (e.g., `linux/arm64`, `linux/amd64`) |
+The private key PEM block type must contain `PRIVATE KEY`.
 
-### Backend: `tart`
+See [How to configure GitHub App authentication](/how-to/configure-github-app/) for the setup steps and permissions.
 
-For macOS VMs on Apple Silicon. Uses [Tart](https://tart.run) to create ephemeral VMs.
+## Runner set fields
 
-- `image`: OCI image reference (e.g., `ghcr.io/cirruslabs/macos-tahoe-xcode:26.3`)
-- `max_runners`: Recommend capping at 2 per host (Apple EULA restriction for macOS VMs)
-- Requires the `tart` CLI installed on the host
+Each `runner_sets[]` item supports:
 
-### Backend: `docker`
+| Field | Type | Required | Rules |
+|---|---|---|---|
+| `name` | string | yes | Nonempty and unique across the whole config |
+| `backend` | string | yes | `docker` or `tart` |
+| `image` | string | yes | Nonempty image reference |
+| `labels` | list of strings | no | GitHub runner labels |
+| `max_runners` | integer | yes | From 1 through 1000 |
+| `platform` | string | no | Backend specific |
 
-For Linux containers. Uses Docker-in-Docker.
+### Docker
 
-- `image`: Docker image with actions/runner (e.g., `ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest`)
-- `platform`: Specify for cross-architecture (e.g., `linux/amd64` for Rosetta 2 emulation on Apple Silicon)
-- Requires Docker installed and running on the host
+`platform` can be empty. When set, it must start with `linux/`, such as `linux/arm64` or `linux/amd64`.
 
-## Environment variables
+The image must contain the GitHub Actions runner and the tools needed by the workflow.
 
-Only one environment variable is supported:
+### Tart
 
-| Variable | Config file equivalent | Description |
-|----------|----------------------|-------------|
-| `LOG_LEVEL` | `log_level` | Overrides the log level from config file |
+`platform` must be empty. The image is a local or OCI Tart VM image.
 
-All other configuration must be done through the YAML config file.
+Tart requires Apple Silicon and the Tart CLI on the host.
 
-## Validation
+## CORS fields
 
-Startup, console validation, and console save use the same strict YAML validator. Unknown fields and duplicate keys are errors.
+The server applies these runtime defaults when a field is empty:
 
-Validation also checks runner set name uniqueness, auth choice, private key PEM data, API address, CORS values, writable paths, runner limits, and backend settings.
+| Field | Type | Runtime default | Rules |
+|---|---|---|---|
+| `allow_origin` | string | `*` | `*` or one valid origin URL |
+| `allow_methods` | string | `GET, POST, OPTIONS` | Only `GET`, `POST`, and `OPTIONS` |
+| `allow_headers` | string | `Content-Type, Connect-Protocol-Version, X-CSRF-Token` | One line |
+| `expose_headers` | string | `Connect-Protocol-Version` | One line |
+| `allow_credentials` | boolean | `false` | Requires a specific `allow_origin` when true |
+| `max_age` | integer | `0` | From 0 through 86400 seconds |
 
-GitHub connectivity is reported as a warning. It is not part of structural validation.
+Keep the Console on the same origin when possible. The daemon does not provide TLS.
 
-See [Use the operations console](/how-to/use-console/) for save, revision, and recovery behavior.
+## Path validation
+
+For `db_path`, `log_path`, and GitHub App private key paths, validation checks the local file system.
+
+* An existing file must be usable for its purpose.
+* A configured file path cannot name a directory.
+* An existing direct parent directory must be writable.
+* If the direct parent does not exist, its parent must exist.
+* `:memory:` is allowed for `db_path`.
+
+## Strict validation
+
+Startup, Console validation, and Console save use the same strict validator.
+
+Validation checks:
+
+* YAML structure
+* Known and duplicate fields
+* Required fields
+* Duration and number limits
+* GitHub owner and repository names
+* Global runner set name uniqueness
+* Auth method choice
+* Private key file and PEM data
+* Backend, image, and platform rules
+* API address
+* CORS values
+* Writable storage paths
+
+GitHub connectivity is not checked. Validation returns a warning for this limit.
+
+See [How to edit and activate config](/how-to/edit-config/) for the save flow.
