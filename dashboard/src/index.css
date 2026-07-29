@@ -513,9 +513,25 @@ input:focus {
 
 .filter-bar {
   display: grid;
-  grid-template-columns: 180px minmax(180px, 1fr) minmax(180px, 1fr);
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.pager {
+  padding-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.range-select {
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  background: var(--panel-raised);
 }
 
 .filter-bar input,

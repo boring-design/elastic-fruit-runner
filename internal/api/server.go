@@ -35,6 +35,7 @@ type Server struct {
 	authService       *auth.Service
 	configState       *configstate.Service
 	databasePath      string
+	logPath           string
 	idleTimeout       time.Duration
 	cors              config.CORSConfig
 }
@@ -44,6 +45,7 @@ type Dependencies struct {
 	Auth         *auth.Service
 	ConfigState  *configstate.Service
 	DatabasePath string
+	LogPath      string
 }
 
 // NewServer creates an API server backed by the management and vitals services.
@@ -70,6 +72,7 @@ func NewServer(managementService *management.Service, vitalsService *vitals.Serv
 		server.authService = dependencies[0].Auth
 		server.configState = dependencies[0].ConfigState
 		server.databasePath = dependencies[0].DatabasePath
+		server.logPath = dependencies[0].LogPath
 	}
 	return server
 }
@@ -580,6 +583,12 @@ func (s *Server) GetSystemInfo(_ context.Context, _ *connect.Request[controlplan
 	if s.databasePath != "" {
 		if info, err := os.Stat(s.databasePath); err == nil {
 			response.DatabaseSizeBytes = info.Size()
+		}
+	}
+	response.LogPath = s.logPath
+	if s.logPath != "" {
+		if info, err := os.Stat(s.logPath); err == nil {
+			response.LogSizeBytes = info.Size()
 		}
 	}
 	return connect.NewResponse(response), nil

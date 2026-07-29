@@ -3,7 +3,9 @@ package config
 import (
 	"bytes"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -70,6 +72,16 @@ func ValidateYAML(data []byte) ValidationResult {
 			Errors: []ValidationIssue{{Path: "$", Message: err.Error()}},
 		}
 	}
+	var extra any
+	if err := decoder.Decode(&extra); err != nil && !errors.Is(err, io.EOF) {
+		return ValidationResult{
+			Errors: []ValidationIssue{{Path: "$", Message: err.Error()}},
+		}
+	} else if err == nil {
+		return ValidationResult{
+			Errors: []ValidationIssue{{Path: "$", Message: "only one YAML document is allowed"}},
+		}
+	}
 	cfg := &Config{
 		Orgs:        raw.Orgs,
 		Repos:       raw.Repos,
@@ -115,8 +127,8 @@ func ValidateConfig(cfg *Config) ValidationResult {
 	if len(cfg.Orgs) == 0 && len(cfg.Repos) == 0 {
 		addError("$", "at least one org or repo is required")
 	}
-	if cfg.IdleTimeout <= 0 {
-		addError("idle_timeout", "must be greater than 0")
+	if cfg.IdleTimeout <= 0 || cfg.IdleTimeout > 24*time.Hour {
+		addError("idle_timeout", "must be greater than 0 and no more than 24h")
 	}
 	if _, err := cfg.ParsedLogLevel(); err != nil {
 		addError("log_level", "must be debug, info, warn, or error")
@@ -138,6 +150,7 @@ func ValidateConfig(cfg *Config) ValidationResult {
 	if cfg.CORS.MaxAge < 0 || cfg.CORS.MaxAge > 86400 {
 		addError("cors.max_age", "must be between 0 and 86400")
 	}
+	validateCORS(cfg.CORS, addError)
 	validateWritablePath(cfg.DBPath, "db_path", addError)
 	validateWritablePath(cfg.LogPath, "log_path", addError)
 
@@ -145,7 +158,7 @@ func ValidateConfig(cfg *Config) ValidationResult {
 	for index := range cfg.Orgs {
 		org := &cfg.Orgs[index]
 		path := "orgs[" + strconv.Itoa(index) + "]"
-		if !validGitHubName(org.Org) {
+		if !validGitHubOwner(org.Org) {
 			addError(path+".org", "must be a valid GitHub organization name")
 		}
 		validateAuthAll(&org.Auth, path+".auth", addError)
@@ -163,7 +176,7 @@ func ValidateConfig(cfg *Config) ValidationResult {
 		repo := &cfg.Repos[index]
 		path := "repos[" + strconv.Itoa(index) + "]"
 		parts := strings.Split(repo.Repo, "/")
-		if len(parts) != 2 || !validGitHubName(parts[0]) || !validGitHubName(parts[1]) {
+		if len(parts) != 2 || !validGitHubOwner(parts[0]) || !validGitHubRepository(parts[1]) {
 			addError(path+".repo", "must use owner/repo format")
 		}
 		validateAuthAll(&repo.Auth, path+".auth", addError)
@@ -181,10 +194,34 @@ func ValidateConfig(cfg *Config) ValidationResult {
 	return result
 }
 
-var githubNamePattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9_.-]{0,98}[A-Za-z0-9])?$`)
+var (
+	githubOwnerPattern      = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
+	githubRepositoryPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
+)
 
-func validGitHubName(value string) bool {
-	return githubNamePattern.MatchString(value)
+func validGitHubOwner(value string) bool {
+	return githubOwnerPattern.MatchString(value) && !strings.Contains(value, "--")
+}
+
+func validGitHubRepository(value string) bool {
+	return githubRepositoryPattern.MatchString(value)
+}
+
+func validateCORS(cors CORSConfig, addError func(string, string)) {
+	if cors.AllowMethods != "" {
+		methods := strings.Split(cors.AllowMethods, ",")
+		for _, method := range methods {
+			switch strings.TrimSpace(method) {
+			case "GET", "POST", "OPTIONS":
+			default:
+				addError("cors.allow_methods", "may contain only GET, POST, and OPTIONS")
+				return
+			}
+		}
+	}
+	if strings.Contains(cors.AllowHeaders, "\n") || strings.Contains(cors.ExposeHeaders, "\n") {
+		addError("cors", "header lists must stay on one line")
+	}
 }
 
 func validateAuthAll(auth *AuthConfig, path string, addError func(string, string)) {
@@ -252,6 +289,18 @@ func validateWritablePath(path, yamlPath string, addError func(string, string)) 
 		return
 	}
 	dir := filepath.Dir(path)
+	if info, err := os.Stat(path); err == nil {
+		if info.IsDir() {
+			addError(yamlPath, "must be a file path")
+			return
+		}
+		file, openErr := os.OpenFile(path, os.O_WRONLY, 0)
+		if openErr != nil {
+			addError(yamlPath, "file is not writable: "+openErr.Error())
+			return
+		}
+		_ = file.Close()
+	}
 	if info, err := os.Stat(dir); err == nil {
 		if !info.IsDir() {
 			addError(yamlPath, "parent path is not a directory")

@@ -408,4 +408,6 @@ message GetSystemInfoResponse {
   string go_version = 3;
   string database_path = 4;
   int64 database_size_bytes = 5;
+  string log_path = 6;
+  int64 log_size_bytes = 7;
 }

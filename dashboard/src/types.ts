@@ -151,4 +151,6 @@ export interface SystemInfo {
   goVersion: string
   databasePath: string
   databaseSizeBytes: number
+  logPath: string
+  logSizeBytes: number
 }

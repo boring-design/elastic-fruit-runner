@@ -85,27 +85,65 @@ func (svc *Service) cleanHistory(now time.Time) {
 			OR recorded_at < ?`,
 		now.Add(-rawHostRetention), now.Add(-historyRetention),
 	)
-	_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_logs WHERE recorded_at < ?`, now.Add(-historyRetention))
-	_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_resource_samples WHERE recorded_at < ?`, now.Add(-historyRetention))
+	_, _ = svc.db.ExecContext(ctx, `
+		DELETE FROM job_logs
+		WHERE recorded_at < ? OR job_id IN (
+			SELECT id FROM jobs
+			WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?
+		)`,
+		now.Add(-historyRetention), now.Add(-historyRetention),
+	)
+	_, _ = svc.db.ExecContext(ctx, `
+		DELETE FROM job_resource_samples
+		WHERE recorded_at < ? OR job_id IN (
+			SELECT id FROM jobs
+			WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?
+		)`,
+		now.Add(-historyRetention), now.Add(-historyRetention),
+	)
+	_, _ = svc.db.ExecContext(ctx, `
+		DELETE FROM jobs
+		WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?`,
+		now.Add(-historyRetention),
+	)
 
-	if databaseSize(svc.databasePath) <= maxHistoryBytes {
+	currentSize := databaseSize(svc.databasePath)
+	if currentSize <= maxHistoryBytes {
 		return
 	}
-	for databaseSize(svc.databasePath) > targetHistoryBytes {
-		var jobID string
-		err := svc.db.QueryRowContext(ctx, `
-			SELECT id FROM jobs
-			WHERE result != 'running'
-			ORDER BY COALESCE(completed_at, started_at)
-			LIMIT 1`).Scan(&jobID)
-		if err != nil {
+	for currentSize > targetHistoryBytes {
+		bytesToFree := currentSize - targetHistoryBytes
+		var freed int64
+		for freed < bytesToFree {
+			var jobID string
+			var estimatedBytes int64
+			err := svc.db.QueryRowContext(ctx, `
+				SELECT jobs.id,
+					4096
+					+ COALESCE((SELECT SUM(LENGTH(text)) FROM job_logs WHERE job_id = jobs.id), 0)
+					+ COALESCE((SELECT COUNT(*) * 256 FROM job_resource_samples WHERE job_id = jobs.id), 0)
+				FROM jobs
+				WHERE result != 'running'
+				ORDER BY COALESCE(completed_at, started_at)
+				LIMIT 1`).Scan(&jobID, &estimatedBytes)
+			if err != nil {
+				break
+			}
+			_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_logs WHERE job_id = ?`, jobID)
+			_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_resource_samples WHERE job_id = ?`, jobID)
+			_, _ = svc.db.ExecContext(ctx, `DELETE FROM jobs WHERE id = ? AND result != 'running'`, jobID)
+			freed += estimatedBytes
+		}
+		if freed == 0 {
 			break
 		}
-		_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_logs WHERE job_id = ?`, jobID)
-		_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_resource_samples WHERE job_id = ?`, jobID)
-		_, _ = svc.db.ExecContext(ctx, `DELETE FROM jobs WHERE id = ? AND result != 'running'`, jobID)
+		_, _ = svc.db.ExecContext(ctx, `PRAGMA wal_checkpoint(TRUNCATE)`)
+		if _, err := svc.db.ExecContext(ctx, `VACUUM`); err != nil {
+			slog.Warn("failed to compact history database", "err", err)
+			break
+		}
+		currentSize = databaseSize(svc.databasePath)
 	}
-	_, _ = svc.db.ExecContext(ctx, `PRAGMA wal_checkpoint(TRUNCATE)`)
 }
 
 func (svc *Service) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {

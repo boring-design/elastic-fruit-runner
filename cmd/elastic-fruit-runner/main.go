@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -144,6 +146,7 @@ func runDaemon() error {
 			Auth:         authService,
 			ConfigState:  configStateService,
 			DatabasePath: databasePath,
+			LogPath:      configLogPath(cfg),
 		},
 	)
 	httpServer := &http.Server{
@@ -225,8 +228,30 @@ func configureLogging(cfg *config.Config) error {
 		return fmt.Errorf("invalid log level %q: %w", cfg.LogLevel, err)
 	}
 
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	output := io.Writer(os.Stdout)
+	if cfg.LogPath != "" {
+		if err := os.MkdirAll(filepath.Dir(cfg.LogPath), 0o750); err != nil {
+			return fmt.Errorf("create log directory %s: %w", filepath.Dir(cfg.LogPath), err)
+		}
+		file, openErr := os.OpenFile(cfg.LogPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+		if openErr != nil {
+			return fmt.Errorf("open log file %s: %w", cfg.LogPath, openErr)
+		}
+		if chmodErr := file.Chmod(0o600); chmodErr != nil {
+			_ = file.Close()
+			return fmt.Errorf("set log file permissions %s: %w", cfg.LogPath, chmodErr)
+		}
+		output = io.MultiWriter(os.Stdout, file)
+	}
+	slog.SetDefault(slog.New(slog.NewJSONHandler(output, &slog.HandlerOptions{
 		Level: logLevel,
 	})))
 	return nil
+}
+
+func configLogPath(cfg *config.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	return cfg.LogPath
 }
