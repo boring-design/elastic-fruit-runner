@@ -13,24 +13,26 @@ Open [http://127.0.0.1:8080](http://127.0.0.1:8080) when you use the default lis
 * [Reset the Console password](/how-to/reset-console-password/)
 * [Upgrade Elastic Fruit Runner](/how-to/upgrade/)
 
-## Console pages
+## Operate runners and jobs
 
-* **Overview** shows current daemon, runner, job, config, and host state.
-* **Jobs** shows job history, filters, logs, resource data, and GitHub Actions links.
-* **Runner Sets** shows scope, backend, image, labels, capacity, connection state, and active runners.
-* **Config** shows active and disk config, validation, revisions, and restart instructions.
-* **System** shows runtime details, storage use, current host state, and host history.
+* [Investigate jobs](/how-to/investigate-jobs/)
+* [Check runner capacity](/how-to/check-runner-capacity/)
+* [Monitor host resources](/how-to/monitor-host-resources/)
+
+## Manage config
+
+* [Edit and activate config](/how-to/edit-config/)
+* [Recover config](/how-to/recover-config/)
 
 ## Related reference
 
-* [Configuration reference](/reference/configuration/)
-* [CLI reference](/reference/cli/)
+* [Console Reference](/reference/console/)
+* [History and Storage Reference](/reference/history-and-storage/)
+* [Configuration Reference](/reference/configuration/)
+* [CLI Reference](/reference/cli/)
 * [Troubleshooting](/how-to/troubleshooting/)
 
-## Network boundary
+## Understand the design
 
-The daemon does not provide TLS. Keep the default local address when possible.
-
-If another device must reach the Console, use a trusted private network or place the daemon behind a TLS reverse proxy that you operate. Do not expose the Console directly to the public internet.
-
-Every management call requires the admin session. Config writes, revision restore, and sign out also require a valid CSRF token.
+* [Runner lifecycle](/explanation/runner-lifecycle/)
+* [Console design](/explanation/console-design/)

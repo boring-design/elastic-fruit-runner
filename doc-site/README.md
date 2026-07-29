@@ -1,49 +1,52 @@
-# Starlight Starter Kit: Basics
+# Elastic Fruit Runner documentation
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+The user documentation uses the [Divio documentation system](https://docs.divio.com/documentation-system/). Keep each page focused on one type.
 
+## Page types
+
+* `tutorials/` helps a new user learn by reaching a reliable result.
+* `how-to/` gives the steps for one clear task.
+* `reference/` lists current behavior, fields, commands, states, and limits.
+* `explanation/` gives background, reasons, and tradeoffs.
+
+Development pages belong in the Development sidebar group. Do not mix internal test or release work into the user journey.
+
+## Files and routes
+
+Pages live under `src/content/docs/`.
+
+Use lowercase file names with words separated by hyphens. The file path becomes the public route. Do not rename an existing public page without keeping its route available.
+
+Put static images in `public/`. Use only test data. Remove tokens, private repository names, private key paths, personal names, and other private data. Give every image clear alt text.
+
+Use English and common words. Keep commands ready to copy.
+
+## Source of truth
+
+Reference pages must match the current code.
+
+* Config fields and validation come from `config/`.
+* Commands and startup behavior come from `cmd/elastic-fruit-runner/`.
+* Console behavior comes from `dashboard/src/` and `internal/api/`.
+* Job history, host history, and cleanup rules come from `internal/management/`.
+* Message fields and states come from `proto/controlplane/`.
+
+Do not describe the Connect RPC service as a stable public API.
+
+## Local checks
+
+Run these commands from the repository root:
+
+```sh
+pnpm --dir doc-site install --frozen-lockfile
+pnpm --dir doc-site build
+make check
 ```
-pnpm create astro@latest -- --template starlight
+
+Before a commit, also run:
+
+```sh
+prek run --all-files
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro + Starlight project, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   └── docs/
-│   └── content.config.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
-```
-
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
-
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
-
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `pnpm install`             | Installs dependencies                            |
-| `pnpm dev`             | Starts local dev server at `localhost:4321`      |
-| `pnpm build`           | Build your production site to `./dist/`          |
-| `pnpm preview`         | Preview your build locally, before deploying     |
-| `pnpm astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `pnpm astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+Check changed pages in a desktop browser and at 390px width. Check both light and dark themes when an image changes.
