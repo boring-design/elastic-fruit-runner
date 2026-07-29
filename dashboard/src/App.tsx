@@ -4,9 +4,13 @@ import useSWR from 'swr'
 import { fetchSession, login, logout, setupAdmin } from './api/fetchers'
 import {
   fetchHostResources,
+  fetchConfigRevisions,
   fetchJobLogs,
   fetchJobResources,
   fetchJobs,
+  restoreConfigRevision,
+  saveConfig,
+  validateConfig,
 } from './api/fetchers'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
@@ -189,7 +193,7 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
           {page === 'overview' && <Overview />}
           {page === 'jobs' && <JobsPage jobs={store.recentJobs} now={store.now} />}
           {page === 'runner-sets' && <RunnerSetsPage runnerSets={store.runnerSets} />}
-          {page === 'config' && store.configStatus && <ConfigPage status={store.configStatus} />}
+          {page === 'config' && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
           {page === 'system' && <SystemPage />}
         </main>
       </div>
@@ -397,11 +401,63 @@ function RunnerSetsPage({ runnerSets }: { runnerSets: RunnerSet[] }) {
   )
 }
 
-function ConfigPage({ status }: { status: ConfigStatus }) {
+function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: string }) {
   const sameText = status.activeYAML === status.diskYAML
+  const [yaml, setYAML] = useState(status.diskYAML)
+  const [messages, setMessages] = useState<Array<{ path: string; message: string; tone: 'danger' | 'warning' }>>([])
+  const [saving, setSaving] = useState(false)
+  const [confirmWarnings, setConfirmWarnings] = useState(false)
+  const revisions = useSWR('configRevisions', fetchConfigRevisions)
+
+  useEffect(() => {
+    setYAML(status.diskYAML)
+  }, [status.diskHash, status.diskYAML])
+
+  async function check() {
+    const result = await validateConfig(yaml)
+    setMessages([
+      ...result.errors.map(issue => ({ ...issue, tone: 'danger' as const })),
+      ...result.warnings.map(issue => ({ ...issue, tone: 'warning' as const })),
+    ])
+    setConfirmWarnings(false)
+    return result
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      const result = await check()
+      if (result.errors.length > 0) return
+      if (result.warnings.length > 0 && !confirmWarnings) {
+        setConfirmWarnings(true)
+        return
+      }
+      const saved = await saveConfig(yaml, csrfToken, confirmWarnings)
+      setConfirmWarnings(false)
+      setMessages(saved.warnings.map(issue => ({ ...issue, tone: 'warning' as const })))
+      await revisions.mutate()
+    } catch (error) {
+      setMessages([{ path: '$', message: String(error), tone: 'danger' }])
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function restore(id: number) {
+    setSaving(true)
+    try {
+      await restoreConfigRevision(id, csrfToken)
+      await revisions.mutate()
+    } catch (error) {
+      setMessages([{ path: '$', message: String(error), tone: 'danger' }])
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <>
-      <PageHeader title="Config" detail="Read only view. Disk changes do not affect the running process." />
+      <PageHeader title="Config" detail="Validate and save the disk config. Restart the service manually to apply changes." />
       <div className={`notice ${status.state === 'disk_invalid' ? 'danger' : status.state === 'restart_required' ? 'warning' : 'success'}`}>
         <strong>{configStateLabel(status.state)}</strong>
         <span>
@@ -411,6 +467,12 @@ function ConfigPage({ status }: { status: ConfigStatus }) {
         </span>
       </div>
       {status.validationErrors.map(error => <div className="notice danger" key={error}>{error}</div>)}
+      {messages.map((message, index) => (
+        <div className={`notice ${message.tone}`} key={`${message.path}-${index}`}>
+          <strong>{message.path}</strong>
+          <span>{message.message}</span>
+        </div>
+      ))}
       <section className="panel">
         <PanelHeader title="Config identity" detail={status.path || 'No config file'} />
         <DefinitionList
@@ -428,11 +490,48 @@ function ConfigPage({ status }: { status: ConfigStatus }) {
           <pre>{status.activeYAML || 'No active YAML available.'}</pre>
         </section>
         <section className="panel">
-          <PanelHeader title="Disk config" detail={sameText ? 'Matches active text' : 'Differs from active text'} />
-          <pre>{status.diskYAML || 'No valid disk YAML available.'}</pre>
+          <PanelHeader title="Disk config editor" detail={sameText ? 'Matches active text' : 'Differs from active text'} />
+          <textarea className="config-editor" spellCheck={false} value={yaml} onChange={event => setYAML(event.target.value)} />
+          <div className="editor-actions">
+            <button className="text-button" disabled={saving} onClick={check}>Validate</button>
+            <button className="primary-button" disabled={saving} onClick={save}>{saving ? 'Working…' : confirmWarnings ? 'Save with warnings' : 'Save to disk'}</button>
+          </div>
         </section>
       </div>
+      {!sameText && <ConfigDiff active={status.activeYAML} disk={status.diskYAML} />}
+      {status.state === 'restart_required' && (
+        <section className="panel">
+          <PanelHeader title="Manual restart" detail="A restart can interrupt running jobs." />
+          {status.restartCommands.map(command => <pre key={command}>{command}</pre>)}
+        </section>
+      )}
+      <section className="panel">
+        <PanelHeader title="Recent revisions" detail="The newest ten saved versions" />
+        {revisions.data?.length
+          ? <div className="revision-list">{revisions.data.map(revision => (
+            <div key={revision.id}>
+              <span>{formatDate(revision.createdAt)} · {revision.source} · {shortenHash(revision.configHash)}</span>
+              <button className="text-button" disabled={saving} onClick={() => restore(revision.id)}>Restore to disk</button>
+            </div>
+          ))}</div>
+          : <EmptyState title="No revisions recorded" />}
+      </section>
     </>
+  )
+}
+
+function ConfigDiff({ active, disk }: { active: string; disk: string }) {
+  const activeLines = new Set(active.split('\n'))
+  const diskLines = new Set(disk.split('\n'))
+  const removed = active.split('\n').filter(line => line && !diskLines.has(line))
+  const added = disk.split('\n').filter(line => line && !activeLines.has(line))
+  return (
+    <section className="panel">
+      <PanelHeader title="Config diff" detail="Line changes between active and disk config" />
+      <pre className="config-diff">
+        {removed.map(line => `- ${line}`).concat(added.map(line => `+ ${line}`)).join('\n') || 'No line changes.'}
+      </pre>
+    </section>
   )
 }
 

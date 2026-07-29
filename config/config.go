@@ -18,6 +18,7 @@ type Config struct {
 	APIAddr     string        `yaml:"api_addr"`
 	CORS        CORSConfig    `yaml:"cors"`
 	DBPath      string        `yaml:"db_path"`
+	LogPath     string        `yaml:"log_path"`
 	FilePath    string        `yaml:"-"`
 	LoadedHash  string        `yaml:"-"`
 	LoadedYAML  []byte        `yaml:"-"`
@@ -162,7 +163,6 @@ func (c *Config) Validate() error {
 			return err
 		}
 	}
-
 	return nil
 }
 

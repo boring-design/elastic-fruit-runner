@@ -257,6 +257,9 @@ func toProtoModule(module *debug.Module) *controlplanev1.Module {
 }
 
 func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlplanev1.ListRunnerSetsRequest]) (*connect.Response[controlplanev1.ListRunnerSetsResponse], error) {
+	if s.managementService == nil {
+		return connect.NewResponse(&controlplanev1.ListRunnerSetsResponse{}), nil
+	}
 	views := s.managementService.ListRunnerSets()
 	sets := make([]*controlplanev1.RunnerSet, 0, len(views))
 	for _, v := range views {
@@ -285,6 +288,9 @@ func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlpla
 }
 
 func (s *Server) ListJobRecords(_ context.Context, req *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
+	if s.managementService == nil {
+		return connect.NewResponse(&controlplanev1.ListJobRecordsResponse{}), nil
+	}
 	cursor, _ := strconv.Atoi(req.Msg.Cursor)
 	filter := management.JobFilter{
 		Status:     req.Msg.Status,
@@ -315,6 +321,9 @@ func (s *Server) ListJobRecords(_ context.Context, req *connect.Request[controlp
 }
 
 func (s *Server) GetJobDetail(_ context.Context, req *connect.Request[controlplanev1.GetJobDetailRequest]) (*connect.Response[controlplanev1.GetJobDetailResponse], error) {
+	if s.managementService == nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("job record was not found"))
+	}
 	job, err := s.managementService.GetJobRecord(req.Msg.Id)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeNotFound, errors.New("job record was not found"))
@@ -323,6 +332,9 @@ func (s *Server) GetJobDetail(_ context.Context, req *connect.Request[controlpla
 }
 
 func (s *Server) GetJobLogs(_ context.Context, req *connect.Request[controlplanev1.GetJobLogsRequest]) (*connect.Response[controlplanev1.GetJobLogsResponse], error) {
+	if s.managementService == nil {
+		return connect.NewResponse(&controlplanev1.GetJobLogsResponse{}), nil
+	}
 	logs, next := s.managementService.GetJobLogs(req.Msg.JobId, req.Msg.AfterSequence, int(req.Msg.PageSize))
 	lines := make([]*controlplanev1.JobLogLine, 0, len(logs))
 	for _, line := range logs {
@@ -336,6 +348,9 @@ func (s *Server) GetJobLogs(_ context.Context, req *connect.Request[controlplane
 }
 
 func (s *Server) GetJobResourceSamples(_ context.Context, req *connect.Request[controlplanev1.GetJobResourceSamplesRequest]) (*connect.Response[controlplanev1.GetJobResourceSamplesResponse], error) {
+	if s.managementService == nil {
+		return connect.NewResponse(&controlplanev1.GetJobResourceSamplesResponse{}), nil
+	}
 	samples := s.managementService.GetJobSamples(req.Msg.JobId)
 	result := make([]*controlplanev1.ResourceSample, 0, len(samples))
 	for _, sample := range samples {
@@ -345,6 +360,9 @@ func (s *Server) GetJobResourceSamples(_ context.Context, req *connect.Request[c
 }
 
 func (s *Server) GetHostResourceSamples(_ context.Context, req *connect.Request[controlplanev1.GetHostResourceSamplesRequest]) (*connect.Response[controlplanev1.GetHostResourceSamplesResponse], error) {
+	if s.managementService == nil {
+		return connect.NewResponse(&controlplanev1.GetHostResourceSamplesResponse{}), nil
+	}
 	to := time.Now()
 	from := to.Add(-time.Hour)
 	if req.Msg.From != nil {
@@ -447,6 +465,13 @@ func (s *Server) GetConfigStatus(_ context.Context, _ *connect.Request[controlpl
 	if s.configState == nil {
 		return connect.NewResponse(&controlplanev1.GetConfigStatusResponse{}), nil
 	}
+	return connect.NewResponse(s.configStatusResponse()), nil
+}
+
+func (s *Server) configStatusResponse() *controlplanev1.GetConfigStatusResponse {
+	if s.configState == nil {
+		return &controlplanev1.GetConfigStatusResponse{}
+	}
 	snapshot := s.configState.Get()
 	response := &controlplanev1.GetConfigStatusResponse{
 		Path:             snapshot.Path,
@@ -457,11 +482,92 @@ func (s *Server) GetConfigStatus(_ context.Context, _ *connect.Request[controlpl
 		ValidationErrors: snapshot.ValidationErrors,
 		ActiveYaml:       snapshot.ActiveYAML,
 		DiskYaml:         snapshot.DiskYAML,
+		RestartCommands: []string{
+			"brew services restart elastic-fruit-runner",
+			"docker compose restart elastic-fruit-runner",
+			"sudo systemctl restart elastic-fruit-runner",
+		},
 	}
 	if snapshot.DiskModifiedAt != nil {
 		response.DiskModifiedAt = timestamppb.New(*snapshot.DiskModifiedAt)
 	}
-	return connect.NewResponse(response), nil
+	return response
+}
+
+func (s *Server) ValidateConfig(_ context.Context, req *connect.Request[controlplanev1.ValidateConfigRequest]) (*connect.Response[controlplanev1.ValidateConfigResponse], error) {
+	if s.configState == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("config service is unavailable"))
+	}
+	result := s.configState.Validate([]byte(req.Msg.Yaml))
+	return connect.NewResponse(toProtoValidation(result)), nil
+}
+
+func (s *Server) SaveConfig(ctx context.Context, req *connect.Request[controlplanev1.SaveConfigRequest]) (*connect.Response[controlplanev1.SaveConfigResponse], error) {
+	if err := s.requireCSRF(ctx, req.Header()); err != nil {
+		return nil, err
+	}
+	if s.configState == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("config service is unavailable"))
+	}
+	validation := s.configState.Validate([]byte(req.Msg.Yaml))
+	if len(validation.Errors) > 0 {
+		return connect.NewResponse(&controlplanev1.SaveConfigResponse{Validation: toProtoValidation(validation)}), nil
+	}
+	if len(validation.Warnings) > 0 && !req.Msg.ConfirmWarnings {
+		return connect.NewResponse(&controlplanev1.SaveConfigResponse{Validation: toProtoValidation(validation)}), nil
+	}
+	result, err := s.configState.Save([]byte(req.Msg.Yaml), "console")
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&controlplanev1.SaveConfigResponse{
+		Validation: toProtoValidation(result),
+		Status:     s.configStatusResponse(),
+	}), nil
+}
+
+func (s *Server) ListConfigRevisions(_ context.Context, _ *connect.Request[controlplanev1.ListConfigRevisionsRequest]) (*connect.Response[controlplanev1.ListConfigRevisionsResponse], error) {
+	if s.configState == nil {
+		return connect.NewResponse(&controlplanev1.ListConfigRevisionsResponse{}), nil
+	}
+	revisions, err := s.configState.Revisions()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	result := make([]*controlplanev1.ConfigRevision, 0, len(revisions))
+	for _, revision := range revisions {
+		result = append(result, &controlplanev1.ConfigRevision{
+			Id:         revision.ID,
+			CreatedAt:  timestamppb.New(revision.CreatedAt),
+			Source:     revision.Source,
+			ConfigHash: revision.Hash,
+		})
+	}
+	return connect.NewResponse(&controlplanev1.ListConfigRevisionsResponse{Revisions: result}), nil
+}
+
+func (s *Server) RestoreConfigRevision(ctx context.Context, req *connect.Request[controlplanev1.RestoreConfigRevisionRequest]) (*connect.Response[controlplanev1.RestoreConfigRevisionResponse], error) {
+	if err := s.requireCSRF(ctx, req.Header()); err != nil {
+		return nil, err
+	}
+	if s.configState == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("config service is unavailable"))
+	}
+	if err := s.configState.Restore(req.Msg.Id); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return connect.NewResponse(&controlplanev1.RestoreConfigRevisionResponse{Status: s.configStatusResponse()}), nil
+}
+
+func toProtoValidation(result config.ValidationResult) *controlplanev1.ValidateConfigResponse {
+	response := &controlplanev1.ValidateConfigResponse{NormalizedYaml: result.Normalized}
+	for _, issue := range result.Errors {
+		response.Errors = append(response.Errors, &controlplanev1.ConfigValidationIssue{Path: issue.Path, Message: issue.Message})
+	}
+	for _, issue := range result.Warnings {
+		response.Warnings = append(response.Warnings, &controlplanev1.ConfigValidationIssue{Path: issue.Path, Message: issue.Message})
+	}
+	return response
 }
 
 func (s *Server) GetSystemInfo(_ context.Context, _ *connect.Request[controlplanev1.GetSystemInfoRequest]) (*connect.Response[controlplanev1.GetSystemInfoResponse], error) {
@@ -557,6 +663,17 @@ func (s *Server) sessionFromHeader(ctx context.Context, header http.Header) (aut
 		return auth.Session{}, auth.ErrSessionNotFound
 	}
 	return s.authService.FindSession(ctx, cookie.Value)
+}
+
+func (s *Server) requireCSRF(ctx context.Context, header http.Header) error {
+	session, err := s.sessionFromHeader(ctx, header)
+	if err != nil {
+		return connect.NewError(connect.CodeUnauthenticated, auth.ErrSessionNotFound)
+	}
+	if header.Get("X-CSRF-Token") != session.CSRFToken {
+		return connect.NewError(connect.CodePermissionDenied, errors.New("CSRF token is not valid"))
+	}
+	return nil
 }
 
 func setSessionCookie(header http.Header, session auth.Session) {

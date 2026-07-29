@@ -3,9 +3,11 @@ package configstate
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -41,17 +43,20 @@ type Service struct {
 	activeHash     string
 	activeYAML     string
 	activeLoadedAt time.Time
+	db             *sql.DB
 
 	mu       sync.RWMutex
 	snapshot Snapshot
 }
 
 // New creates a config state service from the config loaded at startup.
-func New(cfg *config.Config, loadedAt time.Time) *Service {
+func New(cfg *config.Config, loadedAt time.Time, databasePath ...string) *Service {
 	activeData := cfg.LoadedYAML
 	activeHash := cfg.LoadedHash
 	if len(activeData) == 0 {
 		activeData, _ = yaml.Marshal(cfg)
+		activeHash = hash(activeData)
+	} else if activeHash == "" {
 		activeHash = hash(activeData)
 	}
 	service := &Service{
@@ -60,8 +65,39 @@ func New(cfg *config.Config, loadedAt time.Time) *Service {
 		activeYAML:     redactYAML(activeData),
 		activeLoadedAt: loadedAt,
 	}
+	if len(databasePath) > 0 && databasePath[0] != "" {
+		if db, err := openRevisionDB(databasePath[0]); err == nil {
+			service.db = db
+			if len(cfg.LoadedYAML) > 0 {
+				_ = service.saveRevision(cfg.LoadedYAML, "startup", true)
+			}
+		}
+	}
 	service.refresh()
 	return service
+}
+
+// NewForConfigMode creates state when no valid runtime config exists.
+func NewForConfigMode(path, databasePath string, loadedAt time.Time) *Service {
+	service := &Service{
+		path:           path,
+		activeLoadedAt: loadedAt,
+	}
+	if databasePath != "" {
+		if db, err := openRevisionDB(databasePath); err == nil {
+			service.db = db
+		}
+	}
+	service.refresh()
+	return service
+}
+
+// Close closes config revision storage.
+func (s *Service) Close() error {
+	if s.db == nil {
+		return nil
+	}
+	return s.db.Close()
 }
 
 // Start refreshes disk state until the context ends.
@@ -118,10 +154,12 @@ func (s *Service) refresh() {
 		next.DiskModifiedAt = &modifiedAt
 	}
 
-	var document yaml.Node
-	if err := yaml.Unmarshal(data, &document); err != nil {
+	validation := config.ValidateYAML(data)
+	if len(validation.Errors) > 0 {
 		next.State = StateDiskInvalid
-		next.ValidationErrors = []string{fmt.Sprintf("parse config file %s: %v", s.path, err)}
+		for _, issue := range validation.Errors {
+			next.ValidationErrors = append(next.ValidationErrors, issue.String())
+		}
 		s.set(next)
 		return
 	}
@@ -146,7 +184,13 @@ func hash(data []byte) string {
 func redactYAML(data []byte) string {
 	var document yaml.Node
 	if err := yaml.Unmarshal(data, &document); err != nil {
-		return ""
+		lines := strings.Split(string(data), "\n")
+		for index, line := range lines {
+			if separator := strings.Index(line, "pat_token:"); separator >= 0 {
+				lines[index] = line[:separator] + "pat_token: ********"
+			}
+		}
+		return strings.Join(lines, "\n")
 	}
 	redactNode(&document)
 	redacted, err := yaml.Marshal(&document)

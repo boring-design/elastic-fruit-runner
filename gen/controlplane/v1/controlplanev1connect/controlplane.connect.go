@@ -76,6 +76,18 @@ const (
 	// ControlPlaneServiceGetConfigStatusProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetConfigStatus RPC.
 	ControlPlaneServiceGetConfigStatusProcedure = "/controlplane.v1.ControlPlaneService/GetConfigStatus"
+	// ControlPlaneServiceValidateConfigProcedure is the fully-qualified name of the
+	// ControlPlaneService's ValidateConfig RPC.
+	ControlPlaneServiceValidateConfigProcedure = "/controlplane.v1.ControlPlaneService/ValidateConfig"
+	// ControlPlaneServiceSaveConfigProcedure is the fully-qualified name of the ControlPlaneService's
+	// SaveConfig RPC.
+	ControlPlaneServiceSaveConfigProcedure = "/controlplane.v1.ControlPlaneService/SaveConfig"
+	// ControlPlaneServiceListConfigRevisionsProcedure is the fully-qualified name of the
+	// ControlPlaneService's ListConfigRevisions RPC.
+	ControlPlaneServiceListConfigRevisionsProcedure = "/controlplane.v1.ControlPlaneService/ListConfigRevisions"
+	// ControlPlaneServiceRestoreConfigRevisionProcedure is the fully-qualified name of the
+	// ControlPlaneService's RestoreConfigRevision RPC.
+	ControlPlaneServiceRestoreConfigRevisionProcedure = "/controlplane.v1.ControlPlaneService/RestoreConfigRevision"
 	// ControlPlaneServiceGetSystemInfoProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetSystemInfo RPC.
 	ControlPlaneServiceGetSystemInfoProcedure = "/controlplane.v1.ControlPlaneService/GetSystemInfo"
@@ -105,6 +117,10 @@ type ControlPlaneServiceClient interface {
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
 	GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error)
+	ValidateConfig(context.Context, *connect.Request[v1.ValidateConfigRequest]) (*connect.Response[v1.ValidateConfigResponse], error)
+	SaveConfig(context.Context, *connect.Request[v1.SaveConfigRequest]) (*connect.Response[v1.SaveConfigResponse], error)
+	ListConfigRevisions(context.Context, *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error)
+	RestoreConfigRevision(context.Context, *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error)
 	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
 }
 
@@ -203,6 +219,30 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("GetConfigStatus")),
 			connect.WithClientOptions(opts...),
 		),
+		validateConfig: connect.NewClient[v1.ValidateConfigRequest, v1.ValidateConfigResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceValidateConfigProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("ValidateConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		saveConfig: connect.NewClient[v1.SaveConfigRequest, v1.SaveConfigResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceSaveConfigProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("SaveConfig")),
+			connect.WithClientOptions(opts...),
+		),
+		listConfigRevisions: connect.NewClient[v1.ListConfigRevisionsRequest, v1.ListConfigRevisionsResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceListConfigRevisionsProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("ListConfigRevisions")),
+			connect.WithClientOptions(opts...),
+		),
+		restoreConfigRevision: connect.NewClient[v1.RestoreConfigRevisionRequest, v1.RestoreConfigRevisionResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceRestoreConfigRevisionProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("RestoreConfigRevision")),
+			connect.WithClientOptions(opts...),
+		),
 		getSystemInfo: connect.NewClient[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse](
 			httpClient,
 			baseURL+ControlPlaneServiceGetSystemInfoProcedure,
@@ -228,6 +268,10 @@ type controlPlaneServiceClient struct {
 	getHostResourceSamples *connect.Client[v1.GetHostResourceSamplesRequest, v1.GetHostResourceSamplesResponse]
 	getMachineVitals       *connect.Client[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse]
 	getConfigStatus        *connect.Client[v1.GetConfigStatusRequest, v1.GetConfigStatusResponse]
+	validateConfig         *connect.Client[v1.ValidateConfigRequest, v1.ValidateConfigResponse]
+	saveConfig             *connect.Client[v1.SaveConfigRequest, v1.SaveConfigResponse]
+	listConfigRevisions    *connect.Client[v1.ListConfigRevisionsRequest, v1.ListConfigRevisionsResponse]
+	restoreConfigRevision  *connect.Client[v1.RestoreConfigRevisionRequest, v1.RestoreConfigRevisionResponse]
 	getSystemInfo          *connect.Client[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse]
 }
 
@@ -301,6 +345,26 @@ func (c *controlPlaneServiceClient) GetConfigStatus(ctx context.Context, req *co
 	return c.getConfigStatus.CallUnary(ctx, req)
 }
 
+// ValidateConfig calls controlplane.v1.ControlPlaneService.ValidateConfig.
+func (c *controlPlaneServiceClient) ValidateConfig(ctx context.Context, req *connect.Request[v1.ValidateConfigRequest]) (*connect.Response[v1.ValidateConfigResponse], error) {
+	return c.validateConfig.CallUnary(ctx, req)
+}
+
+// SaveConfig calls controlplane.v1.ControlPlaneService.SaveConfig.
+func (c *controlPlaneServiceClient) SaveConfig(ctx context.Context, req *connect.Request[v1.SaveConfigRequest]) (*connect.Response[v1.SaveConfigResponse], error) {
+	return c.saveConfig.CallUnary(ctx, req)
+}
+
+// ListConfigRevisions calls controlplane.v1.ControlPlaneService.ListConfigRevisions.
+func (c *controlPlaneServiceClient) ListConfigRevisions(ctx context.Context, req *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error) {
+	return c.listConfigRevisions.CallUnary(ctx, req)
+}
+
+// RestoreConfigRevision calls controlplane.v1.ControlPlaneService.RestoreConfigRevision.
+func (c *controlPlaneServiceClient) RestoreConfigRevision(ctx context.Context, req *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error) {
+	return c.restoreConfigRevision.CallUnary(ctx, req)
+}
+
 // GetSystemInfo calls controlplane.v1.ControlPlaneService.GetSystemInfo.
 func (c *controlPlaneServiceClient) GetSystemInfo(ctx context.Context, req *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error) {
 	return c.getSystemInfo.CallUnary(ctx, req)
@@ -331,6 +395,10 @@ type ControlPlaneServiceHandler interface {
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
 	GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error)
+	ValidateConfig(context.Context, *connect.Request[v1.ValidateConfigRequest]) (*connect.Response[v1.ValidateConfigResponse], error)
+	SaveConfig(context.Context, *connect.Request[v1.SaveConfigRequest]) (*connect.Response[v1.SaveConfigResponse], error)
+	ListConfigRevisions(context.Context, *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error)
+	RestoreConfigRevision(context.Context, *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error)
 	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
 }
 
@@ -425,6 +493,30 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("GetConfigStatus")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceValidateConfigHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceValidateConfigProcedure,
+		svc.ValidateConfig,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("ValidateConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceSaveConfigHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceSaveConfigProcedure,
+		svc.SaveConfig,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("SaveConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceListConfigRevisionsHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceListConfigRevisionsProcedure,
+		svc.ListConfigRevisions,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("ListConfigRevisions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceRestoreConfigRevisionHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceRestoreConfigRevisionProcedure,
+		svc.RestoreConfigRevision,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("RestoreConfigRevision")),
+		connect.WithHandlerOptions(opts...),
+	)
 	controlPlaneServiceGetSystemInfoHandler := connect.NewUnaryHandler(
 		ControlPlaneServiceGetSystemInfoProcedure,
 		svc.GetSystemInfo,
@@ -461,6 +553,14 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceGetMachineVitalsHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetConfigStatusProcedure:
 			controlPlaneServiceGetConfigStatusHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceValidateConfigProcedure:
+			controlPlaneServiceValidateConfigHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceSaveConfigProcedure:
+			controlPlaneServiceSaveConfigHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceListConfigRevisionsProcedure:
+			controlPlaneServiceListConfigRevisionsHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceRestoreConfigRevisionProcedure:
+			controlPlaneServiceRestoreConfigRevisionHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetSystemInfoProcedure:
 			controlPlaneServiceGetSystemInfoHandler.ServeHTTP(w, r)
 		default:
@@ -526,6 +626,22 @@ func (UnimplementedControlPlaneServiceHandler) GetMachineVitals(context.Context,
 
 func (UnimplementedControlPlaneServiceHandler) GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetConfigStatus is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) ValidateConfig(context.Context, *connect.Request[v1.ValidateConfigRequest]) (*connect.Response[v1.ValidateConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.ValidateConfig is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) SaveConfig(context.Context, *connect.Request[v1.SaveConfigRequest]) (*connect.Response[v1.SaveConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.SaveConfig is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) ListConfigRevisions(context.Context, *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.ListConfigRevisions is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) RestoreConfigRevision(context.Context, *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.RestoreConfigRevision is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error) {

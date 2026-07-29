@@ -124,6 +124,25 @@ export interface ConfigStatus {
   validationErrors: string[]
   activeYAML: string
   diskYAML: string
+  restartCommands: string[]
+}
+
+export interface ConfigValidationIssue {
+  path: string
+  message: string
+}
+
+export interface ConfigValidation {
+  errors: ConfigValidationIssue[]
+  warnings: ConfigValidationIssue[]
+  normalizedYAML: string
+}
+
+export interface ConfigRevision {
+  id: number
+  createdAt: Date
+  source: string
+  configHash: string
 }
 
 export interface SystemInfo {

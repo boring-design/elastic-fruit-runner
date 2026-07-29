@@ -612,6 +612,43 @@ input:focus {
   vector-effect: non-scaling-stroke;
 }
 
+.config-editor {
+  width: 100%;
+  min-height: 520px;
+  padding: 14px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  outline: none;
+  color: var(--text);
+  background: #090b0e;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.config-editor:focus {
+  border-color: var(--blue);
+}
+
+.editor-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.revision-list > div {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--dim);
+  font-size: 11px;
+}
+
 .empty-state,
 .full-page-message {
   color: var(--dim);
