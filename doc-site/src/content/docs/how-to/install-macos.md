@@ -72,6 +72,8 @@ If the Mac is used as a dedicated runner host (e.g. a Mac mini or a MacBook with
 brew services start elastic-fruit-runner
 ```
 
+Open `http://127.0.0.1:8080` and use the setup code from the service log. See [Use the operations console](/how-to/use-console/).
+
 Check status:
 
 ```sh
