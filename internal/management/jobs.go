@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"strings"
 	"time"
 
 	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
@@ -31,11 +32,20 @@ func NewJobStore(db *sql.DB) *JobStore {
 	}
 }
 
-// knownJobResults is the set of valid result strings from the GitHub Scale Set API.
+// knownJobResults is the set of valid result strings the GitHub Actions Scale
+// Set API is documented to send. Comparison is case-insensitive (the API has
+// historically sent both lowercase and Title Case forms across versions).
 var knownJobResults = map[string]struct{}{
 	"succeeded": {},
 	"failed":    {},
 	"canceled":  {},
+}
+
+// isKnownJobResult reports whether result is one of the documented Scale Set
+// API result strings (case-insensitive).
+func isKnownJobResult(result string) bool {
+	_, ok := knownJobResults[strings.ToLower(result)]
+	return ok
 }
 
 // RecordJobStarted inserts a new job with result "running".
@@ -49,16 +59,32 @@ func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
 		StartedAt:     time.Now(),
 	})
 	if err != nil {
-		slog.Error("failed to record job started", "job_id", jobID, "err", err)
+		slog.Error("failed to record job started",
+			"job_id", jobID,
+			"runner_name", runnerName,
+			"runner_set_name", setName,
+			"err", err,
+		)
 	}
 }
 
 // RecordJobCompleted finds an existing job by ID and updates its result.
-// If the job does not exist, inserts a completed-only record.
-func (s *JobStore) RecordJobCompleted(jobID, result string) {
-	if _, ok := knownJobResults[result]; !ok {
-		slog.Error("unexpected job result from scale-set API, refusing to record invalid state", "job_id", jobID, "result", result)
-		return
+// If the job does not exist (e.g. the daemon restarted between start and
+// completion events), inserts a completed-only record using the runner name
+// and set name from the completion event so the dashboard can still display
+// the job correctly.
+//
+// Unknown result strings are persisted as-is (with a warning) so the row
+// transitions out of "running" and the COMPLETED counter increments. The
+// API layer maps unknown values to JOB_RESULT_UNKNOWN for the dashboard.
+func (s *JobStore) RecordJobCompleted(setName, jobID, runnerName, result string) {
+	if !isKnownJobResult(result) {
+		slog.Warn("unrecognised job result from scale-set API; recording as-is",
+			"job_id", jobID,
+			"runner_name", runnerName,
+			"runner_set_name", setName,
+			"result", result,
+		)
 	}
 
 	ctx := context.Background()
@@ -70,27 +96,51 @@ func (s *JobStore) RecordJobCompleted(jobID, result string) {
 		ID:          jobID,
 	})
 	if err != nil {
-		slog.Error("failed to update job completed", "job_id", jobID, "err", err)
+		slog.Error("failed to update job completed",
+			"job_id", jobID,
+			"runner_name", runnerName,
+			"runner_set_name", setName,
+			"result", result,
+			"err", err,
+		)
 		return
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		slog.Error("failed to check rows affected", "job_id", jobID, "err", err)
+		slog.Error("failed to check rows affected for completion update",
+			"job_id", jobID,
+			"runner_name", runnerName,
+			"runner_set_name", setName,
+			"err", err,
+		)
 		return
 	}
 
-	if rowsAffected == 0 {
-		// Job was never recorded (e.g. daemon restarted). Insert a completed-only record.
-		err = s.queries.InsertCompletedJob(ctx, sqlcdb.InsertCompletedJobParams{
-			ID:          jobID,
-			Result:      result,
-			StartedAt:   now,
-			CompletedAt: sql.NullTime{Time: now, Valid: true},
-		})
-		if err != nil {
-			slog.Error("failed to insert completed-only job record", "job_id", jobID, "err", err)
-		}
+	if rowsAffected > 0 {
+		return
+	}
+
+	// Job was never recorded as started (e.g. daemon restarted, or the start
+	// event was missed). Insert a completed-only record carrying the runner
+	// names from the completion event so downstream consumers have full
+	// context — empty fields here previously crashed the dashboard.
+	err = s.queries.InsertCompletedJob(ctx, sqlcdb.InsertCompletedJobParams{
+		ID:            jobID,
+		RunnerName:    runnerName,
+		RunnerSetName: setName,
+		Result:        result,
+		StartedAt:     now,
+		CompletedAt:   sql.NullTime{Time: now, Valid: true},
+	})
+	if err != nil {
+		slog.Error("failed to insert completed-only job record",
+			"job_id", jobID,
+			"runner_name", runnerName,
+			"runner_set_name", setName,
+			"result", result,
+			"err", err,
+		)
 	}
 }
 

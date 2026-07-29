@@ -66,7 +66,7 @@ func TestOpenJobsDB_JobStoreOperations(t *testing.T) {
 	store := NewJobStore(db)
 
 	store.RecordJobStarted("set-1", "job-1", "runner-1")
-	store.RecordJobCompleted("job-1", "succeeded")
+	store.RecordJobCompleted("set-1", "job-1", "runner-1", "succeeded")
 
 	jobs := store.Snapshot()
 	if len(jobs) != 1 {

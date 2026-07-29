@@ -30,6 +30,7 @@ const JOB_RESULT_MAP: Record<string, JobRecord['result']> = {
   JOB_RESULT_SUCCESS: 'success',
   JOB_RESULT_FAILURE: 'failure',
   JOB_RESULT_CANCELED: 'canceled',
+  JOB_RESULT_UNKNOWN: 'unknown',
 }
 
 interface ServiceInfoResponse {
@@ -153,10 +154,14 @@ export async function fetchRunnerSets(): Promise<RunnerSet[]> {
 export async function fetchRecentJobs(): Promise<JobRecord[]> {
   const data = await rpc<JobRecordsResponse>('ListJobRecords')
   return (data.jobRecords ?? []).map((j): JobRecord => ({
-    id: j.id,
-    runnerName: j.runnerName,
-    runnerSetName: j.runnerSetName,
-    result: JOB_RESULT_MAP[j.result] ?? (j.completedAt ? 'failure' : 'running'),
+    id: j.id ?? '',
+    runnerName: j.runnerName ?? '',
+    runnerSetName: j.runnerSetName ?? '',
+    // A missing result on a completed job means the backend never recognised
+    // the result string the Scale Set API sent — surface this as 'unknown'
+    // rather than silently treating it as 'failure', which historically
+    // turned every successful run red on the dashboard (issue #68).
+    result: JOB_RESULT_MAP[j.result] ?? (j.completedAt ? 'unknown' : 'running'),
     startedAt: new Date(j.startedAt),
     completedAt: j.completedAt ? new Date(j.completedAt) : null,
   }))

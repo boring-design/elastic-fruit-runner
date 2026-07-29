@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"runtime/debug"
 	"strconv"
@@ -192,8 +193,18 @@ func toProtoBackend(b string) controlplanev1.Backend {
 	}
 }
 
+// toProtoJobResult maps a result string from the GitHub Scale Set API (or a
+// historical DB row) into a wire-stable enum.
+//
+// Empty strings are mapped to JOB_RESULT_UNSPECIFIED so they remain the
+// zero/default. Any other unrecognised value is mapped to JOB_RESULT_UNKNOWN
+// (a non-zero enum) so it survives protobuf JSON serialization — the old
+// behaviour of folding unknowns into UNSPECIFIED caused the dashboard to
+// silently treat completed jobs as failures (see issues #68/#70).
 func toProtoJobResult(r string) controlplanev1.JobResult {
 	switch strings.ToLower(r) {
+	case "":
+		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
 	case "running":
 		return controlplanev1.JobResult_JOB_RESULT_RUNNING
 	case "succeeded":
@@ -203,7 +214,8 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 	case "canceled":
 		return controlplanev1.JobResult_JOB_RESULT_CANCELED
 	default:
-		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
+		slog.Warn("unrecognised job result string; mapping to JOB_RESULT_UNKNOWN", "result", r)
+		return controlplanev1.JobResult_JOB_RESULT_UNKNOWN
 	}
 }
 
