@@ -2,6 +2,8 @@ import type {
   Backend,
   BuildInfo,
   ConfigStatus,
+  ConfigValidation,
+  ConfigRevision,
   ConfigSyncState,
   DaemonStatus,
   DashboardSummary,
@@ -352,6 +354,7 @@ export async function fetchConfigStatus(): Promise<ConfigStatus> {
     validationErrors?: string[]
     activeYaml?: string
     diskYaml?: string
+    restartCommands?: string[]
   }>('GetConfigStatus')
   return {
     path: data.path ?? '',
@@ -363,6 +366,51 @@ export async function fetchConfigStatus(): Promise<ConfigStatus> {
     validationErrors: data.validationErrors ?? [],
     activeYAML: data.activeYaml ?? '',
     diskYAML: data.diskYaml ?? '',
+    restartCommands: data.restartCommands ?? [],
+  }
+}
+
+export async function validateConfig(yaml: string): Promise<ConfigValidation> {
+  const data = await rpc<ValidationResponse>('ValidateConfig', { yaml })
+  return toValidation(data)
+}
+
+export async function saveConfig(yaml: string, csrfToken: string, confirmWarnings = false): Promise<ConfigValidation> {
+  const data = await rpc<{ validation?: ValidationResponse }>(
+    'SaveConfig',
+    { yaml, confirmWarnings },
+    csrfToken,
+  )
+  return toValidation(data.validation ?? {})
+}
+
+export async function fetchConfigRevisions(): Promise<ConfigRevision[]> {
+  const data = await rpc<{
+    revisions?: Array<{ id: number; createdAt: string; source: string; configHash: string }>
+  }>('ListConfigRevisions')
+  return (data.revisions ?? []).map(revision => ({
+    id: revision.id,
+    createdAt: new Date(revision.createdAt),
+    source: revision.source,
+    configHash: revision.configHash,
+  }))
+}
+
+export async function restoreConfigRevision(id: number, csrfToken: string): Promise<void> {
+  await rpc('RestoreConfigRevision', { id }, csrfToken)
+}
+
+interface ValidationResponse {
+  errors?: Array<{ path?: string; message?: string }>
+  warnings?: Array<{ path?: string; message?: string }>
+  normalizedYaml?: string
+}
+
+function toValidation(data: ValidationResponse): ConfigValidation {
+  return {
+    errors: (data.errors ?? []).map(issue => ({ path: issue.path ?? '$', message: issue.message ?? '' })),
+    warnings: (data.warnings ?? []).map(issue => ({ path: issue.path ?? '$', message: issue.message ?? '' })),
+    normalizedYAML: data.normalizedYaml ?? '',
   }
 }
 

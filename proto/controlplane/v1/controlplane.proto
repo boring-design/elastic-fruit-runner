@@ -43,6 +43,14 @@ service ControlPlaneService {
 
   rpc GetConfigStatus(GetConfigStatusRequest) returns (GetConfigStatusResponse);
 
+  rpc ValidateConfig(ValidateConfigRequest) returns (ValidateConfigResponse);
+
+  rpc SaveConfig(SaveConfigRequest) returns (SaveConfigResponse);
+
+  rpc ListConfigRevisions(ListConfigRevisionsRequest) returns (ListConfigRevisionsResponse);
+
+  rpc RestoreConfigRevision(RestoreConfigRevisionRequest) returns (RestoreConfigRevisionResponse);
+
   rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
 }
 
@@ -341,6 +349,53 @@ message GetConfigStatusResponse {
   repeated string validation_errors = 7;
   string active_yaml = 8;
   string disk_yaml = 9;
+  repeated string restart_commands = 10;
+}
+
+message ConfigValidationIssue {
+  string path = 1;
+  string message = 2;
+}
+
+message ValidateConfigRequest {
+  string yaml = 1;
+}
+
+message ValidateConfigResponse {
+  repeated ConfigValidationIssue errors = 1;
+  repeated ConfigValidationIssue warnings = 2;
+  string normalized_yaml = 3;
+}
+
+message SaveConfigRequest {
+  string yaml = 1;
+  bool confirm_warnings = 2;
+}
+
+message SaveConfigResponse {
+  ValidateConfigResponse validation = 1;
+  GetConfigStatusResponse status = 2;
+}
+
+message ConfigRevision {
+  int64 id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string source = 3;
+  string config_hash = 4;
+}
+
+message ListConfigRevisionsRequest {}
+
+message ListConfigRevisionsResponse {
+  repeated ConfigRevision revisions = 1;
+}
+
+message RestoreConfigRevisionRequest {
+  int64 id = 1;
+}
+
+message RestoreConfigRevisionResponse {
+  GetConfigStatusResponse status = 1;
 }
 
 // System information

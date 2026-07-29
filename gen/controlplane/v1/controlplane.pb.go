@@ -2413,6 +2413,7 @@ type GetConfigStatusResponse struct {
 	ValidationErrors []string               `protobuf:"bytes,7,rep,name=validation_errors,json=validationErrors,proto3" json:"validation_errors,omitempty"`
 	ActiveYaml       string                 `protobuf:"bytes,8,opt,name=active_yaml,json=activeYaml,proto3" json:"active_yaml,omitempty"`
 	DiskYaml         string                 `protobuf:"bytes,9,opt,name=disk_yaml,json=diskYaml,proto3" json:"disk_yaml,omitempty"`
+	RestartCommands  []string               `protobuf:"bytes,10,rep,name=restart_commands,json=restartCommands,proto3" json:"restart_commands,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -2510,6 +2511,509 @@ func (x *GetConfigStatusResponse) GetDiskYaml() string {
 	return ""
 }
 
+func (x *GetConfigStatusResponse) GetRestartCommands() []string {
+	if x != nil {
+		return x.RestartCommands
+	}
+	return nil
+}
+
+type ConfigValidationIssue struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigValidationIssue) Reset() {
+	*x = ConfigValidationIssue{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigValidationIssue) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigValidationIssue) ProtoMessage() {}
+
+func (x *ConfigValidationIssue) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigValidationIssue.ProtoReflect.Descriptor instead.
+func (*ConfigValidationIssue) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *ConfigValidationIssue) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *ConfigValidationIssue) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+type ValidateConfigRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Yaml          string                 `protobuf:"bytes,1,opt,name=yaml,proto3" json:"yaml,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ValidateConfigRequest) Reset() {
+	*x = ValidateConfigRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateConfigRequest) ProtoMessage() {}
+
+func (x *ValidateConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateConfigRequest.ProtoReflect.Descriptor instead.
+func (*ValidateConfigRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *ValidateConfigRequest) GetYaml() string {
+	if x != nil {
+		return x.Yaml
+	}
+	return ""
+}
+
+type ValidateConfigResponse struct {
+	state          protoimpl.MessageState   `protogen:"open.v1"`
+	Errors         []*ConfigValidationIssue `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`
+	Warnings       []*ConfigValidationIssue `protobuf:"bytes,2,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	NormalizedYaml string                   `protobuf:"bytes,3,opt,name=normalized_yaml,json=normalizedYaml,proto3" json:"normalized_yaml,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ValidateConfigResponse) Reset() {
+	*x = ValidateConfigResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateConfigResponse) ProtoMessage() {}
+
+func (x *ValidateConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ValidateConfigResponse.ProtoReflect.Descriptor instead.
+func (*ValidateConfigResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *ValidateConfigResponse) GetErrors() []*ConfigValidationIssue {
+	if x != nil {
+		return x.Errors
+	}
+	return nil
+}
+
+func (x *ValidateConfigResponse) GetWarnings() []*ConfigValidationIssue {
+	if x != nil {
+		return x.Warnings
+	}
+	return nil
+}
+
+func (x *ValidateConfigResponse) GetNormalizedYaml() string {
+	if x != nil {
+		return x.NormalizedYaml
+	}
+	return ""
+}
+
+type SaveConfigRequest struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Yaml            string                 `protobuf:"bytes,1,opt,name=yaml,proto3" json:"yaml,omitempty"`
+	ConfirmWarnings bool                   `protobuf:"varint,2,opt,name=confirm_warnings,json=confirmWarnings,proto3" json:"confirm_warnings,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *SaveConfigRequest) Reset() {
+	*x = SaveConfigRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveConfigRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveConfigRequest) ProtoMessage() {}
+
+func (x *SaveConfigRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveConfigRequest.ProtoReflect.Descriptor instead.
+func (*SaveConfigRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *SaveConfigRequest) GetYaml() string {
+	if x != nil {
+		return x.Yaml
+	}
+	return ""
+}
+
+func (x *SaveConfigRequest) GetConfirmWarnings() bool {
+	if x != nil {
+		return x.ConfirmWarnings
+	}
+	return false
+}
+
+type SaveConfigResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Validation    *ValidateConfigResponse  `protobuf:"bytes,1,opt,name=validation,proto3" json:"validation,omitempty"`
+	Status        *GetConfigStatusResponse `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveConfigResponse) Reset() {
+	*x = SaveConfigResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveConfigResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveConfigResponse) ProtoMessage() {}
+
+func (x *SaveConfigResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveConfigResponse.ProtoReflect.Descriptor instead.
+func (*SaveConfigResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *SaveConfigResponse) GetValidation() *ValidateConfigResponse {
+	if x != nil {
+		return x.Validation
+	}
+	return nil
+}
+
+func (x *SaveConfigResponse) GetStatus() *GetConfigStatusResponse {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+type ConfigRevision struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Source        string                 `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	ConfigHash    string                 `protobuf:"bytes,4,opt,name=config_hash,json=configHash,proto3" json:"config_hash,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfigRevision) Reset() {
+	*x = ConfigRevision{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfigRevision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfigRevision) ProtoMessage() {}
+
+func (x *ConfigRevision) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfigRevision.ProtoReflect.Descriptor instead.
+func (*ConfigRevision) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *ConfigRevision) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *ConfigRevision) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *ConfigRevision) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *ConfigRevision) GetConfigHash() string {
+	if x != nil {
+		return x.ConfigHash
+	}
+	return ""
+}
+
+type ListConfigRevisionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConfigRevisionsRequest) Reset() {
+	*x = ListConfigRevisionsRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConfigRevisionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConfigRevisionsRequest) ProtoMessage() {}
+
+func (x *ListConfigRevisionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConfigRevisionsRequest.ProtoReflect.Descriptor instead.
+func (*ListConfigRevisionsRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{42}
+}
+
+type ListConfigRevisionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Revisions     []*ConfigRevision      `protobuf:"bytes,1,rep,name=revisions,proto3" json:"revisions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListConfigRevisionsResponse) Reset() {
+	*x = ListConfigRevisionsResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListConfigRevisionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListConfigRevisionsResponse) ProtoMessage() {}
+
+func (x *ListConfigRevisionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListConfigRevisionsResponse.ProtoReflect.Descriptor instead.
+func (*ListConfigRevisionsResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *ListConfigRevisionsResponse) GetRevisions() []*ConfigRevision {
+	if x != nil {
+		return x.Revisions
+	}
+	return nil
+}
+
+type RestoreConfigRevisionRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreConfigRevisionRequest) Reset() {
+	*x = RestoreConfigRevisionRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreConfigRevisionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreConfigRevisionRequest) ProtoMessage() {}
+
+func (x *RestoreConfigRevisionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreConfigRevisionRequest.ProtoReflect.Descriptor instead.
+func (*RestoreConfigRevisionRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *RestoreConfigRevisionRequest) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type RestoreConfigRevisionResponse struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Status        *GetConfigStatusResponse `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RestoreConfigRevisionResponse) Reset() {
+	*x = RestoreConfigRevisionResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RestoreConfigRevisionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RestoreConfigRevisionResponse) ProtoMessage() {}
+
+func (x *RestoreConfigRevisionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RestoreConfigRevisionResponse.ProtoReflect.Descriptor instead.
+func (*RestoreConfigRevisionResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RestoreConfigRevisionResponse) GetStatus() *GetConfigStatusResponse {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
 type GetSystemInfoRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -2518,7 +3022,7 @@ type GetSystemInfoRequest struct {
 
 func (x *GetSystemInfoRequest) Reset() {
 	*x = GetSystemInfoRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2530,7 +3034,7 @@ func (x *GetSystemInfoRequest) String() string {
 func (*GetSystemInfoRequest) ProtoMessage() {}
 
 func (x *GetSystemInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2543,7 +3047,7 @@ func (x *GetSystemInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetSystemInfoRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{36}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{46}
 }
 
 type GetSystemInfoResponse struct {
@@ -2559,7 +3063,7 @@ type GetSystemInfoResponse struct {
 
 func (x *GetSystemInfoResponse) Reset() {
 	*x = GetSystemInfoResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2571,7 +3075,7 @@ func (x *GetSystemInfoResponse) String() string {
 func (*GetSystemInfoResponse) ProtoMessage() {}
 
 func (x *GetSystemInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2584,7 +3088,7 @@ func (x *GetSystemInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetSystemInfoResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{37}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *GetSystemInfoResponse) GetOs() string {
@@ -2802,7 +3306,7 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x14memory_usage_percent\x18\x02 \x01(\x02R\x12memoryUsagePercent\x12,\n" +
 	"\x12disk_usage_percent\x18\x03 \x01(\x02R\x10diskUsagePercent\x12/\n" +
 	"\x13temperature_celsius\x18\x04 \x01(\x02R\x12temperatureCelsius\"\x18\n" +
-	"\x16GetConfigStatusRequest\"\xb4\x03\n" +
+	"\x16GetConfigStatusRequest\"\xdf\x03\n" +
 	"\x17GetConfigStatusResponse\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1f\n" +
 	"\vactive_hash\x18\x02 \x01(\tR\n" +
@@ -2814,8 +3318,41 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x11validation_errors\x18\a \x03(\tR\x10validationErrors\x12\x1f\n" +
 	"\vactive_yaml\x18\b \x01(\tR\n" +
 	"activeYaml\x12\x1b\n" +
-	"\tdisk_yaml\x18\t \x01(\tR\bdiskYamlB\x13\n" +
-	"\x11_disk_modified_at\"\x16\n" +
+	"\tdisk_yaml\x18\t \x01(\tR\bdiskYaml\x12)\n" +
+	"\x10restart_commands\x18\n" +
+	" \x03(\tR\x0frestartCommandsB\x13\n" +
+	"\x11_disk_modified_at\"E\n" +
+	"\x15ConfigValidationIssue\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"+\n" +
+	"\x15ValidateConfigRequest\x12\x12\n" +
+	"\x04yaml\x18\x01 \x01(\tR\x04yaml\"\xc5\x01\n" +
+	"\x16ValidateConfigResponse\x12>\n" +
+	"\x06errors\x18\x01 \x03(\v2&.controlplane.v1.ConfigValidationIssueR\x06errors\x12B\n" +
+	"\bwarnings\x18\x02 \x03(\v2&.controlplane.v1.ConfigValidationIssueR\bwarnings\x12'\n" +
+	"\x0fnormalized_yaml\x18\x03 \x01(\tR\x0enormalizedYaml\"R\n" +
+	"\x11SaveConfigRequest\x12\x12\n" +
+	"\x04yaml\x18\x01 \x01(\tR\x04yaml\x12)\n" +
+	"\x10confirm_warnings\x18\x02 \x01(\bR\x0fconfirmWarnings\"\x9f\x01\n" +
+	"\x12SaveConfigResponse\x12G\n" +
+	"\n" +
+	"validation\x18\x01 \x01(\v2'.controlplane.v1.ValidateConfigResponseR\n" +
+	"validation\x12@\n" +
+	"\x06status\x18\x02 \x01(\v2(.controlplane.v1.GetConfigStatusResponseR\x06status\"\x94\x01\n" +
+	"\x0eConfigRevision\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x129\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x16\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\x12\x1f\n" +
+	"\vconfig_hash\x18\x04 \x01(\tR\n" +
+	"configHash\"\x1c\n" +
+	"\x1aListConfigRevisionsRequest\"\\\n" +
+	"\x1bListConfigRevisionsResponse\x12=\n" +
+	"\trevisions\x18\x01 \x03(\v2\x1f.controlplane.v1.ConfigRevisionR\trevisions\".\n" +
+	"\x1cRestoreConfigRevisionRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"a\n" +
+	"\x1dRestoreConfigRevisionResponse\x12@\n" +
+	"\x06status\x18\x01 \x01(\v2(.controlplane.v1.GetConfigStatusResponseR\x06status\"\x16\n" +
 	"\x14GetSystemInfoRequest\"\xaf\x01\n" +
 	"\x15GetSystemInfoResponse\x12\x0e\n" +
 	"\x02os\x18\x01 \x01(\tR\x02os\x12\x12\n" +
@@ -2847,7 +3384,7 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x1dCONFIG_SYNC_STATE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19CONFIG_SYNC_STATE_IN_SYNC\x10\x01\x12&\n" +
 	"\"CONFIG_SYNC_STATE_RESTART_REQUIRED\x10\x02\x12\"\n" +
-	"\x1eCONFIG_SYNC_STATE_DISK_INVALID\x10\x032\xc7\v\n" +
+	"\x1eCONFIG_SYNC_STATE_DISK_INVALID\x10\x032\xeb\x0e\n" +
 	"\x13ControlPlaneService\x12U\n" +
 	"\n" +
 	"GetSession\x12\".controlplane.v1.GetSessionRequest\x1a#.controlplane.v1.GetSessionResponse\x12U\n" +
@@ -2865,7 +3402,12 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x15GetJobResourceSamples\x12-.controlplane.v1.GetJobResourceSamplesRequest\x1a..controlplane.v1.GetJobResourceSamplesResponse\x12y\n" +
 	"\x16GetHostResourceSamples\x12..controlplane.v1.GetHostResourceSamplesRequest\x1a/.controlplane.v1.GetHostResourceSamplesResponse\x12g\n" +
 	"\x10GetMachineVitals\x12(.controlplane.v1.GetMachineVitalsRequest\x1a).controlplane.v1.GetMachineVitalsResponse\x12d\n" +
-	"\x0fGetConfigStatus\x12'.controlplane.v1.GetConfigStatusRequest\x1a(.controlplane.v1.GetConfigStatusResponse\x12^\n" +
+	"\x0fGetConfigStatus\x12'.controlplane.v1.GetConfigStatusRequest\x1a(.controlplane.v1.GetConfigStatusResponse\x12a\n" +
+	"\x0eValidateConfig\x12&.controlplane.v1.ValidateConfigRequest\x1a'.controlplane.v1.ValidateConfigResponse\x12U\n" +
+	"\n" +
+	"SaveConfig\x12\".controlplane.v1.SaveConfigRequest\x1a#.controlplane.v1.SaveConfigResponse\x12p\n" +
+	"\x13ListConfigRevisions\x12+.controlplane.v1.ListConfigRevisionsRequest\x1a,.controlplane.v1.ListConfigRevisionsResponse\x12v\n" +
+	"\x15RestoreConfigRevision\x12-.controlplane.v1.RestoreConfigRevisionRequest\x1a..controlplane.v1.RestoreConfigRevisionResponse\x12^\n" +
 	"\rGetSystemInfo\x12%.controlplane.v1.GetSystemInfoRequest\x1a&.controlplane.v1.GetSystemInfoResponseBRZPgithub.com/boring-design/elastic-fruit-runner/gen/controlplane/v1;controlplanev1b\x06proto3"
 
 var (
@@ -2881,7 +3423,7 @@ func file_controlplane_v1_controlplane_proto_rawDescGZIP() []byte {
 }
 
 var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_controlplane_v1_controlplane_proto_goTypes = []any{
 	(Backend)(0),                           // 0: controlplane.v1.Backend
 	(RunnerState)(0),                       // 1: controlplane.v1.RunnerState
@@ -2924,13 +3466,23 @@ var file_controlplane_v1_controlplane_proto_goTypes = []any{
 	(*GetMachineVitalsResponse)(nil),       // 38: controlplane.v1.GetMachineVitalsResponse
 	(*GetConfigStatusRequest)(nil),         // 39: controlplane.v1.GetConfigStatusRequest
 	(*GetConfigStatusResponse)(nil),        // 40: controlplane.v1.GetConfigStatusResponse
-	(*GetSystemInfoRequest)(nil),           // 41: controlplane.v1.GetSystemInfoRequest
-	(*GetSystemInfoResponse)(nil),          // 42: controlplane.v1.GetSystemInfoResponse
-	(*timestamppb.Timestamp)(nil),          // 43: google.protobuf.Timestamp
+	(*ConfigValidationIssue)(nil),          // 41: controlplane.v1.ConfigValidationIssue
+	(*ValidateConfigRequest)(nil),          // 42: controlplane.v1.ValidateConfigRequest
+	(*ValidateConfigResponse)(nil),         // 43: controlplane.v1.ValidateConfigResponse
+	(*SaveConfigRequest)(nil),              // 44: controlplane.v1.SaveConfigRequest
+	(*SaveConfigResponse)(nil),             // 45: controlplane.v1.SaveConfigResponse
+	(*ConfigRevision)(nil),                 // 46: controlplane.v1.ConfigRevision
+	(*ListConfigRevisionsRequest)(nil),     // 47: controlplane.v1.ListConfigRevisionsRequest
+	(*ListConfigRevisionsResponse)(nil),    // 48: controlplane.v1.ListConfigRevisionsResponse
+	(*RestoreConfigRevisionRequest)(nil),   // 49: controlplane.v1.RestoreConfigRevisionRequest
+	(*RestoreConfigRevisionResponse)(nil),  // 50: controlplane.v1.RestoreConfigRevisionResponse
+	(*GetSystemInfoRequest)(nil),           // 51: controlplane.v1.GetSystemInfoRequest
+	(*GetSystemInfoResponse)(nil),          // 52: controlplane.v1.GetSystemInfoResponse
+	(*timestamppb.Timestamp)(nil),          // 53: google.protobuf.Timestamp
 }
 var file_controlplane_v1_controlplane_proto_depIdxs = []int32{
 	17, // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
-	43, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
+	53, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
 	18, // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
 	18, // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
 	19, // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
@@ -2939,65 +3491,80 @@ var file_controlplane_v1_controlplane_proto_depIdxs = []int32{
 	0,  // 7: controlplane.v1.RunnerSet.backend:type_name -> controlplane.v1.Backend
 	23, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
 	1,  // 9: controlplane.v1.Runner.state:type_name -> controlplane.v1.RunnerState
-	43, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
-	43, // 11: controlplane.v1.ListJobRecordsRequest.from:type_name -> google.protobuf.Timestamp
-	43, // 12: controlplane.v1.ListJobRecordsRequest.to:type_name -> google.protobuf.Timestamp
+	53, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
+	53, // 11: controlplane.v1.ListJobRecordsRequest.from:type_name -> google.protobuf.Timestamp
+	53, // 12: controlplane.v1.ListJobRecordsRequest.to:type_name -> google.protobuf.Timestamp
 	26, // 13: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
 	2,  // 14: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
-	43, // 15: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
-	43, // 16: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
-	43, // 17: controlplane.v1.JobRecord.queued_at:type_name -> google.protobuf.Timestamp
-	43, // 18: controlplane.v1.JobRecord.scale_set_assigned_at:type_name -> google.protobuf.Timestamp
-	43, // 19: controlplane.v1.JobRecord.runner_assigned_at:type_name -> google.protobuf.Timestamp
+	53, // 15: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
+	53, // 16: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
+	53, // 17: controlplane.v1.JobRecord.queued_at:type_name -> google.protobuf.Timestamp
+	53, // 18: controlplane.v1.JobRecord.scale_set_assigned_at:type_name -> google.protobuf.Timestamp
+	53, // 19: controlplane.v1.JobRecord.runner_assigned_at:type_name -> google.protobuf.Timestamp
 	0,  // 20: controlplane.v1.JobRecord.backend:type_name -> controlplane.v1.Backend
 	26, // 21: controlplane.v1.GetJobDetailResponse.job:type_name -> controlplane.v1.JobRecord
-	43, // 22: controlplane.v1.JobLogLine.recorded_at:type_name -> google.protobuf.Timestamp
+	53, // 22: controlplane.v1.JobLogLine.recorded_at:type_name -> google.protobuf.Timestamp
 	30, // 23: controlplane.v1.GetJobLogsResponse.lines:type_name -> controlplane.v1.JobLogLine
-	43, // 24: controlplane.v1.ResourceSample.recorded_at:type_name -> google.protobuf.Timestamp
+	53, // 24: controlplane.v1.ResourceSample.recorded_at:type_name -> google.protobuf.Timestamp
 	3,  // 25: controlplane.v1.ResourceSample.accuracy:type_name -> controlplane.v1.ResourceAccuracy
 	32, // 26: controlplane.v1.GetJobResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
-	43, // 27: controlplane.v1.GetHostResourceSamplesRequest.from:type_name -> google.protobuf.Timestamp
-	43, // 28: controlplane.v1.GetHostResourceSamplesRequest.to:type_name -> google.protobuf.Timestamp
+	53, // 27: controlplane.v1.GetHostResourceSamplesRequest.from:type_name -> google.protobuf.Timestamp
+	53, // 28: controlplane.v1.GetHostResourceSamplesRequest.to:type_name -> google.protobuf.Timestamp
 	32, // 29: controlplane.v1.GetHostResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
-	43, // 30: controlplane.v1.GetHostResourceSamplesResponse.earliest_at:type_name -> google.protobuf.Timestamp
+	53, // 30: controlplane.v1.GetHostResourceSamplesResponse.earliest_at:type_name -> google.protobuf.Timestamp
 	4,  // 31: controlplane.v1.GetConfigStatusResponse.state:type_name -> controlplane.v1.ConfigSyncState
-	43, // 32: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
-	43, // 33: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
-	5,  // 34: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
-	7,  // 35: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
-	9,  // 36: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
-	11, // 37: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
-	13, // 38: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
-	15, // 39: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
-	20, // 40: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
-	24, // 41: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
-	27, // 42: controlplane.v1.ControlPlaneService.GetJobDetail:input_type -> controlplane.v1.GetJobDetailRequest
-	29, // 43: controlplane.v1.ControlPlaneService.GetJobLogs:input_type -> controlplane.v1.GetJobLogsRequest
-	33, // 44: controlplane.v1.ControlPlaneService.GetJobResourceSamples:input_type -> controlplane.v1.GetJobResourceSamplesRequest
-	35, // 45: controlplane.v1.ControlPlaneService.GetHostResourceSamples:input_type -> controlplane.v1.GetHostResourceSamplesRequest
-	37, // 46: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
-	39, // 47: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
-	41, // 48: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
-	6,  // 49: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
-	8,  // 50: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
-	10, // 51: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
-	12, // 52: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
-	14, // 53: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
-	16, // 54: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
-	21, // 55: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
-	25, // 56: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
-	28, // 57: controlplane.v1.ControlPlaneService.GetJobDetail:output_type -> controlplane.v1.GetJobDetailResponse
-	31, // 58: controlplane.v1.ControlPlaneService.GetJobLogs:output_type -> controlplane.v1.GetJobLogsResponse
-	34, // 59: controlplane.v1.ControlPlaneService.GetJobResourceSamples:output_type -> controlplane.v1.GetJobResourceSamplesResponse
-	36, // 60: controlplane.v1.ControlPlaneService.GetHostResourceSamples:output_type -> controlplane.v1.GetHostResourceSamplesResponse
-	38, // 61: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
-	40, // 62: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
-	42, // 63: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
-	49, // [49:64] is the sub-list for method output_type
-	34, // [34:49] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	53, // 32: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
+	53, // 33: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
+	41, // 34: controlplane.v1.ValidateConfigResponse.errors:type_name -> controlplane.v1.ConfigValidationIssue
+	41, // 35: controlplane.v1.ValidateConfigResponse.warnings:type_name -> controlplane.v1.ConfigValidationIssue
+	43, // 36: controlplane.v1.SaveConfigResponse.validation:type_name -> controlplane.v1.ValidateConfigResponse
+	40, // 37: controlplane.v1.SaveConfigResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
+	53, // 38: controlplane.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
+	46, // 39: controlplane.v1.ListConfigRevisionsResponse.revisions:type_name -> controlplane.v1.ConfigRevision
+	40, // 40: controlplane.v1.RestoreConfigRevisionResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
+	5,  // 41: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
+	7,  // 42: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
+	9,  // 43: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
+	11, // 44: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
+	13, // 45: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
+	15, // 46: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
+	20, // 47: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
+	24, // 48: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
+	27, // 49: controlplane.v1.ControlPlaneService.GetJobDetail:input_type -> controlplane.v1.GetJobDetailRequest
+	29, // 50: controlplane.v1.ControlPlaneService.GetJobLogs:input_type -> controlplane.v1.GetJobLogsRequest
+	33, // 51: controlplane.v1.ControlPlaneService.GetJobResourceSamples:input_type -> controlplane.v1.GetJobResourceSamplesRequest
+	35, // 52: controlplane.v1.ControlPlaneService.GetHostResourceSamples:input_type -> controlplane.v1.GetHostResourceSamplesRequest
+	37, // 53: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
+	39, // 54: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
+	42, // 55: controlplane.v1.ControlPlaneService.ValidateConfig:input_type -> controlplane.v1.ValidateConfigRequest
+	44, // 56: controlplane.v1.ControlPlaneService.SaveConfig:input_type -> controlplane.v1.SaveConfigRequest
+	47, // 57: controlplane.v1.ControlPlaneService.ListConfigRevisions:input_type -> controlplane.v1.ListConfigRevisionsRequest
+	49, // 58: controlplane.v1.ControlPlaneService.RestoreConfigRevision:input_type -> controlplane.v1.RestoreConfigRevisionRequest
+	51, // 59: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
+	6,  // 60: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
+	8,  // 61: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
+	10, // 62: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
+	12, // 63: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
+	14, // 64: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
+	16, // 65: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
+	21, // 66: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
+	25, // 67: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
+	28, // 68: controlplane.v1.ControlPlaneService.GetJobDetail:output_type -> controlplane.v1.GetJobDetailResponse
+	31, // 69: controlplane.v1.ControlPlaneService.GetJobLogs:output_type -> controlplane.v1.GetJobLogsResponse
+	34, // 70: controlplane.v1.ControlPlaneService.GetJobResourceSamples:output_type -> controlplane.v1.GetJobResourceSamplesResponse
+	36, // 71: controlplane.v1.ControlPlaneService.GetHostResourceSamples:output_type -> controlplane.v1.GetHostResourceSamplesResponse
+	38, // 72: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
+	40, // 73: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
+	43, // 74: controlplane.v1.ControlPlaneService.ValidateConfig:output_type -> controlplane.v1.ValidateConfigResponse
+	45, // 75: controlplane.v1.ControlPlaneService.SaveConfig:output_type -> controlplane.v1.SaveConfigResponse
+	48, // 76: controlplane.v1.ControlPlaneService.ListConfigRevisions:output_type -> controlplane.v1.ListConfigRevisionsResponse
+	50, // 77: controlplane.v1.ControlPlaneService.RestoreConfigRevision:output_type -> controlplane.v1.RestoreConfigRevisionResponse
+	52, // 78: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
+	60, // [60:79] is the sub-list for method output_type
+	41, // [41:60] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_controlplane_v1_controlplane_proto_init() }
@@ -3016,7 +3583,7 @@ func file_controlplane_v1_controlplane_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_controlplane_v1_controlplane_proto_rawDesc), len(file_controlplane_v1_controlplane_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   38,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

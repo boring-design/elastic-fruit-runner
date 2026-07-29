@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
@@ -83,10 +84,56 @@ func LoadWithArgs(args []string) (*Config, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read loaded config %s: %w", cfg.FilePath, err)
 		}
+		validation := ValidateYAML(data)
+		if len(validation.Errors) > 0 {
+			return nil, fmt.Errorf("validate config %s: %s", cfg.FilePath, validation.Errors[0].String())
+		}
+		loadedLogLevel := cfg.LogLevel
+		cfg = validation.Config
+		cfg.LogLevel = loadedLogLevel
+		cfg.FilePath = absolutePath
 		sum := sha256.Sum256(data)
 		cfg.LoadedHash = hex.EncodeToString(sum[:])
 		cfg.LoadedYAML = data
 	}
 
 	return cfg, nil
+}
+
+// FindConfigPath returns the requested config path or the first default path.
+func FindConfigPath(args []string) string {
+	for index, arg := range args {
+		if arg == "--config" && index+1 < len(args) {
+			path, _ := filepath.Abs(args[index+1])
+			return path
+		}
+		if value, found := strings.CutPrefix(arg, "--config="); found {
+			path, _ := filepath.Abs(value)
+			return path
+		}
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		paths := []string{
+			filepath.Join(home, ".elastic-fruit-runner", "config.yaml"),
+			"/opt/homebrew/var/elastic-fruit-runner/config.yaml",
+			"/usr/local/var/elastic-fruit-runner/config.yaml",
+			"/etc/elastic-fruit-runner/config.yaml",
+		}
+		for _, path := range paths {
+			if _, err := os.Stat(path); err == nil {
+				return path
+			}
+		}
+		return paths[0]
+	}
+	return "/etc/elastic-fruit-runner/config.yaml"
+}
+
+// DefaultDatabasePath returns the local console database path.
+func DefaultDatabasePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("determine home directory for database path: %w", err)
+	}
+	return filepath.Join(home, ".elastic-fruit-runner", "jobs.db"), nil
 }

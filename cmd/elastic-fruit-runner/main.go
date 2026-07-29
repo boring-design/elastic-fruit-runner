@@ -37,18 +37,47 @@ func run() error {
 	return runDaemon()
 }
 
+//nolint:gocyclo // Startup handles normal, recovery, and config mode in one ordered flow.
 func runDaemon() error {
-	cfg, err := config.Load()
+	configPath := config.FindConfigPath(os.Args[1:])
+	databasePath, err := config.DefaultDatabasePath()
 	if err != nil {
-		return fmt.Errorf("load configuration: %w", err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("invalid configuration: %w", err)
-	}
-
-	if err := configureLogging(cfg); err != nil {
 		return err
+	}
+	revisionPath := databasePath
+	cfg, configErr := config.Load()
+	if configErr == nil {
+		if err := cfg.Validate(); err != nil {
+			configErr = err
+		}
+	}
+	if cfg != nil {
+		if path, pathErr := cfg.DatabasePath(); pathErr == nil {
+			databasePath = path
+		}
+	}
+	if configErr != nil {
+		recovered, recoverErr := configstate.LoadLastActive(revisionPath)
+		if recoverErr == nil {
+			result := config.ValidateYAML(recovered)
+			if len(result.Errors) == 0 {
+				cfg = result.Config
+				cfg.FilePath = configPath
+				cfg.LoadedYAML = recovered
+				slog.Warn("disk config is invalid, using last active config", "path", configPath, "err", configErr)
+			} else {
+				cfg = nil
+			}
+		} else {
+			cfg = nil
+		}
+	}
+	if cfg != nil {
+		if err := configureLogging(cfg); err != nil {
+			return err
+		}
+	} else {
+		slog.Warn("starting in config mode", "path", configPath, "err", configErr)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -67,19 +96,18 @@ func runDaemon() error {
 
 	vitalsService := vitals.New(startedAt)
 
-	managementService, err := management.New(cfg)
-	if err != nil {
-		return fmt.Errorf("initialize scale set controller management service: %w", err)
+	var managementService *management.Service
+	if cfg != nil {
+		managementService, err = management.New(cfg)
+		if err != nil {
+			return fmt.Errorf("initialize scale set controller management service: %w", err)
+		}
+		defer managementService.Close()
+		vitalsService.SetOnUpdate(managementService.RecordHostVitals)
+		managementService.Start(ctx)
 	}
-	defer managementService.Close()
-	vitalsService.SetOnUpdate(managementService.RecordHostVitals)
 	go vitalsService.Start(ctx, 5*time.Second)
-	managementService.Start(ctx)
 
-	databasePath, err := cfg.DatabasePath()
-	if err != nil {
-		return fmt.Errorf("resolve console database path: %w", err)
-	}
 	authService, err := auth.Open(databasePath)
 	if err != nil {
 		return fmt.Errorf("initialize console auth: %w", err)
@@ -87,18 +115,31 @@ func runDaemon() error {
 	defer authService.Close()
 	logSetupCode(authService)
 
-	configStateService := configstate.New(cfg, startedAt)
+	var configStateService *configstate.Service
+	if cfg != nil {
+		configStateService = configstate.New(cfg, startedAt, revisionPath)
+	} else {
+		configStateService = configstate.NewForConfigMode(configPath, revisionPath, startedAt)
+	}
+	defer configStateService.Close()
 	go configStateService.Start(ctx, 2*time.Second)
 
-	apiAddr := cfg.APIAddr
+	apiAddr := ""
+	cors := config.CORSConfig{}
+	idleTimeout := 15 * time.Minute
+	if cfg != nil {
+		apiAddr = cfg.APIAddr
+		cors = cfg.CORS
+		idleTimeout = cfg.IdleTimeout
+	}
 	if apiAddr == "" {
 		apiAddr = ":8080"
 	}
 	apiServer := api.NewServer(
 		managementService,
 		vitalsService,
-		cfg.IdleTimeout,
-		cfg.CORS,
+		idleTimeout,
+		cors,
 		api.Dependencies{
 			Auth:         authService,
 			ConfigState:  configStateService,
@@ -129,10 +170,17 @@ func runDaemon() error {
 	}()
 
 	done := make(chan struct{})
-	go func() {
-		managementService.Wait()
-		close(done)
-	}()
+	if managementService != nil {
+		go func() {
+			managementService.Wait()
+			close(done)
+		}()
+	} else {
+		go func() {
+			<-ctx.Done()
+			close(done)
+		}()
+	}
 
 	select {
 	case err := <-listenErr:
