@@ -2,7 +2,10 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"os"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -15,7 +18,9 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/dashboard"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
+	"github.com/boring-design/elastic-fruit-runner/internal/auth"
 	"github.com/boring-design/elastic-fruit-runner/internal/buildinfo"
+	"github.com/boring-design/elastic-fruit-runner/internal/configstate"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
@@ -27,12 +32,22 @@ var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
 type Server struct {
 	managementService *management.Service
 	vitalsService     *vitals.Service
+	authService       *auth.Service
+	configState       *configstate.Service
+	databasePath      string
 	idleTimeout       time.Duration
 	cors              config.CORSConfig
 }
 
+// Dependencies contains optional console services.
+type Dependencies struct {
+	Auth         *auth.Service
+	ConfigState  *configstate.Service
+	DatabasePath string
+}
+
 // NewServer creates an API server backed by the management and vitals services.
-func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, cors config.CORSConfig) *Server {
+func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, cors config.CORSConfig, dependencies ...Dependencies) *Server {
 	if cors.AllowOrigin == "" {
 		cors.AllowOrigin = "*"
 	}
@@ -40,26 +55,117 @@ func NewServer(managementService *management.Service, vitalsService *vitals.Serv
 		cors.AllowMethods = "GET, POST, OPTIONS"
 	}
 	if cors.AllowHeaders == "" {
-		cors.AllowHeaders = "Content-Type, Connect-Protocol-Version"
+		cors.AllowHeaders = "Content-Type, Connect-Protocol-Version, X-CSRF-Token"
 	}
 	if cors.ExposeHeaders == "" {
 		cors.ExposeHeaders = "Connect-Protocol-Version"
 	}
-	return &Server{
+	server := &Server{
 		managementService: managementService,
 		vitalsService:     vitalsService,
 		idleTimeout:       idleTimeout,
 		cors:              cors,
 	}
+	if len(dependencies) > 0 {
+		server.authService = dependencies[0].Auth
+		server.configState = dependencies[0].ConfigState
+		server.databasePath = dependencies[0].DatabasePath
+	}
+	return server
 }
 
 // Handler returns the HTTP handler for the Connect RPC service with CORS support.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
-	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s)
+	handlerOptions := []connect.HandlerOption{}
+	if s.authService != nil {
+		handlerOptions = append(handlerOptions, connect.WithInterceptors(s.authInterceptor()))
+	}
+	path, handler := controlplanev1connect.NewControlPlaneServiceHandler(s, handlerOptions...)
 	mux.Handle(path, handler)
 	mux.Handle("/", dashboard.Handler())
 	return withCORS(mux, s.cors)
+}
+
+func (s *Server) GetSession(ctx context.Context, req *connect.Request[controlplanev1.GetSessionRequest]) (*connect.Response[controlplanev1.GetSessionResponse], error) {
+	if s.authService == nil {
+		return connect.NewResponse(&controlplanev1.GetSessionResponse{Authenticated: true}), nil
+	}
+	setupRequired, err := s.authService.SetupRequired(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	session, err := s.sessionFromHeader(ctx, req.Header())
+	if err != nil {
+		if !errors.Is(err, auth.ErrSessionNotFound) {
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+		return connect.NewResponse(&controlplanev1.GetSessionResponse{
+			SetupRequired: setupRequired,
+			Authenticated: false,
+		}), nil
+	}
+	return connect.NewResponse(&controlplanev1.GetSessionResponse{
+		SetupRequired: setupRequired,
+		Authenticated: true,
+		CsrfToken:     session.CSRFToken,
+	}), nil
+}
+
+func (s *Server) SetupAdmin(ctx context.Context, req *connect.Request[controlplanev1.SetupAdminRequest]) (*connect.Response[controlplanev1.SetupAdminResponse], error) {
+	if s.authService == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("console auth is disabled"))
+	}
+	session, err := s.authService.Setup(ctx, req.Msg.SetupCode, req.Msg.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrAlreadySetup):
+			return nil, connect.NewError(connect.CodeAlreadyExists, err)
+		case errors.Is(err, auth.ErrInvalidSetupCode), errors.Is(err, auth.ErrInvalidPassword):
+			return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		default:
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+	}
+	response := connect.NewResponse(&controlplanev1.SetupAdminResponse{CsrfToken: session.CSRFToken})
+	setSessionCookie(response.Header(), session)
+	return response, nil
+}
+
+func (s *Server) Login(ctx context.Context, req *connect.Request[controlplanev1.LoginRequest]) (*connect.Response[controlplanev1.LoginResponse], error) {
+	if s.authService == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("console auth is disabled"))
+	}
+	session, err := s.authService.Login(ctx, req.Msg.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrLoginBlocked):
+			return nil, connect.NewError(connect.CodeResourceExhausted, err)
+		case errors.Is(err, auth.ErrInvalidCredentials):
+			return nil, connect.NewError(connect.CodeUnauthenticated, err)
+		default:
+			return nil, connect.NewError(connect.CodeInternal, err)
+		}
+	}
+	response := connect.NewResponse(&controlplanev1.LoginResponse{CsrfToken: session.CSRFToken})
+	setSessionCookie(response.Header(), session)
+	return response, nil
+}
+
+func (s *Server) Logout(ctx context.Context, req *connect.Request[controlplanev1.LogoutRequest]) (*connect.Response[controlplanev1.LogoutResponse], error) {
+	session, err := s.sessionFromHeader(ctx, req.Header())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrSessionNotFound)
+	}
+	if req.Header().Get("X-CSRF-Token") != session.CSRFToken {
+		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("CSRF token is not valid"))
+	}
+	if err := s.authService.Logout(ctx, session.Token); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	response := connect.NewResponse(&controlplanev1.LogoutResponse{})
+	clearSessionCookie(response.Header())
+	return response, nil
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
@@ -69,6 +175,47 @@ func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlpla
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 	}), nil
+}
+
+func (s *Server) GetDashboardSummary(_ context.Context, _ *connect.Request[controlplanev1.GetDashboardSummaryRequest]) (*connect.Response[controlplanev1.GetDashboardSummaryResponse], error) {
+	response := &controlplanev1.GetDashboardSummaryResponse{GithubConnected: true}
+	if s.managementService == nil {
+		return connect.NewResponse(response), nil
+	}
+
+	runnerSets := s.managementService.ListRunnerSets()
+	response.RunnerSetCount = int32(len(runnerSets))
+	for _, runnerSet := range runnerSets {
+		if !runnerSet.Connected {
+			response.GithubConnected = false
+		}
+		for _, runner := range runnerSet.Runners {
+			switch runner.State {
+			case controller.StatePreparing:
+				response.PreparingRunnerCount++
+			case controller.StateIdle:
+				response.IdleRunnerCount++
+			case controller.StateBusy:
+				response.BusyRunnerCount++
+			}
+		}
+	}
+	if len(runnerSets) == 0 {
+		response.GithubConnected = false
+	}
+
+	for _, job := range s.managementService.ListJobRecords() {
+		switch strings.ToLower(job.Result) {
+		case "running":
+			response.RunningJobCount++
+		case "failed":
+			response.FailedJobCount++
+			response.CompletedJobCount++
+		default:
+			response.CompletedJobCount++
+		}
+	}
+	return connect.NewResponse(response), nil
 }
 
 func toProtoBuildInfo(bi *debug.BuildInfo) *controlplanev1.BuildInfo {
@@ -168,6 +315,42 @@ func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlp
 	}), nil
 }
 
+func (s *Server) GetConfigStatus(_ context.Context, _ *connect.Request[controlplanev1.GetConfigStatusRequest]) (*connect.Response[controlplanev1.GetConfigStatusResponse], error) {
+	if s.configState == nil {
+		return connect.NewResponse(&controlplanev1.GetConfigStatusResponse{}), nil
+	}
+	snapshot := s.configState.Get()
+	response := &controlplanev1.GetConfigStatusResponse{
+		Path:             snapshot.Path,
+		ActiveHash:       snapshot.ActiveHash,
+		DiskHash:         snapshot.DiskHash,
+		State:            toProtoConfigState(snapshot.State),
+		ActiveLoadedAt:   timestamppb.New(snapshot.ActiveLoadedAt),
+		ValidationErrors: snapshot.ValidationErrors,
+		ActiveYaml:       snapshot.ActiveYAML,
+		DiskYaml:         snapshot.DiskYAML,
+	}
+	if snapshot.DiskModifiedAt != nil {
+		response.DiskModifiedAt = timestamppb.New(*snapshot.DiskModifiedAt)
+	}
+	return connect.NewResponse(response), nil
+}
+
+func (s *Server) GetSystemInfo(_ context.Context, _ *connect.Request[controlplanev1.GetSystemInfoRequest]) (*connect.Response[controlplanev1.GetSystemInfoResponse], error) {
+	response := &controlplanev1.GetSystemInfoResponse{
+		Os:           runtime.GOOS,
+		Arch:         runtime.GOARCH,
+		GoVersion:    runtime.Version(),
+		DatabasePath: s.databasePath,
+	}
+	if s.databasePath != "" {
+		if info, err := os.Stat(s.databasePath); err == nil {
+			response.DatabaseSizeBytes = info.Size()
+		}
+	}
+	return connect.NewResponse(response), nil
+}
+
 func toProtoRunnerState(s controller.RunnerState) controlplanev1.RunnerState {
 	switch s {
 	case controller.StatePreparing:
@@ -205,6 +388,71 @@ func toProtoJobResult(r string) controlplanev1.JobResult {
 	default:
 		return controlplanev1.JobResult_JOB_RESULT_UNSPECIFIED
 	}
+}
+
+func toProtoConfigState(state configstate.State) controlplanev1.ConfigSyncState {
+	switch state {
+	case configstate.StateInSync:
+		return controlplanev1.ConfigSyncState_CONFIG_SYNC_STATE_IN_SYNC
+	case configstate.StateRestartRequired:
+		return controlplanev1.ConfigSyncState_CONFIG_SYNC_STATE_RESTART_REQUIRED
+	case configstate.StateDiskInvalid:
+		return controlplanev1.ConfigSyncState_CONFIG_SYNC_STATE_DISK_INVALID
+	default:
+		return controlplanev1.ConfigSyncState_CONFIG_SYNC_STATE_UNSPECIFIED
+	}
+}
+
+func (s *Server) authInterceptor() connect.Interceptor {
+	publicProcedures := map[string]struct{}{
+		controlplanev1connect.ControlPlaneServiceGetSessionProcedure: {},
+		controlplanev1connect.ControlPlaneServiceSetupAdminProcedure: {},
+		controlplanev1connect.ControlPlaneServiceLoginProcedure:      {},
+	}
+	return connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			if _, public := publicProcedures[req.Spec().Procedure]; public {
+				return next(ctx, req)
+			}
+			if _, err := s.sessionFromHeader(ctx, req.Header()); err != nil {
+				return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrSessionNotFound)
+			}
+			return next(ctx, req)
+		}
+	})
+}
+
+func (s *Server) sessionFromHeader(ctx context.Context, header http.Header) (auth.Session, error) {
+	request := &http.Request{Header: header}
+	cookie, err := request.Cookie(auth.SessionCookieName)
+	if err != nil {
+		return auth.Session{}, auth.ErrSessionNotFound
+	}
+	return s.authService.FindSession(ctx, cookie.Value)
+}
+
+func setSessionCookie(header http.Header, session auth.Session) {
+	cookie := &http.Cookie{
+		Name:     auth.SessionCookieName,
+		Value:    session.Token,
+		Path:     "/",
+		Expires:  session.ExpiresAt,
+		MaxAge:   int(time.Until(session.ExpiresAt).Seconds()),
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	header.Add("Set-Cookie", cookie.String())
+}
+
+func clearSessionCookie(header http.Header) {
+	cookie := &http.Cookie{
+		Name:     auth.SessionCookieName,
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	}
+	header.Add("Set-Cookie", cookie.String())
 }
 
 // withCORS wraps a handler with CORS headers based on the provided configuration.

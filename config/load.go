@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -68,6 +70,22 @@ func LoadWithArgs(args []string) (*Config, error) {
 		)
 	})); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
+	}
+
+	cfg.FilePath = v.ConfigFileUsed()
+	if cfg.FilePath != "" {
+		absolutePath, err := filepath.Abs(cfg.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("resolve config path %s: %w", cfg.FilePath, err)
+		}
+		cfg.FilePath = absolutePath
+		data, err := os.ReadFile(cfg.FilePath)
+		if err != nil {
+			return nil, fmt.Errorf("read loaded config %s: %w", cfg.FilePath, err)
+		}
+		sum := sha256.Sum256(data)
+		cfg.LoadedHash = hex.EncodeToString(sum[:])
+		cfg.LoadedYAML = data
 	}
 
 	return cfg, nil

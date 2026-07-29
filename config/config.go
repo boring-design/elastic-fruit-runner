@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -16,6 +18,21 @@ type Config struct {
 	APIAddr     string        `yaml:"api_addr"`
 	CORS        CORSConfig    `yaml:"cors"`
 	DBPath      string        `yaml:"db_path"`
+	FilePath    string        `yaml:"-"`
+	LoadedHash  string        `yaml:"-"`
+	LoadedYAML  []byte        `yaml:"-"`
+}
+
+// DatabasePath returns the configured database path or the default path.
+func (c *Config) DatabasePath() (string, error) {
+	if c.DBPath != "" {
+		return c.DBPath, nil
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("determine home directory for database path: %w", err)
+	}
+	return filepath.Join(homeDir, ".elastic-fruit-runner", "jobs.db"), nil
 }
 
 // CORSConfig holds Cross-Origin Resource Sharing settings.
