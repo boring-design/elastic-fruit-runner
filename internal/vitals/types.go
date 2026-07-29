@@ -7,10 +7,18 @@ import (
 
 // Vitals holds a point-in-time snapshot of host resource metrics.
 type Vitals struct {
-	CPUUsagePercent    float32
-	MemoryUsagePercent float32
-	DiskUsagePercent   float32
-	TemperatureCelsius float32
+	CPUUsagePercent      float32
+	MemoryUsagePercent   float32
+	DiskUsagePercent     float32
+	TemperatureCelsius   float32
+	LoadOne              float64
+	MemoryUsedBytes      int64
+	MemoryAvailableBytes int64
+	SwapUsedBytes        int64
+	DiskUsedBytes        int64
+	DiskAvailableBytes   int64
+	DiskReadBytes        int64
+	DiskWriteBytes       int64
 }
 
 // CollectFunc is the signature for a function that collects host metrics.

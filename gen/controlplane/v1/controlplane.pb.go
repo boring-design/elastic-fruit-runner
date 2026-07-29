@@ -179,6 +179,55 @@ func (JobResult) EnumDescriptor() ([]byte, []int) {
 	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{2}
 }
 
+type ResourceAccuracy int32
+
+const (
+	ResourceAccuracy_RESOURCE_ACCURACY_UNSPECIFIED ResourceAccuracy = 0
+	ResourceAccuracy_RESOURCE_ACCURACY_EXACT       ResourceAccuracy = 1
+	ResourceAccuracy_RESOURCE_ACCURACY_ESTIMATE    ResourceAccuracy = 2
+)
+
+// Enum value maps for ResourceAccuracy.
+var (
+	ResourceAccuracy_name = map[int32]string{
+		0: "RESOURCE_ACCURACY_UNSPECIFIED",
+		1: "RESOURCE_ACCURACY_EXACT",
+		2: "RESOURCE_ACCURACY_ESTIMATE",
+	}
+	ResourceAccuracy_value = map[string]int32{
+		"RESOURCE_ACCURACY_UNSPECIFIED": 0,
+		"RESOURCE_ACCURACY_EXACT":       1,
+		"RESOURCE_ACCURACY_ESTIMATE":    2,
+	}
+)
+
+func (x ResourceAccuracy) Enum() *ResourceAccuracy {
+	p := new(ResourceAccuracy)
+	*p = x
+	return p
+}
+
+func (x ResourceAccuracy) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ResourceAccuracy) Descriptor() protoreflect.EnumDescriptor {
+	return file_controlplane_v1_controlplane_proto_enumTypes[3].Descriptor()
+}
+
+func (ResourceAccuracy) Type() protoreflect.EnumType {
+	return &file_controlplane_v1_controlplane_proto_enumTypes[3]
+}
+
+func (x ResourceAccuracy) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ResourceAccuracy.Descriptor instead.
+func (ResourceAccuracy) EnumDescriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{3}
+}
+
 type ConfigSyncState int32
 
 const (
@@ -215,11 +264,11 @@ func (x ConfigSyncState) String() string {
 }
 
 func (ConfigSyncState) Descriptor() protoreflect.EnumDescriptor {
-	return file_controlplane_v1_controlplane_proto_enumTypes[3].Descriptor()
+	return file_controlplane_v1_controlplane_proto_enumTypes[4].Descriptor()
 }
 
 func (ConfigSyncState) Type() protoreflect.EnumType {
-	return &file_controlplane_v1_controlplane_proto_enumTypes[3]
+	return &file_controlplane_v1_controlplane_proto_enumTypes[4]
 }
 
 func (x ConfigSyncState) Number() protoreflect.EnumNumber {
@@ -228,7 +277,7 @@ func (x ConfigSyncState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ConfigSyncState.Descriptor instead.
 func (ConfigSyncState) EnumDescriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{3}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{4}
 }
 
 type GetSessionRequest struct {
@@ -1273,6 +1322,14 @@ func (x *Runner) GetSince() *timestamppb.Timestamp {
 
 type ListJobRecordsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	RunnerSet     string                 `protobuf:"bytes,2,opt,name=runner_set,json=runnerSet,proto3" json:"runner_set,omitempty"`
+	Repository    string                 `protobuf:"bytes,3,opt,name=repository,proto3" json:"repository,omitempty"`
+	Workflow      string                 `protobuf:"bytes,4,opt,name=workflow,proto3" json:"workflow,omitempty"`
+	From          *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=from,proto3,oneof" json:"from,omitempty"`
+	To            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=to,proto3,oneof" json:"to,omitempty"`
+	Cursor        string                 `protobuf:"bytes,7,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	PageSize      int32                  `protobuf:"varint,8,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1307,9 +1364,66 @@ func (*ListJobRecordsRequest) Descriptor() ([]byte, []int) {
 	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{19}
 }
 
+func (x *ListJobRecordsRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ListJobRecordsRequest) GetRunnerSet() string {
+	if x != nil {
+		return x.RunnerSet
+	}
+	return ""
+}
+
+func (x *ListJobRecordsRequest) GetRepository() string {
+	if x != nil {
+		return x.Repository
+	}
+	return ""
+}
+
+func (x *ListJobRecordsRequest) GetWorkflow() string {
+	if x != nil {
+		return x.Workflow
+	}
+	return ""
+}
+
+func (x *ListJobRecordsRequest) GetFrom() *timestamppb.Timestamp {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *ListJobRecordsRequest) GetTo() *timestamppb.Timestamp {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *ListJobRecordsRequest) GetCursor() string {
+	if x != nil {
+		return x.Cursor
+	}
+	return ""
+}
+
+func (x *ListJobRecordsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
 type ListJobRecordsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	JobRecords    []*JobRecord           `protobuf:"bytes,1,rep,name=job_records,json=jobRecords,proto3" json:"job_records,omitempty"`
+	NextCursor    string                 `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1351,6 +1465,13 @@ func (x *ListJobRecordsResponse) GetJobRecords() []*JobRecord {
 	return nil
 }
 
+func (x *ListJobRecordsResponse) GetNextCursor() string {
+	if x != nil {
+		return x.NextCursor
+	}
+	return ""
+}
+
 type JobRecord struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Unique job identifier from GitHub.
@@ -1364,9 +1485,21 @@ type JobRecord struct {
 	// When the job started.
 	StartedAt *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=started_at,json=startedAt,proto3" json:"started_at,omitempty"`
 	// When the job finished. Absent if still running.
-	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	CompletedAt        *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=completed_at,json=completedAt,proto3,oneof" json:"completed_at,omitempty"`
+	Owner              string                 `protobuf:"bytes,7,opt,name=owner,proto3" json:"owner,omitempty"`
+	Repository         string                 `protobuf:"bytes,8,opt,name=repository,proto3" json:"repository,omitempty"`
+	WorkflowRef        string                 `protobuf:"bytes,9,opt,name=workflow_ref,json=workflowRef,proto3" json:"workflow_ref,omitempty"`
+	DisplayName        string                 `protobuf:"bytes,10,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	WorkflowRunId      int64                  `protobuf:"varint,11,opt,name=workflow_run_id,json=workflowRunId,proto3" json:"workflow_run_id,omitempty"`
+	EventName          string                 `protobuf:"bytes,12,opt,name=event_name,json=eventName,proto3" json:"event_name,omitempty"`
+	Labels             []string               `protobuf:"bytes,13,rep,name=labels,proto3" json:"labels,omitempty"`
+	QueuedAt           *timestamppb.Timestamp `protobuf:"bytes,14,opt,name=queued_at,json=queuedAt,proto3,oneof" json:"queued_at,omitempty"`
+	ScaleSetAssignedAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=scale_set_assigned_at,json=scaleSetAssignedAt,proto3,oneof" json:"scale_set_assigned_at,omitempty"`
+	RunnerAssignedAt   *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=runner_assigned_at,json=runnerAssignedAt,proto3,oneof" json:"runner_assigned_at,omitempty"`
+	Backend            Backend                `protobuf:"varint,17,opt,name=backend,proto3,enum=controlplane.v1.Backend" json:"backend,omitempty"`
+	ActionsUrl         string                 `protobuf:"bytes,18,opt,name=actions_url,json=actionsUrl,proto3" json:"actions_url,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *JobRecord) Reset() {
@@ -1441,6 +1574,690 @@ func (x *JobRecord) GetCompletedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *JobRecord) GetOwner() string {
+	if x != nil {
+		return x.Owner
+	}
+	return ""
+}
+
+func (x *JobRecord) GetRepository() string {
+	if x != nil {
+		return x.Repository
+	}
+	return ""
+}
+
+func (x *JobRecord) GetWorkflowRef() string {
+	if x != nil {
+		return x.WorkflowRef
+	}
+	return ""
+}
+
+func (x *JobRecord) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *JobRecord) GetWorkflowRunId() int64 {
+	if x != nil {
+		return x.WorkflowRunId
+	}
+	return 0
+}
+
+func (x *JobRecord) GetEventName() string {
+	if x != nil {
+		return x.EventName
+	}
+	return ""
+}
+
+func (x *JobRecord) GetLabels() []string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+func (x *JobRecord) GetQueuedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QueuedAt
+	}
+	return nil
+}
+
+func (x *JobRecord) GetScaleSetAssignedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ScaleSetAssignedAt
+	}
+	return nil
+}
+
+func (x *JobRecord) GetRunnerAssignedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RunnerAssignedAt
+	}
+	return nil
+}
+
+func (x *JobRecord) GetBackend() Backend {
+	if x != nil {
+		return x.Backend
+	}
+	return Backend_BACKEND_UNSPECIFIED
+}
+
+func (x *JobRecord) GetActionsUrl() string {
+	if x != nil {
+		return x.ActionsUrl
+	}
+	return ""
+}
+
+type GetJobDetailRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobDetailRequest) Reset() {
+	*x = GetJobDetailRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobDetailRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobDetailRequest) ProtoMessage() {}
+
+func (x *GetJobDetailRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobDetailRequest.ProtoReflect.Descriptor instead.
+func (*GetJobDetailRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetJobDetailRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type GetJobDetailResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Job           *JobRecord             `protobuf:"bytes,1,opt,name=job,proto3" json:"job,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobDetailResponse) Reset() {
+	*x = GetJobDetailResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobDetailResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobDetailResponse) ProtoMessage() {}
+
+func (x *GetJobDetailResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobDetailResponse.ProtoReflect.Descriptor instead.
+func (*GetJobDetailResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetJobDetailResponse) GetJob() *JobRecord {
+	if x != nil {
+		return x.Job
+	}
+	return nil
+}
+
+type GetJobLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	AfterSequence int64                  `protobuf:"varint,2,opt,name=after_sequence,json=afterSequence,proto3" json:"after_sequence,omitempty"`
+	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobLogsRequest) Reset() {
+	*x = GetJobLogsRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobLogsRequest) ProtoMessage() {}
+
+func (x *GetJobLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobLogsRequest.ProtoReflect.Descriptor instead.
+func (*GetJobLogsRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetJobLogsRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+func (x *GetJobLogsRequest) GetAfterSequence() int64 {
+	if x != nil {
+		return x.AfterSequence
+	}
+	return 0
+}
+
+func (x *GetJobLogsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+type JobLogLine struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sequence      int64                  `protobuf:"varint,1,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	RecordedAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	Text          string                 `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *JobLogLine) Reset() {
+	*x = JobLogLine{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *JobLogLine) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*JobLogLine) ProtoMessage() {}
+
+func (x *JobLogLine) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use JobLogLine.ProtoReflect.Descriptor instead.
+func (*JobLogLine) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *JobLogLine) GetSequence() int64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *JobLogLine) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+func (x *JobLogLine) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+type GetJobLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Lines         []*JobLogLine          `protobuf:"bytes,1,rep,name=lines,proto3" json:"lines,omitempty"`
+	NextSequence  int64                  `protobuf:"varint,2,opt,name=next_sequence,json=nextSequence,proto3" json:"next_sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobLogsResponse) Reset() {
+	*x = GetJobLogsResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobLogsResponse) ProtoMessage() {}
+
+func (x *GetJobLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobLogsResponse.ProtoReflect.Descriptor instead.
+func (*GetJobLogsResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *GetJobLogsResponse) GetLines() []*JobLogLine {
+	if x != nil {
+		return x.Lines
+	}
+	return nil
+}
+
+func (x *GetJobLogsResponse) GetNextSequence() int64 {
+	if x != nil {
+		return x.NextSequence
+	}
+	return 0
+}
+
+type ResourceSample struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	RecordedAt           *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	Source               string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Accuracy             ResourceAccuracy       `protobuf:"varint,3,opt,name=accuracy,proto3,enum=controlplane.v1.ResourceAccuracy" json:"accuracy,omitempty"`
+	CpuPercent           float64                `protobuf:"fixed64,4,opt,name=cpu_percent,json=cpuPercent,proto3" json:"cpu_percent,omitempty"`
+	MemoryUsedBytes      int64                  `protobuf:"varint,5,opt,name=memory_used_bytes,json=memoryUsedBytes,proto3" json:"memory_used_bytes,omitempty"`
+	MemoryAvailableBytes int64                  `protobuf:"varint,6,opt,name=memory_available_bytes,json=memoryAvailableBytes,proto3" json:"memory_available_bytes,omitempty"`
+	DiskUsedBytes        int64                  `protobuf:"varint,7,opt,name=disk_used_bytes,json=diskUsedBytes,proto3" json:"disk_used_bytes,omitempty"`
+	DiskAvailableBytes   int64                  `protobuf:"varint,8,opt,name=disk_available_bytes,json=diskAvailableBytes,proto3" json:"disk_available_bytes,omitempty"`
+	DiskReadBytes        int64                  `protobuf:"varint,9,opt,name=disk_read_bytes,json=diskReadBytes,proto3" json:"disk_read_bytes,omitempty"`
+	DiskWriteBytes       int64                  `protobuf:"varint,10,opt,name=disk_write_bytes,json=diskWriteBytes,proto3" json:"disk_write_bytes,omitempty"`
+	NetworkReceiveBytes  int64                  `protobuf:"varint,11,opt,name=network_receive_bytes,json=networkReceiveBytes,proto3" json:"network_receive_bytes,omitempty"`
+	NetworkSendBytes     int64                  `protobuf:"varint,12,opt,name=network_send_bytes,json=networkSendBytes,proto3" json:"network_send_bytes,omitempty"`
+	LoadOne              float64                `protobuf:"fixed64,13,opt,name=load_one,json=loadOne,proto3" json:"load_one,omitempty"`
+	TemperatureCelsius   float64                `protobuf:"fixed64,14,opt,name=temperature_celsius,json=temperatureCelsius,proto3" json:"temperature_celsius,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ResourceSample) Reset() {
+	*x = ResourceSample{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResourceSample) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResourceSample) ProtoMessage() {}
+
+func (x *ResourceSample) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResourceSample.ProtoReflect.Descriptor instead.
+func (*ResourceSample) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *ResourceSample) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+func (x *ResourceSample) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *ResourceSample) GetAccuracy() ResourceAccuracy {
+	if x != nil {
+		return x.Accuracy
+	}
+	return ResourceAccuracy_RESOURCE_ACCURACY_UNSPECIFIED
+}
+
+func (x *ResourceSample) GetCpuPercent() float64 {
+	if x != nil {
+		return x.CpuPercent
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetMemoryUsedBytes() int64 {
+	if x != nil {
+		return x.MemoryUsedBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetMemoryAvailableBytes() int64 {
+	if x != nil {
+		return x.MemoryAvailableBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetDiskUsedBytes() int64 {
+	if x != nil {
+		return x.DiskUsedBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetDiskAvailableBytes() int64 {
+	if x != nil {
+		return x.DiskAvailableBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetDiskReadBytes() int64 {
+	if x != nil {
+		return x.DiskReadBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetDiskWriteBytes() int64 {
+	if x != nil {
+		return x.DiskWriteBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetNetworkReceiveBytes() int64 {
+	if x != nil {
+		return x.NetworkReceiveBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetNetworkSendBytes() int64 {
+	if x != nil {
+		return x.NetworkSendBytes
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetLoadOne() float64 {
+	if x != nil {
+		return x.LoadOne
+	}
+	return 0
+}
+
+func (x *ResourceSample) GetTemperatureCelsius() float64 {
+	if x != nil {
+		return x.TemperatureCelsius
+	}
+	return 0
+}
+
+type GetJobResourceSamplesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JobId         string                 `protobuf:"bytes,1,opt,name=job_id,json=jobId,proto3" json:"job_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobResourceSamplesRequest) Reset() {
+	*x = GetJobResourceSamplesRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobResourceSamplesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobResourceSamplesRequest) ProtoMessage() {}
+
+func (x *GetJobResourceSamplesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobResourceSamplesRequest.ProtoReflect.Descriptor instead.
+func (*GetJobResourceSamplesRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *GetJobResourceSamplesRequest) GetJobId() string {
+	if x != nil {
+		return x.JobId
+	}
+	return ""
+}
+
+type GetJobResourceSamplesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Samples       []*ResourceSample      `protobuf:"bytes,1,rep,name=samples,proto3" json:"samples,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetJobResourceSamplesResponse) Reset() {
+	*x = GetJobResourceSamplesResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetJobResourceSamplesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetJobResourceSamplesResponse) ProtoMessage() {}
+
+func (x *GetJobResourceSamplesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetJobResourceSamplesResponse.ProtoReflect.Descriptor instead.
+func (*GetJobResourceSamplesResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *GetJobResourceSamplesResponse) GetSamples() []*ResourceSample {
+	if x != nil {
+		return x.Samples
+	}
+	return nil
+}
+
+type GetHostResourceSamplesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	From          *timestamppb.Timestamp `protobuf:"bytes,1,opt,name=from,proto3,oneof" json:"from,omitempty"`
+	To            *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=to,proto3,oneof" json:"to,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHostResourceSamplesRequest) Reset() {
+	*x = GetHostResourceSamplesRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHostResourceSamplesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostResourceSamplesRequest) ProtoMessage() {}
+
+func (x *GetHostResourceSamplesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostResourceSamplesRequest.ProtoReflect.Descriptor instead.
+func (*GetHostResourceSamplesRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *GetHostResourceSamplesRequest) GetFrom() *timestamppb.Timestamp {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *GetHostResourceSamplesRequest) GetTo() *timestamppb.Timestamp {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+type GetHostResourceSamplesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Samples       []*ResourceSample      `protobuf:"bytes,1,rep,name=samples,proto3" json:"samples,omitempty"`
+	EarliestAt    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=earliest_at,json=earliestAt,proto3,oneof" json:"earliest_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetHostResourceSamplesResponse) Reset() {
+	*x = GetHostResourceSamplesResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetHostResourceSamplesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetHostResourceSamplesResponse) ProtoMessage() {}
+
+func (x *GetHostResourceSamplesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetHostResourceSamplesResponse.ProtoReflect.Descriptor instead.
+func (*GetHostResourceSamplesResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *GetHostResourceSamplesResponse) GetSamples() []*ResourceSample {
+	if x != nil {
+		return x.Samples
+	}
+	return nil
+}
+
+func (x *GetHostResourceSamplesResponse) GetEarliestAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.EarliestAt
+	}
+	return nil
+}
+
 type GetMachineVitalsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -1449,7 +2266,7 @@ type GetMachineVitalsRequest struct {
 
 func (x *GetMachineVitalsRequest) Reset() {
 	*x = GetMachineVitalsRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[22]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1461,7 +2278,7 @@ func (x *GetMachineVitalsRequest) String() string {
 func (*GetMachineVitalsRequest) ProtoMessage() {}
 
 func (x *GetMachineVitalsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[22]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1474,7 +2291,7 @@ func (x *GetMachineVitalsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMachineVitalsRequest.ProtoReflect.Descriptor instead.
 func (*GetMachineVitalsRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{22}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{32}
 }
 
 type GetMachineVitalsResponse struct {
@@ -1493,7 +2310,7 @@ type GetMachineVitalsResponse struct {
 
 func (x *GetMachineVitalsResponse) Reset() {
 	*x = GetMachineVitalsResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[23]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1505,7 +2322,7 @@ func (x *GetMachineVitalsResponse) String() string {
 func (*GetMachineVitalsResponse) ProtoMessage() {}
 
 func (x *GetMachineVitalsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[23]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1518,7 +2335,7 @@ func (x *GetMachineVitalsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMachineVitalsResponse.ProtoReflect.Descriptor instead.
 func (*GetMachineVitalsResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{23}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *GetMachineVitalsResponse) GetCpuUsagePercent() float32 {
@@ -1557,7 +2374,7 @@ type GetConfigStatusRequest struct {
 
 func (x *GetConfigStatusRequest) Reset() {
 	*x = GetConfigStatusRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[24]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1569,7 +2386,7 @@ func (x *GetConfigStatusRequest) String() string {
 func (*GetConfigStatusRequest) ProtoMessage() {}
 
 func (x *GetConfigStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[24]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1582,7 +2399,7 @@ func (x *GetConfigStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetConfigStatusRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{24}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{34}
 }
 
 type GetConfigStatusResponse struct {
@@ -1602,7 +2419,7 @@ type GetConfigStatusResponse struct {
 
 func (x *GetConfigStatusResponse) Reset() {
 	*x = GetConfigStatusResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[25]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1614,7 +2431,7 @@ func (x *GetConfigStatusResponse) String() string {
 func (*GetConfigStatusResponse) ProtoMessage() {}
 
 func (x *GetConfigStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[25]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1627,7 +2444,7 @@ func (x *GetConfigStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetConfigStatusResponse.ProtoReflect.Descriptor instead.
 func (*GetConfigStatusResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{25}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetConfigStatusResponse) GetPath() string {
@@ -1701,7 +2518,7 @@ type GetSystemInfoRequest struct {
 
 func (x *GetSystemInfoRequest) Reset() {
 	*x = GetSystemInfoRequest{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[26]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1713,7 +2530,7 @@ func (x *GetSystemInfoRequest) String() string {
 func (*GetSystemInfoRequest) ProtoMessage() {}
 
 func (x *GetSystemInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[26]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1726,7 +2543,7 @@ func (x *GetSystemInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetSystemInfoRequest) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{26}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{36}
 }
 
 type GetSystemInfoResponse struct {
@@ -1742,7 +2559,7 @@ type GetSystemInfoResponse struct {
 
 func (x *GetSystemInfoResponse) Reset() {
 	*x = GetSystemInfoResponse{}
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[27]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1754,7 +2571,7 @@ func (x *GetSystemInfoResponse) String() string {
 func (*GetSystemInfoResponse) ProtoMessage() {}
 
 func (x *GetSystemInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_controlplane_v1_controlplane_proto_msgTypes[27]
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1767,7 +2584,7 @@ func (x *GetSystemInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSystemInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetSystemInfoResponse) Descriptor() ([]byte, []int) {
-	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{27}
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetSystemInfoResponse) GetOs() string {
@@ -1879,11 +2696,26 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x06Runner\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x122\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x1c.controlplane.v1.RunnerStateR\x05state\x120\n" +
-	"\x05since\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05since\"\x17\n" +
-	"\x15ListJobRecordsRequest\"U\n" +
+	"\x05since\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05since\"\xb5\x02\n" +
+	"\x15ListJobRecordsRequest\x12\x16\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1d\n" +
+	"\n" +
+	"runner_set\x18\x02 \x01(\tR\trunnerSet\x12\x1e\n" +
+	"\n" +
+	"repository\x18\x03 \x01(\tR\n" +
+	"repository\x12\x1a\n" +
+	"\bworkflow\x18\x04 \x01(\tR\bworkflow\x123\n" +
+	"\x04from\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x04from\x88\x01\x01\x12/\n" +
+	"\x02to\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\x02to\x88\x01\x01\x12\x16\n" +
+	"\x06cursor\x18\a \x01(\tR\x06cursor\x12\x1b\n" +
+	"\tpage_size\x18\b \x01(\x05R\bpageSizeB\a\n" +
+	"\x05_fromB\x05\n" +
+	"\x03_to\"v\n" +
 	"\x16ListJobRecordsResponse\x12;\n" +
 	"\vjob_records\x18\x01 \x03(\v2\x1a.controlplane.v1.JobRecordR\n" +
-	"jobRecords\"\xa8\x02\n" +
+	"jobRecords\x12\x1f\n" +
+	"\vnext_cursor\x18\x02 \x01(\tR\n" +
+	"nextCursor\"\xf8\x06\n" +
 	"\tJobRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vrunner_name\x18\x02 \x01(\tR\n" +
@@ -1892,8 +2724,78 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x06result\x18\x04 \x01(\x0e2\x1a.controlplane.v1.JobResultR\x06result\x129\n" +
 	"\n" +
 	"started_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x12B\n" +
-	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01B\x0f\n" +
-	"\r_completed_at\"\x19\n" +
+	"\fcompleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\vcompletedAt\x88\x01\x01\x12\x14\n" +
+	"\x05owner\x18\a \x01(\tR\x05owner\x12\x1e\n" +
+	"\n" +
+	"repository\x18\b \x01(\tR\n" +
+	"repository\x12!\n" +
+	"\fworkflow_ref\x18\t \x01(\tR\vworkflowRef\x12!\n" +
+	"\fdisplay_name\x18\n" +
+	" \x01(\tR\vdisplayName\x12&\n" +
+	"\x0fworkflow_run_id\x18\v \x01(\x03R\rworkflowRunId\x12\x1d\n" +
+	"\n" +
+	"event_name\x18\f \x01(\tR\teventName\x12\x16\n" +
+	"\x06labels\x18\r \x03(\tR\x06labels\x12<\n" +
+	"\tqueued_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampH\x01R\bqueuedAt\x88\x01\x01\x12R\n" +
+	"\x15scale_set_assigned_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampH\x02R\x12scaleSetAssignedAt\x88\x01\x01\x12M\n" +
+	"\x12runner_assigned_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampH\x03R\x10runnerAssignedAt\x88\x01\x01\x122\n" +
+	"\abackend\x18\x11 \x01(\x0e2\x18.controlplane.v1.BackendR\abackend\x12\x1f\n" +
+	"\vactions_url\x18\x12 \x01(\tR\n" +
+	"actionsUrlB\x0f\n" +
+	"\r_completed_atB\f\n" +
+	"\n" +
+	"_queued_atB\x18\n" +
+	"\x16_scale_set_assigned_atB\x15\n" +
+	"\x13_runner_assigned_at\"%\n" +
+	"\x13GetJobDetailRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"D\n" +
+	"\x14GetJobDetailResponse\x12,\n" +
+	"\x03job\x18\x01 \x01(\v2\x1a.controlplane.v1.JobRecordR\x03job\"n\n" +
+	"\x11GetJobLogsRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\x12%\n" +
+	"\x0eafter_sequence\x18\x02 \x01(\x03R\rafterSequence\x12\x1b\n" +
+	"\tpage_size\x18\x03 \x01(\x05R\bpageSize\"y\n" +
+	"\n" +
+	"JobLogLine\x12\x1a\n" +
+	"\bsequence\x18\x01 \x01(\x03R\bsequence\x12;\n" +
+	"\vrecorded_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x12\x12\n" +
+	"\x04text\x18\x03 \x01(\tR\x04text\"l\n" +
+	"\x12GetJobLogsResponse\x121\n" +
+	"\x05lines\x18\x01 \x03(\v2\x1b.controlplane.v1.JobLogLineR\x05lines\x12#\n" +
+	"\rnext_sequence\x18\x02 \x01(\x03R\fnextSequence\"\x81\x05\n" +
+	"\x0eResourceSample\x12;\n" +
+	"\vrecorded_at\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12=\n" +
+	"\baccuracy\x18\x03 \x01(\x0e2!.controlplane.v1.ResourceAccuracyR\baccuracy\x12\x1f\n" +
+	"\vcpu_percent\x18\x04 \x01(\x01R\n" +
+	"cpuPercent\x12*\n" +
+	"\x11memory_used_bytes\x18\x05 \x01(\x03R\x0fmemoryUsedBytes\x124\n" +
+	"\x16memory_available_bytes\x18\x06 \x01(\x03R\x14memoryAvailableBytes\x12&\n" +
+	"\x0fdisk_used_bytes\x18\a \x01(\x03R\rdiskUsedBytes\x120\n" +
+	"\x14disk_available_bytes\x18\b \x01(\x03R\x12diskAvailableBytes\x12&\n" +
+	"\x0fdisk_read_bytes\x18\t \x01(\x03R\rdiskReadBytes\x12(\n" +
+	"\x10disk_write_bytes\x18\n" +
+	" \x01(\x03R\x0ediskWriteBytes\x122\n" +
+	"\x15network_receive_bytes\x18\v \x01(\x03R\x13networkReceiveBytes\x12,\n" +
+	"\x12network_send_bytes\x18\f \x01(\x03R\x10networkSendBytes\x12\x19\n" +
+	"\bload_one\x18\r \x01(\x01R\aloadOne\x12/\n" +
+	"\x13temperature_celsius\x18\x0e \x01(\x01R\x12temperatureCelsius\"5\n" +
+	"\x1cGetJobResourceSamplesRequest\x12\x15\n" +
+	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"Z\n" +
+	"\x1dGetJobResourceSamplesResponse\x129\n" +
+	"\asamples\x18\x01 \x03(\v2\x1f.controlplane.v1.ResourceSampleR\asamples\"\x95\x01\n" +
+	"\x1dGetHostResourceSamplesRequest\x123\n" +
+	"\x04from\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\x04from\x88\x01\x01\x12/\n" +
+	"\x02to\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x01R\x02to\x88\x01\x01B\a\n" +
+	"\x05_fromB\x05\n" +
+	"\x03_to\"\xad\x01\n" +
+	"\x1eGetHostResourceSamplesResponse\x129\n" +
+	"\asamples\x18\x01 \x03(\v2\x1f.controlplane.v1.ResourceSampleR\asamples\x12@\n" +
+	"\vearliest_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampH\x00R\n" +
+	"earliestAt\x88\x01\x01B\x0e\n" +
+	"\f_earliest_at\"\x19\n" +
 	"\x17GetMachineVitalsRequest\"\xd7\x01\n" +
 	"\x18GetMachineVitalsResponse\x12*\n" +
 	"\x11cpu_usage_percent\x18\x01 \x01(\x02R\x0fcpuUsagePercent\x120\n" +
@@ -1936,12 +2838,16 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x12JOB_RESULT_RUNNING\x10\x01\x12\x16\n" +
 	"\x12JOB_RESULT_SUCCESS\x10\x02\x12\x16\n" +
 	"\x12JOB_RESULT_FAILURE\x10\x03\x12\x17\n" +
-	"\x13JOB_RESULT_CANCELED\x10\x04*\x9f\x01\n" +
+	"\x13JOB_RESULT_CANCELED\x10\x04*r\n" +
+	"\x10ResourceAccuracy\x12!\n" +
+	"\x1dRESOURCE_ACCURACY_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17RESOURCE_ACCURACY_EXACT\x10\x01\x12\x1e\n" +
+	"\x1aRESOURCE_ACCURACY_ESTIMATE\x10\x02*\x9f\x01\n" +
 	"\x0fConfigSyncState\x12!\n" +
 	"\x1dCONFIG_SYNC_STATE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19CONFIG_SYNC_STATE_IN_SYNC\x10\x01\x12&\n" +
 	"\"CONFIG_SYNC_STATE_RESTART_REQUIRED\x10\x02\x12\"\n" +
-	"\x1eCONFIG_SYNC_STATE_DISK_INVALID\x10\x032\xa0\b\n" +
+	"\x1eCONFIG_SYNC_STATE_DISK_INVALID\x10\x032\xc7\v\n" +
 	"\x13ControlPlaneService\x12U\n" +
 	"\n" +
 	"GetSession\x12\".controlplane.v1.GetSessionRequest\x1a#.controlplane.v1.GetSessionResponse\x12U\n" +
@@ -1952,7 +2858,12 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x0eGetServiceInfo\x12&.controlplane.v1.GetServiceInfoRequest\x1a'.controlplane.v1.GetServiceInfoResponse\x12p\n" +
 	"\x13GetDashboardSummary\x12+.controlplane.v1.GetDashboardSummaryRequest\x1a,.controlplane.v1.GetDashboardSummaryResponse\x12a\n" +
 	"\x0eListRunnerSets\x12&.controlplane.v1.ListRunnerSetsRequest\x1a'.controlplane.v1.ListRunnerSetsResponse\x12a\n" +
-	"\x0eListJobRecords\x12&.controlplane.v1.ListJobRecordsRequest\x1a'.controlplane.v1.ListJobRecordsResponse\x12g\n" +
+	"\x0eListJobRecords\x12&.controlplane.v1.ListJobRecordsRequest\x1a'.controlplane.v1.ListJobRecordsResponse\x12[\n" +
+	"\fGetJobDetail\x12$.controlplane.v1.GetJobDetailRequest\x1a%.controlplane.v1.GetJobDetailResponse\x12U\n" +
+	"\n" +
+	"GetJobLogs\x12\".controlplane.v1.GetJobLogsRequest\x1a#.controlplane.v1.GetJobLogsResponse\x12v\n" +
+	"\x15GetJobResourceSamples\x12-.controlplane.v1.GetJobResourceSamplesRequest\x1a..controlplane.v1.GetJobResourceSamplesResponse\x12y\n" +
+	"\x16GetHostResourceSamples\x12..controlplane.v1.GetHostResourceSamplesRequest\x1a/.controlplane.v1.GetHostResourceSamplesResponse\x12g\n" +
 	"\x10GetMachineVitals\x12(.controlplane.v1.GetMachineVitalsRequest\x1a).controlplane.v1.GetMachineVitalsResponse\x12d\n" +
 	"\x0fGetConfigStatus\x12'.controlplane.v1.GetConfigStatusRequest\x1a(.controlplane.v1.GetConfigStatusResponse\x12^\n" +
 	"\rGetSystemInfo\x12%.controlplane.v1.GetSystemInfoRequest\x1a&.controlplane.v1.GetSystemInfoResponseBRZPgithub.com/boring-design/elastic-fruit-runner/gen/controlplane/v1;controlplanev1b\x06proto3"
@@ -1969,89 +2880,124 @@ func file_controlplane_v1_controlplane_proto_rawDescGZIP() []byte {
 	return file_controlplane_v1_controlplane_proto_rawDescData
 }
 
-var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
+var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_controlplane_v1_controlplane_proto_goTypes = []any{
-	(Backend)(0),                        // 0: controlplane.v1.Backend
-	(RunnerState)(0),                    // 1: controlplane.v1.RunnerState
-	(JobResult)(0),                      // 2: controlplane.v1.JobResult
-	(ConfigSyncState)(0),                // 3: controlplane.v1.ConfigSyncState
-	(*GetSessionRequest)(nil),           // 4: controlplane.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),          // 5: controlplane.v1.GetSessionResponse
-	(*SetupAdminRequest)(nil),           // 6: controlplane.v1.SetupAdminRequest
-	(*SetupAdminResponse)(nil),          // 7: controlplane.v1.SetupAdminResponse
-	(*LoginRequest)(nil),                // 8: controlplane.v1.LoginRequest
-	(*LoginResponse)(nil),               // 9: controlplane.v1.LoginResponse
-	(*LogoutRequest)(nil),               // 10: controlplane.v1.LogoutRequest
-	(*LogoutResponse)(nil),              // 11: controlplane.v1.LogoutResponse
-	(*GetServiceInfoRequest)(nil),       // 12: controlplane.v1.GetServiceInfoRequest
-	(*GetServiceInfoResponse)(nil),      // 13: controlplane.v1.GetServiceInfoResponse
-	(*GetDashboardSummaryRequest)(nil),  // 14: controlplane.v1.GetDashboardSummaryRequest
-	(*GetDashboardSummaryResponse)(nil), // 15: controlplane.v1.GetDashboardSummaryResponse
-	(*BuildInfo)(nil),                   // 16: controlplane.v1.BuildInfo
-	(*Module)(nil),                      // 17: controlplane.v1.Module
-	(*BuildSetting)(nil),                // 18: controlplane.v1.BuildSetting
-	(*ListRunnerSetsRequest)(nil),       // 19: controlplane.v1.ListRunnerSetsRequest
-	(*ListRunnerSetsResponse)(nil),      // 20: controlplane.v1.ListRunnerSetsResponse
-	(*RunnerSet)(nil),                   // 21: controlplane.v1.RunnerSet
-	(*Runner)(nil),                      // 22: controlplane.v1.Runner
-	(*ListJobRecordsRequest)(nil),       // 23: controlplane.v1.ListJobRecordsRequest
-	(*ListJobRecordsResponse)(nil),      // 24: controlplane.v1.ListJobRecordsResponse
-	(*JobRecord)(nil),                   // 25: controlplane.v1.JobRecord
-	(*GetMachineVitalsRequest)(nil),     // 26: controlplane.v1.GetMachineVitalsRequest
-	(*GetMachineVitalsResponse)(nil),    // 27: controlplane.v1.GetMachineVitalsResponse
-	(*GetConfigStatusRequest)(nil),      // 28: controlplane.v1.GetConfigStatusRequest
-	(*GetConfigStatusResponse)(nil),     // 29: controlplane.v1.GetConfigStatusResponse
-	(*GetSystemInfoRequest)(nil),        // 30: controlplane.v1.GetSystemInfoRequest
-	(*GetSystemInfoResponse)(nil),       // 31: controlplane.v1.GetSystemInfoResponse
-	(*timestamppb.Timestamp)(nil),       // 32: google.protobuf.Timestamp
+	(Backend)(0),                           // 0: controlplane.v1.Backend
+	(RunnerState)(0),                       // 1: controlplane.v1.RunnerState
+	(JobResult)(0),                         // 2: controlplane.v1.JobResult
+	(ResourceAccuracy)(0),                  // 3: controlplane.v1.ResourceAccuracy
+	(ConfigSyncState)(0),                   // 4: controlplane.v1.ConfigSyncState
+	(*GetSessionRequest)(nil),              // 5: controlplane.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),             // 6: controlplane.v1.GetSessionResponse
+	(*SetupAdminRequest)(nil),              // 7: controlplane.v1.SetupAdminRequest
+	(*SetupAdminResponse)(nil),             // 8: controlplane.v1.SetupAdminResponse
+	(*LoginRequest)(nil),                   // 9: controlplane.v1.LoginRequest
+	(*LoginResponse)(nil),                  // 10: controlplane.v1.LoginResponse
+	(*LogoutRequest)(nil),                  // 11: controlplane.v1.LogoutRequest
+	(*LogoutResponse)(nil),                 // 12: controlplane.v1.LogoutResponse
+	(*GetServiceInfoRequest)(nil),          // 13: controlplane.v1.GetServiceInfoRequest
+	(*GetServiceInfoResponse)(nil),         // 14: controlplane.v1.GetServiceInfoResponse
+	(*GetDashboardSummaryRequest)(nil),     // 15: controlplane.v1.GetDashboardSummaryRequest
+	(*GetDashboardSummaryResponse)(nil),    // 16: controlplane.v1.GetDashboardSummaryResponse
+	(*BuildInfo)(nil),                      // 17: controlplane.v1.BuildInfo
+	(*Module)(nil),                         // 18: controlplane.v1.Module
+	(*BuildSetting)(nil),                   // 19: controlplane.v1.BuildSetting
+	(*ListRunnerSetsRequest)(nil),          // 20: controlplane.v1.ListRunnerSetsRequest
+	(*ListRunnerSetsResponse)(nil),         // 21: controlplane.v1.ListRunnerSetsResponse
+	(*RunnerSet)(nil),                      // 22: controlplane.v1.RunnerSet
+	(*Runner)(nil),                         // 23: controlplane.v1.Runner
+	(*ListJobRecordsRequest)(nil),          // 24: controlplane.v1.ListJobRecordsRequest
+	(*ListJobRecordsResponse)(nil),         // 25: controlplane.v1.ListJobRecordsResponse
+	(*JobRecord)(nil),                      // 26: controlplane.v1.JobRecord
+	(*GetJobDetailRequest)(nil),            // 27: controlplane.v1.GetJobDetailRequest
+	(*GetJobDetailResponse)(nil),           // 28: controlplane.v1.GetJobDetailResponse
+	(*GetJobLogsRequest)(nil),              // 29: controlplane.v1.GetJobLogsRequest
+	(*JobLogLine)(nil),                     // 30: controlplane.v1.JobLogLine
+	(*GetJobLogsResponse)(nil),             // 31: controlplane.v1.GetJobLogsResponse
+	(*ResourceSample)(nil),                 // 32: controlplane.v1.ResourceSample
+	(*GetJobResourceSamplesRequest)(nil),   // 33: controlplane.v1.GetJobResourceSamplesRequest
+	(*GetJobResourceSamplesResponse)(nil),  // 34: controlplane.v1.GetJobResourceSamplesResponse
+	(*GetHostResourceSamplesRequest)(nil),  // 35: controlplane.v1.GetHostResourceSamplesRequest
+	(*GetHostResourceSamplesResponse)(nil), // 36: controlplane.v1.GetHostResourceSamplesResponse
+	(*GetMachineVitalsRequest)(nil),        // 37: controlplane.v1.GetMachineVitalsRequest
+	(*GetMachineVitalsResponse)(nil),       // 38: controlplane.v1.GetMachineVitalsResponse
+	(*GetConfigStatusRequest)(nil),         // 39: controlplane.v1.GetConfigStatusRequest
+	(*GetConfigStatusResponse)(nil),        // 40: controlplane.v1.GetConfigStatusResponse
+	(*GetSystemInfoRequest)(nil),           // 41: controlplane.v1.GetSystemInfoRequest
+	(*GetSystemInfoResponse)(nil),          // 42: controlplane.v1.GetSystemInfoResponse
+	(*timestamppb.Timestamp)(nil),          // 43: google.protobuf.Timestamp
 }
 var file_controlplane_v1_controlplane_proto_depIdxs = []int32{
-	16, // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
-	32, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
-	17, // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
-	17, // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
-	18, // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
-	17, // 5: controlplane.v1.Module.replace:type_name -> controlplane.v1.Module
-	21, // 6: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
+	17, // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
+	43, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
+	18, // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
+	18, // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
+	19, // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
+	18, // 5: controlplane.v1.Module.replace:type_name -> controlplane.v1.Module
+	22, // 6: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
 	0,  // 7: controlplane.v1.RunnerSet.backend:type_name -> controlplane.v1.Backend
-	22, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
+	23, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
 	1,  // 9: controlplane.v1.Runner.state:type_name -> controlplane.v1.RunnerState
-	32, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
-	25, // 11: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
-	2,  // 12: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
-	32, // 13: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
-	32, // 14: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
-	3,  // 15: controlplane.v1.GetConfigStatusResponse.state:type_name -> controlplane.v1.ConfigSyncState
-	32, // 16: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
-	32, // 17: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
-	4,  // 18: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
-	6,  // 19: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
-	8,  // 20: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
-	10, // 21: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
-	12, // 22: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
-	14, // 23: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
-	19, // 24: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
-	23, // 25: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
-	26, // 26: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
-	28, // 27: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
-	30, // 28: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
-	5,  // 29: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
-	7,  // 30: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
-	9,  // 31: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
-	11, // 32: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
-	13, // 33: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
-	15, // 34: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
-	20, // 35: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
-	24, // 36: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
-	27, // 37: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
-	29, // 38: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
-	31, // 39: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
-	29, // [29:40] is the sub-list for method output_type
-	18, // [18:29] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	43, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
+	43, // 11: controlplane.v1.ListJobRecordsRequest.from:type_name -> google.protobuf.Timestamp
+	43, // 12: controlplane.v1.ListJobRecordsRequest.to:type_name -> google.protobuf.Timestamp
+	26, // 13: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
+	2,  // 14: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
+	43, // 15: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
+	43, // 16: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
+	43, // 17: controlplane.v1.JobRecord.queued_at:type_name -> google.protobuf.Timestamp
+	43, // 18: controlplane.v1.JobRecord.scale_set_assigned_at:type_name -> google.protobuf.Timestamp
+	43, // 19: controlplane.v1.JobRecord.runner_assigned_at:type_name -> google.protobuf.Timestamp
+	0,  // 20: controlplane.v1.JobRecord.backend:type_name -> controlplane.v1.Backend
+	26, // 21: controlplane.v1.GetJobDetailResponse.job:type_name -> controlplane.v1.JobRecord
+	43, // 22: controlplane.v1.JobLogLine.recorded_at:type_name -> google.protobuf.Timestamp
+	30, // 23: controlplane.v1.GetJobLogsResponse.lines:type_name -> controlplane.v1.JobLogLine
+	43, // 24: controlplane.v1.ResourceSample.recorded_at:type_name -> google.protobuf.Timestamp
+	3,  // 25: controlplane.v1.ResourceSample.accuracy:type_name -> controlplane.v1.ResourceAccuracy
+	32, // 26: controlplane.v1.GetJobResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
+	43, // 27: controlplane.v1.GetHostResourceSamplesRequest.from:type_name -> google.protobuf.Timestamp
+	43, // 28: controlplane.v1.GetHostResourceSamplesRequest.to:type_name -> google.protobuf.Timestamp
+	32, // 29: controlplane.v1.GetHostResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
+	43, // 30: controlplane.v1.GetHostResourceSamplesResponse.earliest_at:type_name -> google.protobuf.Timestamp
+	4,  // 31: controlplane.v1.GetConfigStatusResponse.state:type_name -> controlplane.v1.ConfigSyncState
+	43, // 32: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
+	43, // 33: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
+	5,  // 34: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
+	7,  // 35: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
+	9,  // 36: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
+	11, // 37: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
+	13, // 38: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
+	15, // 39: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
+	20, // 40: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
+	24, // 41: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
+	27, // 42: controlplane.v1.ControlPlaneService.GetJobDetail:input_type -> controlplane.v1.GetJobDetailRequest
+	29, // 43: controlplane.v1.ControlPlaneService.GetJobLogs:input_type -> controlplane.v1.GetJobLogsRequest
+	33, // 44: controlplane.v1.ControlPlaneService.GetJobResourceSamples:input_type -> controlplane.v1.GetJobResourceSamplesRequest
+	35, // 45: controlplane.v1.ControlPlaneService.GetHostResourceSamples:input_type -> controlplane.v1.GetHostResourceSamplesRequest
+	37, // 46: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
+	39, // 47: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
+	41, // 48: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
+	6,  // 49: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
+	8,  // 50: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
+	10, // 51: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
+	12, // 52: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
+	14, // 53: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
+	16, // 54: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
+	21, // 55: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
+	25, // 56: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
+	28, // 57: controlplane.v1.ControlPlaneService.GetJobDetail:output_type -> controlplane.v1.GetJobDetailResponse
+	31, // 58: controlplane.v1.ControlPlaneService.GetJobLogs:output_type -> controlplane.v1.GetJobLogsResponse
+	34, // 59: controlplane.v1.ControlPlaneService.GetJobResourceSamples:output_type -> controlplane.v1.GetJobResourceSamplesResponse
+	36, // 60: controlplane.v1.ControlPlaneService.GetHostResourceSamples:output_type -> controlplane.v1.GetHostResourceSamplesResponse
+	38, // 61: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
+	40, // 62: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
+	42, // 63: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
+	49, // [49:64] is the sub-list for method output_type
+	34, // [34:49] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_controlplane_v1_controlplane_proto_init() }
@@ -2059,15 +3005,18 @@ func file_controlplane_v1_controlplane_proto_init() {
 	if File_controlplane_v1_controlplane_proto != nil {
 		return
 	}
+	file_controlplane_v1_controlplane_proto_msgTypes[19].OneofWrappers = []any{}
 	file_controlplane_v1_controlplane_proto_msgTypes[21].OneofWrappers = []any{}
-	file_controlplane_v1_controlplane_proto_msgTypes[25].OneofWrappers = []any{}
+	file_controlplane_v1_controlplane_proto_msgTypes[30].OneofWrappers = []any{}
+	file_controlplane_v1_controlplane_proto_msgTypes[31].OneofWrappers = []any{}
+	file_controlplane_v1_controlplane_proto_msgTypes[35].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_controlplane_v1_controlplane_proto_rawDesc), len(file_controlplane_v1_controlplane_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   28,
+			NumEnums:      5,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

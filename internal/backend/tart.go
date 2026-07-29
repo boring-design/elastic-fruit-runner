@@ -2,17 +2,27 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os/exec"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"github.com/boring-design/elastic-fruit-runner/internal/tart"
 )
+
+type tartInfo struct {
+	CPU    int   `json:"CPU"`
+	Memory int64 `json:"Memory"`
+	Disk   int64 `json:"Disk"`
+}
 
 // isRemoteImage returns true if the image looks like a registry reference
 // (e.g. "ghcr.io/cirruslabs/macos-tahoe-xcode:26.3") rather than a local
@@ -154,4 +164,31 @@ func (b *TartBackend) CleanupAll(ctx context.Context, prefix string) {
 			b.Cleanup(ctx, name)
 		}
 	}
+}
+
+func (b *TartBackend) ReadLogs(ctx context.Context, name string) (string, error) {
+	out, err := b.tart.ExecOutput(ctx, name, "tail", "-n", "5000", "/tmp/runner.log")
+	if err != nil {
+		return "", fmt.Errorf("read Tart runner log for %s: %w", name, err)
+	}
+	return out, nil
+}
+
+func (b *TartBackend) ReadResource(ctx context.Context, name string) (ResourceSample, error) {
+	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "get", name, "--format", "json")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return ResourceSample{}, fmt.Errorf("read Tart allocation for %s: %w: %s", name, err, strings.TrimSpace(string(out)))
+	}
+	var info tartInfo
+	if err := json.Unmarshal(out, &info); err != nil {
+		return ResourceSample{}, fmt.Errorf("parse Tart allocation for %s: %w", name, err)
+	}
+	return ResourceSample{
+		RecordedAt:           time.Now(),
+		Source:               "tart",
+		Accuracy:             "estimate",
+		MemoryAvailableBytes: info.Memory * 1024 * 1024,
+		DiskAvailableBytes:   info.Disk * 1000 * 1000 * 1000,
+	}, nil
 }

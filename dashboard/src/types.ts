@@ -33,6 +33,41 @@ export interface JobRecord {
   result: JobResult
   startedAt: Date
   completedAt: Date | null
+  owner?: string
+  repository?: string
+  workflowRef?: string
+  displayName?: string
+  workflowRunId?: number
+  eventName?: string
+  labels?: string[]
+  queuedAt?: Date | null
+  scaleSetAssignedAt?: Date | null
+  runnerAssignedAt?: Date | null
+  backend?: Backend
+  actionsURL?: string
+}
+
+export interface JobLog {
+  sequence: number
+  recordedAt: Date
+  text: string
+}
+
+export interface ResourceSample {
+  recordedAt: Date
+  source: string
+  accuracy: 'exact' | 'estimate'
+  cpuPercent: number
+  memoryUsedBytes: number
+  memoryAvailableBytes: number
+  diskUsedBytes: number
+  diskAvailableBytes: number
+  diskReadBytes: number
+  diskWriteBytes: number
+  networkReceiveBytes: number
+  networkSendBytes: number
+  loadOne: number
+  temperatureCelsius: number
 }
 
 export interface DaemonStatus {

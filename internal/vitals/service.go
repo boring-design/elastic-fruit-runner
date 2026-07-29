@@ -11,8 +11,9 @@ import (
 type Service struct {
 	startedAt time.Time
 
-	mu      sync.RWMutex
-	current Vitals
+	mu       sync.RWMutex
+	current  Vitals
+	onUpdate func(Vitals)
 }
 
 // New creates a Service that records the given start time.
@@ -29,8 +30,19 @@ func (s *Service) Start(ctx context.Context, interval time.Duration) {
 	RunCollector(ctx, interval, func(v Vitals) {
 		s.mu.Lock()
 		s.current = v
+		onUpdate := s.onUpdate
 		s.mu.Unlock()
+		if onUpdate != nil {
+			onUpdate(v)
+		}
 	})
+}
+
+// SetOnUpdate sets the function called after each resource sample.
+func (s *Service) SetOnUpdate(onUpdate func(Vitals)) {
+	s.mu.Lock()
+	s.onUpdate = onUpdate
+	s.mu.Unlock()
 }
 
 // StartedAt returns when the daemon process started.

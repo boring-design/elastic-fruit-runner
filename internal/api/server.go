@@ -284,25 +284,153 @@ func (s *Server) ListRunnerSets(_ context.Context, _ *connect.Request[controlpla
 	}), nil
 }
 
-func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
-	jobs := s.managementService.ListJobRecords()
+func (s *Server) ListJobRecords(_ context.Context, req *connect.Request[controlplanev1.ListJobRecordsRequest]) (*connect.Response[controlplanev1.ListJobRecordsResponse], error) {
+	cursor, _ := strconv.Atoi(req.Msg.Cursor)
+	filter := management.JobFilter{
+		Status:     req.Msg.Status,
+		RunnerSet:  req.Msg.RunnerSet,
+		Repository: req.Msg.Repository,
+		Workflow:   req.Msg.Workflow,
+		Cursor:     cursor,
+		PageSize:   int(req.Msg.PageSize),
+	}
+	if req.Msg.From != nil {
+		value := req.Msg.From.AsTime()
+		filter.From = &value
+	}
+	if req.Msg.To != nil {
+		value := req.Msg.To.AsTime()
+		filter.To = &value
+	}
+	page := s.managementService.FindJobRecords(filter)
+	jobs := page.Records
 	records := make([]*controlplanev1.JobRecord, 0, len(jobs))
 	for _, j := range jobs {
-		rec := &controlplanev1.JobRecord{
-			Id:            j.ID,
-			RunnerName:    j.RunnerName,
-			RunnerSetName: j.RunnerSetName,
-			Result:        toProtoJobResult(j.Result),
-			StartedAt:     timestamppb.New(j.StartedAt),
-		}
-		if j.CompletedAt != nil {
-			rec.CompletedAt = timestamppb.New(*j.CompletedAt)
-		}
-		records = append(records, rec)
+		records = append(records, toProtoJob(j))
 	}
 	return connect.NewResponse(&controlplanev1.ListJobRecordsResponse{
 		JobRecords: records,
+		NextCursor: page.NextCursor,
 	}), nil
+}
+
+func (s *Server) GetJobDetail(_ context.Context, req *connect.Request[controlplanev1.GetJobDetailRequest]) (*connect.Response[controlplanev1.GetJobDetailResponse], error) {
+	job, err := s.managementService.GetJobRecord(req.Msg.Id)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeNotFound, errors.New("job record was not found"))
+	}
+	return connect.NewResponse(&controlplanev1.GetJobDetailResponse{Job: toProtoJob(*job)}), nil
+}
+
+func (s *Server) GetJobLogs(_ context.Context, req *connect.Request[controlplanev1.GetJobLogsRequest]) (*connect.Response[controlplanev1.GetJobLogsResponse], error) {
+	logs, next := s.managementService.GetJobLogs(req.Msg.JobId, req.Msg.AfterSequence, int(req.Msg.PageSize))
+	lines := make([]*controlplanev1.JobLogLine, 0, len(logs))
+	for _, line := range logs {
+		lines = append(lines, &controlplanev1.JobLogLine{
+			Sequence:   line.Sequence,
+			RecordedAt: timestamppb.New(line.RecordedAt),
+			Text:       line.Text,
+		})
+	}
+	return connect.NewResponse(&controlplanev1.GetJobLogsResponse{Lines: lines, NextSequence: next}), nil
+}
+
+func (s *Server) GetJobResourceSamples(_ context.Context, req *connect.Request[controlplanev1.GetJobResourceSamplesRequest]) (*connect.Response[controlplanev1.GetJobResourceSamplesResponse], error) {
+	samples := s.managementService.GetJobSamples(req.Msg.JobId)
+	result := make([]*controlplanev1.ResourceSample, 0, len(samples))
+	for _, sample := range samples {
+		result = append(result, toProtoResourceSample(sample))
+	}
+	return connect.NewResponse(&controlplanev1.GetJobResourceSamplesResponse{Samples: result}), nil
+}
+
+func (s *Server) GetHostResourceSamples(_ context.Context, req *connect.Request[controlplanev1.GetHostResourceSamplesRequest]) (*connect.Response[controlplanev1.GetHostResourceSamplesResponse], error) {
+	to := time.Now()
+	from := to.Add(-time.Hour)
+	if req.Msg.From != nil {
+		from = req.Msg.From.AsTime()
+	}
+	if req.Msg.To != nil {
+		to = req.Msg.To.AsTime()
+	}
+	samples, earliest := s.managementService.HostSamples(from, to)
+	result := make([]*controlplanev1.ResourceSample, 0, len(samples))
+	for _, sample := range samples {
+		result = append(result, &controlplanev1.ResourceSample{
+			RecordedAt:           timestamppb.New(sample.RecordedAt),
+			Source:               "host",
+			Accuracy:             controlplanev1.ResourceAccuracy_RESOURCE_ACCURACY_EXACT,
+			CpuPercent:           sample.CPUPercent,
+			MemoryUsedBytes:      sample.MemoryUsedBytes,
+			MemoryAvailableBytes: sample.MemoryAvailableBytes,
+			DiskUsedBytes:        sample.DiskUsedBytes,
+			DiskAvailableBytes:   sample.DiskAvailableBytes,
+			DiskReadBytes:        sample.DiskReadBytes,
+			DiskWriteBytes:       sample.DiskWriteBytes,
+			LoadOne:              sample.LoadOne,
+			TemperatureCelsius:   sample.TemperatureCelsius,
+		})
+	}
+	response := &controlplanev1.GetHostResourceSamplesResponse{Samples: result}
+	if earliest != nil {
+		response.EarliestAt = timestamppb.New(*earliest)
+	}
+	return connect.NewResponse(response), nil
+}
+
+func toProtoJob(job management.JobRecord) *controlplanev1.JobRecord {
+	record := &controlplanev1.JobRecord{
+		Id:            job.ID,
+		RunnerName:    job.RunnerName,
+		RunnerSetName: job.RunnerSetName,
+		Result:        toProtoJobResult(job.Result),
+		StartedAt:     timestamppb.New(job.StartedAt),
+		Owner:         job.Owner,
+		Repository:    job.Repository,
+		WorkflowRef:   job.WorkflowRef,
+		DisplayName:   job.DisplayName,
+		WorkflowRunId: job.WorkflowRunID,
+		EventName:     job.EventName,
+		Labels:        job.Labels,
+		Backend:       toProtoBackend(job.Backend),
+	}
+	if job.Owner != "" && job.Repository != "" && job.WorkflowRunID > 0 {
+		record.ActionsUrl = "https://github.com/" + job.Owner + "/" + job.Repository + "/actions/runs/" + strconv.FormatInt(job.WorkflowRunID, 10)
+	}
+	if job.CompletedAt != nil {
+		record.CompletedAt = timestamppb.New(*job.CompletedAt)
+	}
+	if job.QueuedAt != nil {
+		record.QueuedAt = timestamppb.New(*job.QueuedAt)
+	}
+	if job.ScaleSetAssignedAt != nil {
+		record.ScaleSetAssignedAt = timestamppb.New(*job.ScaleSetAssignedAt)
+	}
+	if job.RunnerAssignedAt != nil {
+		record.RunnerAssignedAt = timestamppb.New(*job.RunnerAssignedAt)
+	}
+	return record
+}
+
+func toProtoResourceSample(sample management.ResourceSample) *controlplanev1.ResourceSample {
+	accuracy := controlplanev1.ResourceAccuracy_RESOURCE_ACCURACY_EXACT
+	if sample.Accuracy == "estimate" {
+		accuracy = controlplanev1.ResourceAccuracy_RESOURCE_ACCURACY_ESTIMATE
+	}
+	return &controlplanev1.ResourceSample{
+		RecordedAt:           timestamppb.New(sample.RecordedAt),
+		Source:               sample.Source,
+		Accuracy:             accuracy,
+		CpuPercent:           sample.CPUPercent,
+		MemoryUsedBytes:      sample.MemoryUsedBytes,
+		MemoryAvailableBytes: sample.MemoryAvailableBytes,
+		DiskUsedBytes:        sample.DiskUsedBytes,
+		DiskAvailableBytes:   sample.DiskAvailableBytes,
+		DiskReadBytes:        sample.DiskReadBytes,
+		DiskWriteBytes:       sample.DiskWriteBytes,
+		NetworkReceiveBytes:  sample.NetworkReceiveBytes,
+		NetworkSendBytes:     sample.NetworkSendBytes,
+	}
 }
 
 func (s *Server) GetMachineVitals(_ context.Context, _ *connect.Request[controlplanev1.GetMachineVitalsRequest]) (*connect.Response[controlplanev1.GetMachineVitalsResponse], error) {

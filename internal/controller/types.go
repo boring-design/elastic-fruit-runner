@@ -1,6 +1,12 @@
 package controller
 
-import "time"
+import (
+	"time"
+
+	"github.com/actions/scaleset"
+
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
+)
 
 // RunnerState represents the lifecycle phase of a runner.
 type RunnerState int
@@ -30,6 +36,6 @@ type RunnerSnapshot struct {
 // JobRecorder records job lifecycle events.
 // Implemented by the management service; injected into controllers.
 type JobRecorder interface {
-	RecordJobStarted(setName, jobID, runnerName string)
-	RecordJobCompleted(jobID, result string)
+	RecordJobMessageStarted(setName, backendName string, diagnostics backend.Diagnostics, job *scaleset.JobStarted)
+	RecordJobMessageCompleted(job *scaleset.JobCompleted)
 }

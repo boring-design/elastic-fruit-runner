@@ -29,6 +29,14 @@ service ControlPlaneService {
   // across all runner sets, ordered most-recent-first.
   rpc ListJobRecords(ListJobRecordsRequest) returns (ListJobRecordsResponse);
 
+  rpc GetJobDetail(GetJobDetailRequest) returns (GetJobDetailResponse);
+
+  rpc GetJobLogs(GetJobLogsRequest) returns (GetJobLogsResponse);
+
+  rpc GetJobResourceSamples(GetJobResourceSamplesRequest) returns (GetJobResourceSamplesResponse);
+
+  rpc GetHostResourceSamples(GetHostResourceSamplesRequest) returns (GetHostResourceSamplesResponse);
+
   // GetMachineVitals returns a point-in-time snapshot of host-level
   // resource metrics (CPU, memory, disk, temperature).
   rpc GetMachineVitals(GetMachineVitalsRequest) returns (GetMachineVitalsResponse);
@@ -178,10 +186,20 @@ message Runner {
 // ListJobRecords
 // ---------------------------------------------------------------------------
 
-message ListJobRecordsRequest {}
+message ListJobRecordsRequest {
+  string status = 1;
+  string runner_set = 2;
+  string repository = 3;
+  string workflow = 4;
+  optional google.protobuf.Timestamp from = 5;
+  optional google.protobuf.Timestamp to = 6;
+  string cursor = 7;
+  int32 page_size = 8;
+}
 
 message ListJobRecordsResponse {
   repeated JobRecord job_records = 1;
+  string next_cursor = 2;
 }
 
 enum JobResult {
@@ -205,6 +223,84 @@ message JobRecord {
   google.protobuf.Timestamp started_at = 5;
   // When the job finished. Absent if still running.
   optional google.protobuf.Timestamp completed_at = 6;
+  string owner = 7;
+  string repository = 8;
+  string workflow_ref = 9;
+  string display_name = 10;
+  int64 workflow_run_id = 11;
+  string event_name = 12;
+  repeated string labels = 13;
+  optional google.protobuf.Timestamp queued_at = 14;
+  optional google.protobuf.Timestamp scale_set_assigned_at = 15;
+  optional google.protobuf.Timestamp runner_assigned_at = 16;
+  Backend backend = 17;
+  string actions_url = 18;
+}
+
+message GetJobDetailRequest {
+  string id = 1;
+}
+
+message GetJobDetailResponse {
+  JobRecord job = 1;
+}
+
+message GetJobLogsRequest {
+  string job_id = 1;
+  int64 after_sequence = 2;
+  int32 page_size = 3;
+}
+
+message JobLogLine {
+  int64 sequence = 1;
+  google.protobuf.Timestamp recorded_at = 2;
+  string text = 3;
+}
+
+message GetJobLogsResponse {
+  repeated JobLogLine lines = 1;
+  int64 next_sequence = 2;
+}
+
+enum ResourceAccuracy {
+  RESOURCE_ACCURACY_UNSPECIFIED = 0;
+  RESOURCE_ACCURACY_EXACT = 1;
+  RESOURCE_ACCURACY_ESTIMATE = 2;
+}
+
+message ResourceSample {
+  google.protobuf.Timestamp recorded_at = 1;
+  string source = 2;
+  ResourceAccuracy accuracy = 3;
+  double cpu_percent = 4;
+  int64 memory_used_bytes = 5;
+  int64 memory_available_bytes = 6;
+  int64 disk_used_bytes = 7;
+  int64 disk_available_bytes = 8;
+  int64 disk_read_bytes = 9;
+  int64 disk_write_bytes = 10;
+  int64 network_receive_bytes = 11;
+  int64 network_send_bytes = 12;
+  double load_one = 13;
+  double temperature_celsius = 14;
+}
+
+message GetJobResourceSamplesRequest {
+  string job_id = 1;
+}
+
+message GetJobResourceSamplesResponse {
+  repeated ResourceSample samples = 1;
+}
+
+message GetHostResourceSamplesRequest {
+  optional google.protobuf.Timestamp from = 1;
+  optional google.protobuf.Timestamp to = 2;
+}
+
+message GetHostResourceSamplesResponse {
+  repeated ResourceSample samples = 1;
+  optional google.protobuf.Timestamp earliest_at = 2;
 }
 
 // ---------------------------------------------------------------------------

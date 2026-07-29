@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 )
 
 const reaperInterval = time.Minute
@@ -72,7 +74,8 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	defer span.End()
 
 	d.runners.markBusy(job.RunnerName)
-	d.jobRecorder.RecordJobStarted(d.rsCfg.Name, job.JobID, job.RunnerName)
+	diagnostics, _ := d.backend.(backend.Diagnostics)
+	d.jobRecorder.RecordJobMessageStarted(d.rsCfg.Name, d.rsCfg.Backend, diagnostics, job)
 	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
 	return nil
 }
@@ -90,7 +93,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 
 	name := job.RunnerName
 	d.runners.markDone(name)
-	d.jobRecorder.RecordJobCompleted(job.JobID, job.Result)
+	d.jobRecorder.RecordJobMessageCompleted(job)
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
 	go func() {
