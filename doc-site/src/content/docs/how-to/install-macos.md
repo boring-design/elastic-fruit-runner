@@ -126,10 +126,7 @@ When running manually, logs go to stdout.
 
 ## Update
 
-```sh
-brew upgrade elastic-fruit-runner
-brew services restart elastic-fruit-runner
-```
+Follow [How to upgrade Elastic Fruit Runner](/how-to/upgrade/) to check running jobs, upgrade the binary, and verify the Console.
 
 ## Uninstall
 
