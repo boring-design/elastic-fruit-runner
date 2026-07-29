@@ -37,7 +37,7 @@ html, body, #root {
   background: var(--border);
   gap: 1px;
   border: 1px solid var(--border);
-  margin-bottom: -1px;
+  border-bottom: none;
 }
 
 .grid-stats {
@@ -46,7 +46,7 @@ html, body, #root {
   background: var(--border);
   gap: 1px;
   border: 1px solid var(--border);
-  margin-bottom: 19px;
+  margin-bottom: 1px;
 }
 
 .grid-main {
@@ -59,7 +59,12 @@ html, body, #root {
 
 .cell {
   background: var(--bg);
-  padding: 20px 22px;
+  padding: 18px 20px;
+  min-width: 0;
+}
+
+.grid-stats .cell {
+  padding: 14px 16px;
 }
 
 /* Tablet: ≤ 900px */
@@ -71,7 +76,11 @@ html, body, #root {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    column-gap: 24px;
+    row-gap: 0;
+  }
+  .grid-top .cell-brain > .label {
+    grid-column: 1 / -1;
   }
   .grid-top .cell-brain .brain-vitals {
     border-top: none;
@@ -218,7 +227,7 @@ html, body, #root {
 /* Table rows */
 .runner-row {
   display: grid;
-  grid-template-columns: 1fr 64px 64px;
+  grid-template-columns: minmax(0, 1fr) 64px 64px;
   gap: 10px;
   align-items: center;
   padding: 7px 0;
@@ -230,9 +239,20 @@ html, body, #root {
   border-bottom: none;
 }
 
+.runner-row-head {
+  padding-bottom: 5px;
+  padding-top: 0;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
 .job-row {
   display: grid;
-  grid-template-columns: 1fr 54px 58px;
+  grid-template-columns: minmax(0, 1fr) 54px 58px;
   gap: 10px;
   align-items: center;
   padding: 7px 0;
@@ -242,6 +262,244 @@ html, body, #root {
 
 .job-row:last-child {
   border-bottom: none;
+}
+
+.job-row-head {
+  padding: 0 0 5px 0;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Ellipsis utility */
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+}
+
+/* Runner Set card */
+.runner-set {
+  margin-bottom: 22px;
+}
+
+.runner-set:last-child {
+  margin-bottom: 0;
+}
+
+.runner-set-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.runner-set-name {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  min-width: 0;
+  flex: 1;
+}
+
+.runner-set-meta {
+  color: #666;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.runner-set-image {
+  color: #555;
+  font-size: 10px;
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+
+.runner-set-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+/* Status card */
+.status-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.status-hero-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 3px;
+  color: var(--text);
+}
+
+.status-hero-sub {
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.1em;
+}
+
+.status-meta {
+  border-top: 1px solid #1e1e1e;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.status-meta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.meta-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.15em;
+  margin-bottom: 3px;
+}
+
+.meta-value {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+
+.meta-strong {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Capacity card */
+.capacity-sub {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.12em;
+  margin-bottom: 14px;
+}
+
+.capacity-section {
+  border-top: 1px solid #1e1e1e;
+  padding-top: 12px;
+  margin-top: 0;
+}
+
+.capacity-section.throughput {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.capacity-set {
+  margin-bottom: 8px;
+}
+
+.capacity-set:last-child {
+  margin-bottom: 0;
+}
+
+.capacity-set-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+
+.capacity-set-bar {
+  height: 4px;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.capacity-set-fill {
+  height: 100%;
+  transition: width 0.6s ease;
+  background-image: repeating-linear-gradient(90deg, transparent 0px, transparent 3px, rgba(0,0,0,0.35) 3px, rgba(0,0,0,0.35) 4px);
+}
+
+/* Brain (controller) section */
+.cell-brain {
+  display: flex;
+  flex-direction: column;
+}
+
+.brain-pet-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.brain-pet {
+  flex-shrink: 0;
+}
+
+.brain-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.brain-mood {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+  letter-spacing: 0.04em;
+  cursor: help;
+}
+
+.brain-mood-sub {
+  font-size: 9px;
+  color: #666;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.brain-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.brain-stat-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  margin-bottom: 2px;
+  cursor: help;
+}
+
+.brain-stat-value {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.brain-vitals {
+  border-top: 1px solid #1e1e1e;
+  margin-top: 14px;
+  padding-top: 14px;
 }
 
 /* Scrollbar */

@@ -2,7 +2,7 @@ import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardDerived } from './hooks/useDashboardDerived'
 import { elapsed, fmtDuration, fmtUptime } from './utils'
 import { PixelPet } from './components/PixelPet'
-import { MOOD_LABEL, MOOD_SUBTEXT } from './components/petMood'
+import { MOOD_LABEL, MOOD_SUBTEXT, MOOD_TOOLTIP } from './components/petMood'
 import { SystemVitals } from './components/SystemVitals'
 import { RunnerSetPanel } from './components/RunnerSetPanel'
 import { JobRow } from './components/JobRow'
@@ -81,45 +81,36 @@ export default function App() {
         {/* Cell: Daemon status */}
         <div className="cell">
           <div className="label">STATUS</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+          <div className="status-hero">
             <div className="spinner" />
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4, color: '#f0f0f0' }}>
-                LISTENING FOR JOBS
-              </div>
-              <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.1em' }}>
-                GITHUB SCALE SET API
-              </div>
+              <div className="status-hero-title">LISTENING FOR JOBS</div>
+              <div className="status-hero-sub">GITHUB SCALE SET API</div>
             </div>
           </div>
 
-          <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Scope */}
+          <div className="status-meta">
             <div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>CONNECTED TO</div>
-              {runnerSets.map(rs => (
-                <div key={rs.name} style={{ fontSize: 11, color: '#888', letterSpacing: '0.04em' }}>
-                  {rs.scope}
-                </div>
-              )).filter((_, i) => i === 0)}
-            </div>
-
-            {/* Auth + Sets */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>AUTH MODE</div>
-                <div style={{ fontSize: 11, color: '#888' }}>GITHUB APP</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>RUNNER SETS</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: '#f0f0f0', lineHeight: 1 }}>{runnerSets.length}</div>
+              <div className="meta-label">CONNECTED TO</div>
+              <div className="meta-value ellipsis" title={runnerSets[0]?.scope ?? ''}>
+                {runnerSets[0]?.scope ?? '—'}
               </div>
             </div>
 
-            {/* Last activity */}
+            <div className="status-meta-row">
+              <div>
+                <div className="meta-label">AUTH MODE</div>
+                <div className="meta-value">GITHUB APP</div>
+              </div>
+              <div>
+                <div className="meta-label">RUNNER SETS</div>
+                <div className="meta-strong">{runnerSets.length}</div>
+              </div>
+            </div>
+
             <div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>LAST JOB</div>
-              <div style={{ fontSize: 11, color: '#888' }}>
+              <div className="meta-label">LAST JOB</div>
+              <div className="meta-value">
                 {(() => {
                   const latest = recentJobs.find(j => j.completedAt)
                   if (!latest?.completedAt) return '—'
@@ -143,31 +134,29 @@ export default function App() {
             <span className="value-md">{totalActive}</span>
             <span style={{ fontSize: 11, color: '#555' }}>OF {totalMax} MAX</span>
           </div>
-          <div style={{ fontSize: 10, color: '#555', letterSpacing: '0.12em', marginBottom: 16 }}>
-            OVERALL UTILIZATION {utilPct}% · {totalMax - totalActive} SLOTS FREE
+          <div className="capacity-sub">
+            {utilPct}% UTILIZED · {totalMax - totalActive} SLOTS FREE
           </div>
 
           {/* Per-set breakdown */}
-          <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: 14 }}>
-            <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 10 }}>PER SET</div>
+          <div className="capacity-section">
+            <div className="meta-label" style={{ marginBottom: 8 }}>PER SET</div>
             {runnerSets.map(rs => {
               const pct = Math.round((rs.runners.length / rs.maxRunners) * 100)
               return (
-                <div key={rs.name} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                <div key={rs.name} className="capacity-set">
+                  <div className="capacity-set-head">
+                    <span className="ellipsis" title={rs.name} style={{ fontSize: 10, color: '#888', minWidth: 0 }}>
                       {rs.name}
                     </span>
                     <span style={{ fontSize: 10, color: '#555', flexShrink: 0 }}>
                       {rs.runners.length}/{rs.maxRunners}
                     </span>
                   </div>
-                  <div style={{ height: 4, background: '#1a1a1a', overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', width: `${pct}%`,
+                  <div className="capacity-set-bar">
+                    <div className="capacity-set-fill" style={{
+                      width: `${pct}%`,
                       background: pct >= 80 ? '#ff9500' : '#e8e8e8',
-                      transition: 'width 0.6s ease',
-                      backgroundImage: 'repeating-linear-gradient(90deg, transparent 0px, transparent 3px, rgba(0,0,0,0.35) 3px, rgba(0,0,0,0.35) 4px)',
                     }} />
                   </div>
                 </div>
@@ -176,10 +165,10 @@ export default function App() {
           </div>
 
           {/* Throughput stats */}
-          <div style={{ borderTop: '1px solid #1e1e1e', paddingTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          <div className="capacity-section throughput">
             <div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>AVG DURATION</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#f0f0f0' }}>
+              <div className="meta-label">AVG DURATION</div>
+              <div className="meta-strong">
                 {(() => {
                   const done = recentJobs.filter(j => j.completedAt)
                   if (!done.length) return '—'
@@ -189,8 +178,8 @@ export default function App() {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.15em', marginBottom: 3 }}>SUCCESS RATE</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: successCount + failureCount + canceledCount > 0 && (failureCount + canceledCount) / (successCount + failureCount + canceledCount) > 0.2 ? '#ff9500' : '#f0f0f0' }}>
+              <div className="meta-label">SUCCESS RATE</div>
+              <div className="meta-strong" style={{ color: successCount + failureCount + canceledCount > 0 && (failureCount + canceledCount) / (successCount + failureCount + canceledCount) > 0.2 ? '#ff9500' : '#f0f0f0' }}>
                 {successCount + failureCount + canceledCount > 0
                   ? `${Math.round(successCount / (successCount + failureCount + canceledCount) * 100)}%`
                   : '—'}
@@ -199,37 +188,50 @@ export default function App() {
           </div>
         </div>
 
-        {/* Cell: BRAIN — pixel pet + vitals */}
+        {/* Cell: CONTROLLER — pixel pet + uptime + vitals */}
         <div className="cell cell-brain">
-          <div className="label">RUNNER BRAIN</div>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <div className="label" title="Live state of the controller process and host machine">
+            CONTROLLER
+          </div>
+          <div className="brain-pet-row">
             {/* Pixel pet */}
-            <div style={{ flexShrink: 0 }}>
+            <div className="brain-pet">
               <PixelPet mood={mood} />
-              <div style={{ marginTop: 6, fontSize: 8, letterSpacing: '0.1em', color: '#555', textAlign: 'center' }}>
-                {mood.toUpperCase()}
-              </div>
             </div>
             {/* Status text + uptime */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#f0f0f0', marginBottom: 3, letterSpacing: '0.04em' }}>
+            <div className="brain-info">
+              <div
+                className="brain-mood"
+                title={MOOD_TOOLTIP[mood]}
+              >
                 {MOOD_LABEL[mood]}
               </div>
-              <div style={{ fontSize: 9, color: '#555', letterSpacing: '0.06em', marginBottom: 12 }}>
+              <div className="brain-mood-sub">
                 {MOOD_SUBTEXT[mood]}
               </div>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: '0.12em', marginBottom: 2 }}>UPTIME</div>
-              <div style={{ fontSize: 16, fontWeight: 700, fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em', marginBottom: 10 }}>
-                {fmtUptime(uptime)}
-              </div>
-              <div style={{ fontSize: 9, color: '#333', letterSpacing: '0.1em' }}>
-                IDLE TIMEOUT {Math.floor(daemonStatus.idleTimeout / 60)}M
+              <div className="brain-stats">
+                <div>
+                  <div className="brain-stat-label" title="How long the controller process has been running">
+                    UPTIME
+                  </div>
+                  <div className="brain-stat-value">
+                    {fmtUptime(uptime)}
+                  </div>
+                </div>
+                <div>
+                  <div className="brain-stat-label" title="Idle runners are removed after this duration">
+                    IDLE TIMEOUT
+                  </div>
+                  <div className="brain-stat-value">
+                    {Math.floor(daemonStatus.idleTimeout / 60)}m
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           {/* System vitals */}
-          <div className="brain-vitals" style={{ borderTop: '1px solid #1e1e1e', marginTop: 14, paddingTop: 14 }}>
-            <div className="label" style={{ marginBottom: 10 }}>SYSTEM VITALS</div>
+          <div className="brain-vitals">
+            <div className="label" style={{ marginBottom: 10 }}>HOST VITALS</div>
             <SystemVitals vitals={machineVitals} />
           </div>
         </div>
@@ -259,7 +261,7 @@ export default function App() {
 
         {/* Runner Sets */}
         <div className="cell">
-          <div className="label" style={{ marginBottom: 22 }}>RUNNER SETS</div>
+          <div className="label" style={{ marginBottom: 14 }}>RUNNER SETS</div>
           {runnerSets.map(rs => (
             <RunnerSetPanel key={rs.name} rs={rs} now={now} />
           ))}
@@ -267,8 +269,8 @@ export default function App() {
 
         {/* Recent Jobs */}
         <div className="cell">
-          <div className="label" style={{ marginBottom: 14 }}>RECENT JOBS</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 54px 58px', gap: 10, paddingBottom: 6, marginBottom: 4, borderBottom: '1px solid #242424', fontSize: 9, color: '#444', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          <div className="label" style={{ marginBottom: 10 }}>RECENT JOBS</div>
+          <div className="job-row job-row-head">
             <span>Runner</span>
             <span>Result</span>
             <span style={{ textAlign: 'right' }}>Duration</span>

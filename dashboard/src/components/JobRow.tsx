@@ -1,5 +1,5 @@
 import type { JobRecord } from '../types'
-import { elapsed, fmtDuration, shortName } from '../utils'
+import { elapsed, fmtDuration } from '../utils'
 
 export function JobRow({ job, now }: { job: JobRecord; now: Date }) {
   const isRunning = job.result === 'running'
@@ -17,11 +17,12 @@ export function JobRow({ job, now }: { job: JobRecord; now: Date }) {
 
   return (
     <div className="job-row" style={{ opacity: isRunning ? 1 : 0.7 }}>
-      <span style={{
-        color: isRunning ? '#f0f0f0' : '#888',
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
-        {shortName(job.runnerName)}
+      <span
+        className="ellipsis"
+        title={job.runnerName}
+        style={{ color: isRunning ? '#f0f0f0' : '#888', minWidth: 0 }}
+      >
+        {job.runnerName}
       </span>
       {resultEl}
       <span style={{ color: '#666', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
