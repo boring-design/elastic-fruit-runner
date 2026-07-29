@@ -66,6 +66,7 @@ jobs:
           brew_prefix="$("$brew_bin" --prefix)"
           echo "$brew_prefix/bin" >> "$GITHUB_PATH"
 
+          "$brew_bin" update
           "$brew_bin" trust --formula cirruslabs/cli/softnet
           "$brew_bin" install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
           "$brew_prefix/bin/tart" --version
