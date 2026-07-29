@@ -3057,6 +3057,8 @@ type GetSystemInfoResponse struct {
 	GoVersion         string                 `protobuf:"bytes,3,opt,name=go_version,json=goVersion,proto3" json:"go_version,omitempty"`
 	DatabasePath      string                 `protobuf:"bytes,4,opt,name=database_path,json=databasePath,proto3" json:"database_path,omitempty"`
 	DatabaseSizeBytes int64                  `protobuf:"varint,5,opt,name=database_size_bytes,json=databaseSizeBytes,proto3" json:"database_size_bytes,omitempty"`
+	LogPath           string                 `protobuf:"bytes,6,opt,name=log_path,json=logPath,proto3" json:"log_path,omitempty"`
+	LogSizeBytes      int64                  `protobuf:"varint,7,opt,name=log_size_bytes,json=logSizeBytes,proto3" json:"log_size_bytes,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -3122,6 +3124,20 @@ func (x *GetSystemInfoResponse) GetDatabasePath() string {
 func (x *GetSystemInfoResponse) GetDatabaseSizeBytes() int64 {
 	if x != nil {
 		return x.DatabaseSizeBytes
+	}
+	return 0
+}
+
+func (x *GetSystemInfoResponse) GetLogPath() string {
+	if x != nil {
+		return x.LogPath
+	}
+	return ""
+}
+
+func (x *GetSystemInfoResponse) GetLogSizeBytes() int64 {
+	if x != nil {
+		return x.LogSizeBytes
 	}
 	return 0
 }
@@ -3353,14 +3369,16 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"a\n" +
 	"\x1dRestoreConfigRevisionResponse\x12@\n" +
 	"\x06status\x18\x01 \x01(\v2(.controlplane.v1.GetConfigStatusResponseR\x06status\"\x16\n" +
-	"\x14GetSystemInfoRequest\"\xaf\x01\n" +
+	"\x14GetSystemInfoRequest\"\xf0\x01\n" +
 	"\x15GetSystemInfoResponse\x12\x0e\n" +
 	"\x02os\x18\x01 \x01(\tR\x02os\x12\x12\n" +
 	"\x04arch\x18\x02 \x01(\tR\x04arch\x12\x1d\n" +
 	"\n" +
 	"go_version\x18\x03 \x01(\tR\tgoVersion\x12#\n" +
 	"\rdatabase_path\x18\x04 \x01(\tR\fdatabasePath\x12.\n" +
-	"\x13database_size_bytes\x18\x05 \x01(\x03R\x11databaseSizeBytes*H\n" +
+	"\x13database_size_bytes\x18\x05 \x01(\x03R\x11databaseSizeBytes\x12\x19\n" +
+	"\blog_path\x18\x06 \x01(\tR\alogPath\x12$\n" +
+	"\x0elog_size_bytes\x18\a \x01(\x03R\flogSizeBytes*H\n" +
 	"\aBackend\x12\x17\n" +
 	"\x13BACKEND_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fBACKEND_TART\x10\x01\x12\x12\n" +

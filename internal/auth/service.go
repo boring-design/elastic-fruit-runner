@@ -75,6 +75,12 @@ func Open(dbPath string) (*Service, error) {
 		db.Close()
 		return nil, fmt.Errorf("migrate auth database %s: %w", dbPath, err)
 	}
+	if dbPath != ":memory:" {
+		if err := os.Chmod(dbPath, 0o600); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("set auth database permissions %s: %w", dbPath, err)
+		}
+	}
 
 	service := &Service{db: db}
 	setupRequired, err := service.SetupRequired(context.Background())

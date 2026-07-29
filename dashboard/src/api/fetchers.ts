@@ -219,6 +219,8 @@ export async function fetchJobs(filters: {
   runnerSet?: string
   repository?: string
   workflow?: string
+  from?: string
+  to?: string
   cursor?: string
   pageSize?: number
 }): Promise<{ jobs: JobRecord[]; nextCursor: string }> {
@@ -422,5 +424,7 @@ export async function fetchSystemInfo(): Promise<SystemInfo> {
     goVersion: data.goVersion ?? '',
     databasePath: data.databasePath ?? '',
     databaseSizeBytes: data.databaseSizeBytes ?? 0,
+    logPath: data.logPath ?? '',
+    logSizeBytes: data.logSizeBytes ?? 0,
   }
 }

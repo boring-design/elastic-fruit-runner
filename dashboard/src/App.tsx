@@ -16,6 +16,7 @@ import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
 import type {
   ConfigStatus,
+  JobLog,
   JobRecord,
   MachineVitals,
   RunnerSet,
@@ -247,31 +248,78 @@ function JobsPage({ jobs: initialJobs, now }: { jobs: JobRecord[]; now: Date }) 
   const [status, setStatus] = useState('')
   const [repository, setRepository] = useState('')
   const [workflow, setWorkflow] = useState('')
+  const [runnerSet, setRunnerSet] = useState('')
+  const [range, setRange] = useState('24')
+  const [cursor, setCursor] = useState('')
+  const [previousCursors, setPreviousCursors] = useState<string[]>([])
   const [selected, setSelected] = useState<JobRecord | null>(null)
   const jobs = useSWR(
-    ['jobs', status, repository, workflow],
-    () => fetchJobs({ status, repository, workflow, pageSize: 100 }),
+    ['jobs', status, repository, workflow, runnerSet, range, cursor],
+    () => {
+      const to = new Date()
+      const from = new Date(to.getTime() - Number(range) * 60 * 60 * 1000)
+      return fetchJobs({
+        status,
+        repository,
+        workflow,
+        runnerSet,
+        from: from.toISOString(),
+        to: to.toISOString(),
+        cursor,
+        pageSize: 50,
+      })
+    },
     { refreshInterval: 5000, fallbackData: { jobs: initialJobs, nextCursor: '' } },
   )
+
+  function resetPage() {
+    setCursor('')
+    setPreviousCursors([])
+  }
+
+  function nextPage() {
+    if (!jobs.data?.nextCursor) return
+    setPreviousCursors(values => [...values, cursor])
+    setCursor(jobs.data.nextCursor)
+  }
+
+  function previousPage() {
+    setPreviousCursors(values => {
+      const next = [...values]
+      setCursor(next.pop() ?? '')
+      return next
+    })
+  }
   return (
     <>
       <PageHeader title="Jobs" detail="Recent job history from local storage." />
       <section className="filter-bar">
-        <select aria-label="Job status" value={status} onChange={event => setStatus(event.target.value)}>
+        <select aria-label="Job status" value={status} onChange={event => { setStatus(event.target.value); resetPage() }}>
           <option value="">All results</option>
           <option value="running">Running</option>
           <option value="succeeded">Success</option>
           <option value="failed">Failure</option>
           <option value="canceled">Canceled</option>
         </select>
-        <input aria-label="Repository filter" placeholder="Repository" value={repository} onChange={event => setRepository(event.target.value)} />
-        <input aria-label="Workflow filter" placeholder="Workflow" value={workflow} onChange={event => setWorkflow(event.target.value)} />
+        <input aria-label="Runner set filter" placeholder="Runner set" value={runnerSet} onChange={event => { setRunnerSet(event.target.value); resetPage() }} />
+        <input aria-label="Repository filter" placeholder="Repository" value={repository} onChange={event => { setRepository(event.target.value); resetPage() }} />
+        <input aria-label="Workflow filter" placeholder="Workflow" value={workflow} onChange={event => { setWorkflow(event.target.value); resetPage() }} />
+        <select aria-label="Job time range" value={range} onChange={event => { setRange(event.target.value); resetPage() }}>
+          <option value="1">Last hour</option>
+          <option value="24">Last 24 hours</option>
+          <option value="168">Last 7 days</option>
+          <option value="720">Last 30 days</option>
+        </select>
       </section>
       <section className="panel">
         <PanelHeader title="Job records" detail={`${jobs.data?.jobs.length ?? 0} records`} />
         {jobs.error
           ? <EmptyState title="Job history unavailable" detail={String(jobs.error)} />
           : <JobTable jobs={jobs.data?.jobs ?? []} now={now} onSelect={setSelected} />}
+        <div className="pager">
+          <button className="text-button" disabled={previousCursors.length === 0} onClick={previousPage}>Previous</button>
+          <button className="text-button" disabled={!jobs.data?.nextCursor} onClick={nextPage}>Next</button>
+        </div>
       </section>
       {selected && <JobDetail job={selected} onClose={() => setSelected(null)} />}
     </>
@@ -313,14 +361,45 @@ function JobTable({ jobs, now, onSelect }: { jobs: JobRecord[]; now: Date; onSel
 }
 
 function JobDetail({ job, onClose }: { job: JobRecord; onClose: () => void }) {
-  const logs = useSWR(['jobLogs', job.id], () => fetchJobLogs(job.id), {
-    refreshInterval: job.result === 'running' ? 2000 : 0,
-  })
+  const [logLines, setLogLines] = useState<JobLog[]>([])
   const resources = useSWR(['jobResources', job.id], () => fetchJobResources(job.id), {
     refreshInterval: job.result === 'running' ? 5000 : 0,
   })
   const samples = resources.data ?? []
   const estimate = samples.some(sample => sample.accuracy === 'estimate')
+
+  useEffect(() => {
+    let stopped = false
+    let sequence = 0
+    let lines: JobLog[] = []
+    let timer = 0
+
+    async function load() {
+      try {
+        const result = await fetchJobLogs(job.id, sequence)
+        if (stopped) return
+        if (result.lines.length > 0) {
+          lines = [...lines, ...result.lines]
+          sequence = result.nextSequence
+          setLogLines(lines)
+        }
+        const delay = result.lines.length === 500 ? 0 : 2000
+        if (job.result === 'running' || result.lines.length === 500) {
+          timer = window.setTimeout(load, delay)
+        }
+      } catch {
+        if (!stopped && job.result === 'running') {
+          timer = window.setTimeout(load, 2000)
+        }
+      }
+    }
+
+    void load()
+    return () => {
+      stopped = true
+      window.clearTimeout(timer)
+    }
+  }, [job.id, job.result])
   return (
     <div className="detail-overlay" role="dialog" aria-modal="true" aria-label="Job detail">
       <section className="detail-panel">
@@ -337,6 +416,7 @@ function JobDetail({ job, onClose }: { job: JobRecord; onClose: () => void }) {
           ['Runner', job.runnerName],
           ['Backend', job.backend || 'Unknown'],
           ['Queued', job.queuedAt ? formatDate(job.queuedAt) : 'Unavailable'],
+          ['Scale set assigned', job.scaleSetAssignedAt ? formatDate(job.scaleSetAssignedAt) : 'Unavailable'],
           ['Runner assigned', job.runnerAssignedAt ? formatDate(job.runnerAssignedAt) : 'Unavailable'],
           ['Started', formatDate(job.startedAt)],
           ['Completed', job.completedAt ? formatDate(job.completedAt) : 'Running'],
@@ -344,10 +424,21 @@ function JobDetail({ job, onClose }: { job: JobRecord; onClose: () => void }) {
         {job.actionsURL && <a className="external-link" href={job.actionsURL} target="_blank" rel="noreferrer">Open in GitHub Actions</a>}
         <div className="panel-header"><h2>Resource history</h2><span>{estimate ? 'Tart host estimate' : 'Backend data'}</span></div>
         {estimate && <div className="notice warning">Guest resource usage is unavailable. Tart values show VM allocation and host side estimates.</div>}
-        <ResourceChart samples={samples} field="cpuPercent" label="CPU" suffix="%" />
-        <ResourceChart samples={samples} field="memoryUsedBytes" label="Memory" format={formatBytes} />
-        <div className="panel-header"><h2>Runner log</h2><span>{logs.data?.lines.length ?? 0} chunks</span></div>
-        <pre className="job-log">{logs.data?.lines.map(line => line.text).join('') || 'No log data is available.'}</pre>
+        {estimate
+          ? <>
+            <ResourceChart samples={samples} field="memoryAvailableBytes" label="Memory allocation" format={formatBytes} />
+            <ResourceChart samples={samples} field="diskAvailableBytes" label="Disk allocation" format={formatBytes} />
+          </>
+          : <>
+            <ResourceChart samples={samples} field="cpuPercent" label="CPU" suffix="%" />
+            <ResourceChart samples={samples} field="memoryUsedBytes" label="Memory" format={formatBytes} />
+            <ResourceChart samples={samples} field="diskReadBytes" label="Disk read" format={formatBytes} />
+            <ResourceChart samples={samples} field="diskWriteBytes" label="Disk written" format={formatBytes} />
+            <ResourceChart samples={samples} field="networkReceiveBytes" label="Network received" format={formatBytes} />
+            <ResourceChart samples={samples} field="networkSendBytes" label="Network sent" format={formatBytes} />
+          </>}
+        <div className="panel-header"><h2>Runner log</h2><span>{logLines.length} chunks</span></div>
+        <pre className="job-log">{logLines.map(line => line.text).join('') || 'No log data is available.'}</pre>
       </section>
     </div>
   )
@@ -539,9 +630,10 @@ function SystemPage() {
   const store = useDashboardStore()
   const system = store.systemInfo
   const daemon = store.daemonStatus
+  const [historyHours, setHistoryHours] = useState(1)
   const history = useSWR(
-    'hostResources',
-    () => fetchHostResources(new Date(Date.now() - 60 * 60 * 1000), new Date()),
+    ['hostResources', historyHours],
+    () => fetchHostResources(new Date(Date.now() - historyHours * 60 * 60 * 1000), new Date()),
     { refreshInterval: 5000 },
   )
   return (
@@ -566,6 +658,8 @@ function SystemPage() {
             rows={[
               ['Database', system?.databasePath || 'Unknown'],
               ['Database size', formatBytes(system?.databaseSizeBytes ?? 0)],
+              ['Log file', system?.logPath || 'Standard output'],
+              ['Log size', formatBytes(system?.logSizeBytes ?? 0)],
               ['Config', store.configStatus?.path || 'No config file'],
             ]}
           />
@@ -573,9 +667,20 @@ function SystemPage() {
       </div>
       <section className="panel">
         <PanelHeader title="Host resources" detail={history.data?.earliestAt ? `Available since ${formatDate(history.data.earliestAt)}` : 'Current sample'} />
+        <select className="range-select" aria-label="Host history range" value={historyHours} onChange={event => setHistoryHours(Number(event.target.value))}>
+          <option value={1}>Last hour</option>
+          <option value={24}>Last 24 hours</option>
+          <option value={168}>Last 7 days</option>
+          <option value={720}>Last 30 days</option>
+        </select>
         <Vitals vitals={store.machineVitals} />
         <ResourceChart samples={history.data?.samples ?? []} field="cpuPercent" label="CPU history" suffix="%" />
         <ResourceChart samples={history.data?.samples ?? []} field="memoryUsedBytes" label="Memory history" format={formatBytes} />
+        <ResourceChart samples={history.data?.samples ?? []} field="diskReadBytes" label="Disk read history" format={formatBytes} />
+        <ResourceChart samples={history.data?.samples ?? []} field="diskWriteBytes" label="Disk write history" format={formatBytes} />
+        {(history.data?.samples ?? []).some(sample => sample.temperatureCelsius !== 0)
+          ? <ResourceChart samples={history.data?.samples ?? []} field="temperatureCelsius" label="Temperature history" suffix="°C" />
+          : <EmptyState title="Temperature is unavailable on this system" />}
       </section>
     </>
   )
@@ -589,7 +694,7 @@ function ResourceChart({
   format,
 }: {
   samples: ResourceSample[]
-  field: 'cpuPercent' | 'memoryUsedBytes'
+  field: 'cpuPercent' | 'memoryUsedBytes' | 'memoryAvailableBytes' | 'diskAvailableBytes' | 'diskReadBytes' | 'diskWriteBytes' | 'networkReceiveBytes' | 'networkSendBytes' | 'temperatureCelsius'
   label: string
   suffix?: string
   format?: (value: number) => string
