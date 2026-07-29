@@ -43,3 +43,13 @@ Override log level via environment variable:
 ```sh
 LOG_LEVEL=debug elastic-fruit-runner
 ```
+
+## Reset the console password
+
+Stop the daemon before resetting the password:
+
+```sh
+elastic-fruit-runner reset-password --config /path/to/config.yaml
+```
+
+This removes the admin password and all console sessions. Start the daemon again and use the new setup code from the local log.

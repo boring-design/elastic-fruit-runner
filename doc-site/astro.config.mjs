@@ -29,6 +29,7 @@ export default defineConfig({
 						{ slug: 'how-to/prevent-macos-sleep' },
 						{ slug: 'how-to/install-linux-docker' },
 						{ slug: 'how-to/configure-github-app' },
+						{ slug: 'how-to/use-console' },
 						{ slug: 'how-to/multiple-orgs-repos' },
 						{ slug: 'how-to/troubleshooting' },
 						{ slug: 'how-to/run-integration-tests' },

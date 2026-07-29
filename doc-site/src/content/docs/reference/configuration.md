@@ -70,6 +70,10 @@ log_level: info
 | `repos` | list | — | Repository-level runner set configurations |
 | `idle_timeout` | duration | `15m` | Time after which idle runners are reaped. Must be > 0 |
 | `log_level` | string | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `api_addr` | string | `:8080` | Console listen address |
+| `db_path` | string | local data directory | SQLite path for job, auth, and host data |
+| `log_path` | string | empty | Optional writable log path used for path validation |
+| `cors` | object | local defaults | Console CORS settings |
 
 At least one of `orgs` or `repos` must be configured.
 
@@ -157,3 +161,13 @@ Only one environment variable is supported:
 | `LOG_LEVEL` | `log_level` | Overrides the log level from config file |
 
 All other configuration must be done through the YAML config file.
+
+## Validation
+
+Startup, console validation, and console save use the same strict YAML validator. Unknown fields and duplicate keys are errors.
+
+Validation also checks runner set name uniqueness, auth choice, private key PEM data, API address, CORS values, writable paths, runner limits, and backend settings.
+
+GitHub connectivity is reported as a warning. It is not part of structural validation.
+
+See [Use the operations console](/how-to/use-console/) for save, revision, and recovery behavior.

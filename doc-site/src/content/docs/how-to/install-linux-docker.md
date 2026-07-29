@@ -33,6 +33,7 @@ orgs:
         platform: linux/amd64
 
 idle_timeout: 15m
+db_path: /var/lib/elastic-fruit-runner/jobs.db
 ```
 
 ```yaml
@@ -43,12 +44,17 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./config.yaml:/etc/elastic-fruit-runner/config.yaml:ro
+      - ./config.yaml:/etc/elastic-fruit-runner/config.yaml
+      - ./data:/var/lib/elastic-fruit-runner
+    ports:
+      - 127.0.0.1:8080:8080
 ```
 
 ```sh
 docker compose up -d
 ```
+
+Open `http://127.0.0.1:8080` and use the setup code from the container log. The config mount must be writable to use the editor. See [Use the operations console](/how-to/use-console/).
 
 ## Docker Compose with GitHub App auth
 
@@ -80,6 +86,7 @@ orgs:
         platform: linux/amd64
 
 idle_timeout: 15m
+db_path: /var/lib/elastic-fruit-runner/jobs.db
 ```
 
 ```yaml
@@ -90,8 +97,11 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./config.yaml:/etc/elastic-fruit-runner/config.yaml:ro
+      - ./config.yaml:/etc/elastic-fruit-runner/config.yaml
       - ./private-key.pem:/etc/efr/private-key.pem:ro
+      - ./data:/var/lib/elastic-fruit-runner
+    ports:
+      - 127.0.0.1:8080:8080
 ```
 
 ## How it works
