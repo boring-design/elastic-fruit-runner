@@ -1,6 +1,13 @@
 export type RunnerState = 'preparing' | 'idle' | 'busy' | 'unknown'
 export type Backend = 'tart' | 'docker' | 'unknown'
 export type JobResult = 'success' | 'failure' | 'canceled' | 'running'
+export type ConfigSyncState = 'in_sync' | 'restart_required' | 'disk_invalid' | 'unknown'
+
+export interface SessionState {
+  setupRequired: boolean
+  authenticated: boolean
+  csrfToken: string
+}
 
 export interface Runner {
   name: string
@@ -31,9 +38,18 @@ export interface JobRecord {
 export interface DaemonStatus {
   buildInfo: BuildInfo | null
   startedAt: Date
-  // null while runner set data has not been fetched yet (loading state)
-  githubConnected: boolean | null
   idleTimeout: number
+}
+
+export interface DashboardSummary {
+  runnerSetCount: number
+  preparingRunnerCount: number
+  idleRunnerCount: number
+  busyRunnerCount: number
+  runningJobCount: number
+  failedJobCount: number
+  completedJobCount: number
+  githubConnected: boolean
 }
 
 export interface BuildInfo {
@@ -61,4 +77,24 @@ export interface MachineVitals {
   memoryUsagePercent: number
   diskUsagePercent: number
   temperatureCelsius: number
+}
+
+export interface ConfigStatus {
+  path: string
+  activeHash: string
+  diskHash: string
+  state: ConfigSyncState
+  diskModifiedAt: Date | null
+  activeLoadedAt: Date
+  validationErrors: string[]
+  activeYAML: string
+  diskYAML: string
+}
+
+export interface SystemInfo {
+  os: string
+  arch: string
+  goVersion: string
+  databasePath: string
+  databaseSizeBytes: number
 }

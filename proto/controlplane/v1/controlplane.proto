@@ -7,9 +7,19 @@ option go_package = "github.com/boring-design/elastic-fruit-runner/gen/controlpl
 import "google/protobuf/timestamp.proto";
 
 service ControlPlaneService {
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  rpc SetupAdmin(SetupAdminRequest) returns (SetupAdminResponse);
+
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
   // GetServiceInfo returns the daemon's identity and configuration.
   // These values are immutable for the lifetime of the process.
   rpc GetServiceInfo(GetServiceInfoRequest) returns (GetServiceInfoResponse);
+
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (GetDashboardSummaryResponse);
 
   // ListRunnerSets returns all runner sets with their configuration,
   // GitHub connection state, and live runner instances.
@@ -22,7 +32,42 @@ service ControlPlaneService {
   // GetMachineVitals returns a point-in-time snapshot of host-level
   // resource metrics (CPU, memory, disk, temperature).
   rpc GetMachineVitals(GetMachineVitalsRequest) returns (GetMachineVitalsResponse);
+
+  rpc GetConfigStatus(GetConfigStatusRequest) returns (GetConfigStatusResponse);
+
+  rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
 }
+
+// Authentication
+
+message GetSessionRequest {}
+
+message GetSessionResponse {
+  bool setup_required = 1;
+  bool authenticated = 2;
+  string csrf_token = 3;
+}
+
+message SetupAdminRequest {
+  string setup_code = 1;
+  string password = 2;
+}
+
+message SetupAdminResponse {
+  string csrf_token = 1;
+}
+
+message LoginRequest {
+  string password = 1;
+}
+
+message LoginResponse {
+  string csrf_token = 1;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
 
 // ---------------------------------------------------------------------------
 // GetServiceInfo
@@ -37,6 +82,19 @@ message GetServiceInfoResponse {
   google.protobuf.Timestamp started_at = 2;
   // Configured idle runner timeout in seconds.
   int32 idle_timeout_seconds = 3;
+}
+
+message GetDashboardSummaryRequest {}
+
+message GetDashboardSummaryResponse {
+  int32 runner_set_count = 1;
+  int32 preparing_runner_count = 2;
+  int32 idle_runner_count = 3;
+  int32 busy_runner_count = 4;
+  int32 running_job_count = 5;
+  int32 failed_job_count = 6;
+  int32 completed_job_count = 7;
+  bool github_connected = 8;
 }
 
 message BuildInfo {
@@ -164,4 +222,39 @@ message GetMachineVitalsResponse {
   float disk_usage_percent = 3;
   // CPU/SoC core temperature in Celsius.
   float temperature_celsius = 4;
+}
+
+// Config status
+
+enum ConfigSyncState {
+  CONFIG_SYNC_STATE_UNSPECIFIED = 0;
+  CONFIG_SYNC_STATE_IN_SYNC = 1;
+  CONFIG_SYNC_STATE_RESTART_REQUIRED = 2;
+  CONFIG_SYNC_STATE_DISK_INVALID = 3;
+}
+
+message GetConfigStatusRequest {}
+
+message GetConfigStatusResponse {
+  string path = 1;
+  string active_hash = 2;
+  string disk_hash = 3;
+  ConfigSyncState state = 4;
+  optional google.protobuf.Timestamp disk_modified_at = 5;
+  google.protobuf.Timestamp active_loaded_at = 6;
+  repeated string validation_errors = 7;
+  string active_yaml = 8;
+  string disk_yaml = 9;
+}
+
+// System information
+
+message GetSystemInfoRequest {}
+
+message GetSystemInfoResponse {
+  string os = 1;
+  string arch = 2;
+  string go_version = 3;
+  string database_path = 4;
+  int64 database_size_bytes = 5;
 }

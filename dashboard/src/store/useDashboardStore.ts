@@ -1,36 +1,48 @@
 import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
-import type { DaemonStatus, RunnerSet, JobRecord, MachineVitals } from '../types'
+import type {
+  ConfigStatus,
+  DaemonStatus,
+  DashboardSummary,
+  JobRecord,
+  MachineVitals,
+  RunnerSet,
+  SystemInfo,
+} from '../types'
 
 export interface DashboardState {
   daemonStatus: DaemonStatus | null
+  summary: DashboardSummary | null
   runnerSets: RunnerSet[]
   recentJobs: JobRecord[]
   machineVitals: MachineVitals | null
+  configStatus: ConfigStatus | null
+  systemInfo: SystemInfo | null
   now: Date
-
-  setDaemonStatus: (status: DaemonStatus) => void
-  setRunnerSets: (sets: RunnerSet[]) => void
-  setRecentJobs: (jobs: JobRecord[]) => void
-  setMachineVitals: (vitals: MachineVitals) => void
+  setDaemonStatus: (value: DaemonStatus) => void
+  setSummary: (value: DashboardSummary) => void
+  setRunnerSets: (value: RunnerSet[]) => void
+  setRecentJobs: (value: JobRecord[]) => void
+  setMachineVitals: (value: MachineVitals) => void
+  setConfigStatus: (value: ConfigStatus) => void
+  setSystemInfo: (value: SystemInfo) => void
   tick: () => void
 }
 
-export const useDashboardStore = create<DashboardState>()(
-  devtools(
-    (set) => ({
-      daemonStatus: null,
-      runnerSets: [],
-      recentJobs: [],
-      machineVitals: null,
-      now: new Date(),
-
-      setDaemonStatus: (status) => set({ daemonStatus: status }, false, 'setDaemonStatus'),
-      setRunnerSets: (sets) => set({ runnerSets: sets }, false, 'setRunnerSets'),
-      setRecentJobs: (jobs) => set({ recentJobs: jobs }, false, 'setRecentJobs'),
-      setMachineVitals: (vitals) => set({ machineVitals: vitals }, false, 'setMachineVitals'),
-      tick: () => set({ now: new Date() }, false, 'tick'),
-    }),
-    { name: 'dashboard' },
-  ),
-)
+export const useDashboardStore = create<DashboardState>()(set => ({
+  daemonStatus: null,
+  summary: null,
+  runnerSets: [],
+  recentJobs: [],
+  machineVitals: null,
+  configStatus: null,
+  systemInfo: null,
+  now: new Date(),
+  setDaemonStatus: daemonStatus => set({ daemonStatus }),
+  setSummary: summary => set({ summary }),
+  setRunnerSets: runnerSets => set({ runnerSets }),
+  setRecentJobs: recentJobs => set({ recentJobs }),
+  setMachineVitals: machineVitals => set({ machineVitals }),
+  setConfigStatus: configStatus => set({ configStatus }),
+  setSystemInfo: systemInfo => set({ systemInfo }),
+  tick: () => set({ now: new Date() }),
+}))

@@ -19,7 +19,6 @@ export const daemonStatus: DaemonStatus = {
     ],
   },
   startedAt: ago(9252),
-  githubConnected: true,
   idleTimeout: 900,
 }
 

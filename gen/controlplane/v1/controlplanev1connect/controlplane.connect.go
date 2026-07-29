@@ -34,9 +34,24 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// ControlPlaneServiceGetSessionProcedure is the fully-qualified name of the ControlPlaneService's
+	// GetSession RPC.
+	ControlPlaneServiceGetSessionProcedure = "/controlplane.v1.ControlPlaneService/GetSession"
+	// ControlPlaneServiceSetupAdminProcedure is the fully-qualified name of the ControlPlaneService's
+	// SetupAdmin RPC.
+	ControlPlaneServiceSetupAdminProcedure = "/controlplane.v1.ControlPlaneService/SetupAdmin"
+	// ControlPlaneServiceLoginProcedure is the fully-qualified name of the ControlPlaneService's Login
+	// RPC.
+	ControlPlaneServiceLoginProcedure = "/controlplane.v1.ControlPlaneService/Login"
+	// ControlPlaneServiceLogoutProcedure is the fully-qualified name of the ControlPlaneService's
+	// Logout RPC.
+	ControlPlaneServiceLogoutProcedure = "/controlplane.v1.ControlPlaneService/Logout"
 	// ControlPlaneServiceGetServiceInfoProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetServiceInfo RPC.
 	ControlPlaneServiceGetServiceInfoProcedure = "/controlplane.v1.ControlPlaneService/GetServiceInfo"
+	// ControlPlaneServiceGetDashboardSummaryProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetDashboardSummary RPC.
+	ControlPlaneServiceGetDashboardSummaryProcedure = "/controlplane.v1.ControlPlaneService/GetDashboardSummary"
 	// ControlPlaneServiceListRunnerSetsProcedure is the fully-qualified name of the
 	// ControlPlaneService's ListRunnerSets RPC.
 	ControlPlaneServiceListRunnerSetsProcedure = "/controlplane.v1.ControlPlaneService/ListRunnerSets"
@@ -46,13 +61,24 @@ const (
 	// ControlPlaneServiceGetMachineVitalsProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetMachineVitals RPC.
 	ControlPlaneServiceGetMachineVitalsProcedure = "/controlplane.v1.ControlPlaneService/GetMachineVitals"
+	// ControlPlaneServiceGetConfigStatusProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetConfigStatus RPC.
+	ControlPlaneServiceGetConfigStatusProcedure = "/controlplane.v1.ControlPlaneService/GetConfigStatus"
+	// ControlPlaneServiceGetSystemInfoProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetSystemInfo RPC.
+	ControlPlaneServiceGetSystemInfoProcedure = "/controlplane.v1.ControlPlaneService/GetSystemInfo"
 )
 
 // ControlPlaneServiceClient is a client for the controlplane.v1.ControlPlaneService service.
 type ControlPlaneServiceClient interface {
+	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
+	SetupAdmin(context.Context, *connect.Request[v1.SetupAdminRequest]) (*connect.Response[v1.SetupAdminResponse], error)
+	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// GetServiceInfo returns the daemon's identity and configuration.
 	// These values are immutable for the lifetime of the process.
 	GetServiceInfo(context.Context, *connect.Request[v1.GetServiceInfoRequest]) (*connect.Response[v1.GetServiceInfoResponse], error)
+	GetDashboardSummary(context.Context, *connect.Request[v1.GetDashboardSummaryRequest]) (*connect.Response[v1.GetDashboardSummaryResponse], error)
 	// ListRunnerSets returns all runner sets with their configuration,
 	// GitHub connection state, and live runner instances.
 	ListRunnerSets(context.Context, *connect.Request[v1.ListRunnerSetsRequest]) (*connect.Response[v1.ListRunnerSetsResponse], error)
@@ -62,6 +88,8 @@ type ControlPlaneServiceClient interface {
 	// GetMachineVitals returns a point-in-time snapshot of host-level
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
+	GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error)
+	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
 }
 
 // NewControlPlaneServiceClient constructs a client for the controlplane.v1.ControlPlaneService
@@ -75,10 +103,40 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 	baseURL = strings.TrimRight(baseURL, "/")
 	controlPlaneServiceMethods := v1.File_controlplane_v1_controlplane_proto.Services().ByName("ControlPlaneService").Methods()
 	return &controlPlaneServiceClient{
+		getSession: connect.NewClient[v1.GetSessionRequest, v1.GetSessionResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetSessionProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetSession")),
+			connect.WithClientOptions(opts...),
+		),
+		setupAdmin: connect.NewClient[v1.SetupAdminRequest, v1.SetupAdminResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceSetupAdminProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("SetupAdmin")),
+			connect.WithClientOptions(opts...),
+		),
+		login: connect.NewClient[v1.LoginRequest, v1.LoginResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceLoginProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("Login")),
+			connect.WithClientOptions(opts...),
+		),
+		logout: connect.NewClient[v1.LogoutRequest, v1.LogoutResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceLogoutProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("Logout")),
+			connect.WithClientOptions(opts...),
+		),
 		getServiceInfo: connect.NewClient[v1.GetServiceInfoRequest, v1.GetServiceInfoResponse](
 			httpClient,
 			baseURL+ControlPlaneServiceGetServiceInfoProcedure,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("GetServiceInfo")),
+			connect.WithClientOptions(opts...),
+		),
+		getDashboardSummary: connect.NewClient[v1.GetDashboardSummaryRequest, v1.GetDashboardSummaryResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetDashboardSummaryProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetDashboardSummary")),
 			connect.WithClientOptions(opts...),
 		),
 		listRunnerSets: connect.NewClient[v1.ListRunnerSetsRequest, v1.ListRunnerSetsResponse](
@@ -99,20 +157,64 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("GetMachineVitals")),
 			connect.WithClientOptions(opts...),
 		),
+		getConfigStatus: connect.NewClient[v1.GetConfigStatusRequest, v1.GetConfigStatusResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetConfigStatusProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetConfigStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		getSystemInfo: connect.NewClient[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetSystemInfoProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetSystemInfo")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // controlPlaneServiceClient implements ControlPlaneServiceClient.
 type controlPlaneServiceClient struct {
-	getServiceInfo   *connect.Client[v1.GetServiceInfoRequest, v1.GetServiceInfoResponse]
-	listRunnerSets   *connect.Client[v1.ListRunnerSetsRequest, v1.ListRunnerSetsResponse]
-	listJobRecords   *connect.Client[v1.ListJobRecordsRequest, v1.ListJobRecordsResponse]
-	getMachineVitals *connect.Client[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse]
+	getSession          *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
+	setupAdmin          *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
+	login               *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout              *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getServiceInfo      *connect.Client[v1.GetServiceInfoRequest, v1.GetServiceInfoResponse]
+	getDashboardSummary *connect.Client[v1.GetDashboardSummaryRequest, v1.GetDashboardSummaryResponse]
+	listRunnerSets      *connect.Client[v1.ListRunnerSetsRequest, v1.ListRunnerSetsResponse]
+	listJobRecords      *connect.Client[v1.ListJobRecordsRequest, v1.ListJobRecordsResponse]
+	getMachineVitals    *connect.Client[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse]
+	getConfigStatus     *connect.Client[v1.GetConfigStatusRequest, v1.GetConfigStatusResponse]
+	getSystemInfo       *connect.Client[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse]
+}
+
+// GetSession calls controlplane.v1.ControlPlaneService.GetSession.
+func (c *controlPlaneServiceClient) GetSession(ctx context.Context, req *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error) {
+	return c.getSession.CallUnary(ctx, req)
+}
+
+// SetupAdmin calls controlplane.v1.ControlPlaneService.SetupAdmin.
+func (c *controlPlaneServiceClient) SetupAdmin(ctx context.Context, req *connect.Request[v1.SetupAdminRequest]) (*connect.Response[v1.SetupAdminResponse], error) {
+	return c.setupAdmin.CallUnary(ctx, req)
+}
+
+// Login calls controlplane.v1.ControlPlaneService.Login.
+func (c *controlPlaneServiceClient) Login(ctx context.Context, req *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
+	return c.login.CallUnary(ctx, req)
+}
+
+// Logout calls controlplane.v1.ControlPlaneService.Logout.
+func (c *controlPlaneServiceClient) Logout(ctx context.Context, req *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	return c.logout.CallUnary(ctx, req)
 }
 
 // GetServiceInfo calls controlplane.v1.ControlPlaneService.GetServiceInfo.
 func (c *controlPlaneServiceClient) GetServiceInfo(ctx context.Context, req *connect.Request[v1.GetServiceInfoRequest]) (*connect.Response[v1.GetServiceInfoResponse], error) {
 	return c.getServiceInfo.CallUnary(ctx, req)
+}
+
+// GetDashboardSummary calls controlplane.v1.ControlPlaneService.GetDashboardSummary.
+func (c *controlPlaneServiceClient) GetDashboardSummary(ctx context.Context, req *connect.Request[v1.GetDashboardSummaryRequest]) (*connect.Response[v1.GetDashboardSummaryResponse], error) {
+	return c.getDashboardSummary.CallUnary(ctx, req)
 }
 
 // ListRunnerSets calls controlplane.v1.ControlPlaneService.ListRunnerSets.
@@ -130,12 +232,27 @@ func (c *controlPlaneServiceClient) GetMachineVitals(ctx context.Context, req *c
 	return c.getMachineVitals.CallUnary(ctx, req)
 }
 
+// GetConfigStatus calls controlplane.v1.ControlPlaneService.GetConfigStatus.
+func (c *controlPlaneServiceClient) GetConfigStatus(ctx context.Context, req *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error) {
+	return c.getConfigStatus.CallUnary(ctx, req)
+}
+
+// GetSystemInfo calls controlplane.v1.ControlPlaneService.GetSystemInfo.
+func (c *controlPlaneServiceClient) GetSystemInfo(ctx context.Context, req *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error) {
+	return c.getSystemInfo.CallUnary(ctx, req)
+}
+
 // ControlPlaneServiceHandler is an implementation of the controlplane.v1.ControlPlaneService
 // service.
 type ControlPlaneServiceHandler interface {
+	GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error)
+	SetupAdmin(context.Context, *connect.Request[v1.SetupAdminRequest]) (*connect.Response[v1.SetupAdminResponse], error)
+	Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error)
+	Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error)
 	// GetServiceInfo returns the daemon's identity and configuration.
 	// These values are immutable for the lifetime of the process.
 	GetServiceInfo(context.Context, *connect.Request[v1.GetServiceInfoRequest]) (*connect.Response[v1.GetServiceInfoResponse], error)
+	GetDashboardSummary(context.Context, *connect.Request[v1.GetDashboardSummaryRequest]) (*connect.Response[v1.GetDashboardSummaryResponse], error)
 	// ListRunnerSets returns all runner sets with their configuration,
 	// GitHub connection state, and live runner instances.
 	ListRunnerSets(context.Context, *connect.Request[v1.ListRunnerSetsRequest]) (*connect.Response[v1.ListRunnerSetsResponse], error)
@@ -145,6 +262,8 @@ type ControlPlaneServiceHandler interface {
 	// GetMachineVitals returns a point-in-time snapshot of host-level
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
+	GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error)
+	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -154,10 +273,40 @@ type ControlPlaneServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	controlPlaneServiceMethods := v1.File_controlplane_v1_controlplane_proto.Services().ByName("ControlPlaneService").Methods()
+	controlPlaneServiceGetSessionHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetSessionProcedure,
+		svc.GetSession,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetSession")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceSetupAdminHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceSetupAdminProcedure,
+		svc.SetupAdmin,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("SetupAdmin")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceLoginHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceLoginProcedure,
+		svc.Login,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("Login")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceLogoutHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceLogoutProcedure,
+		svc.Logout,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("Logout")),
+		connect.WithHandlerOptions(opts...),
+	)
 	controlPlaneServiceGetServiceInfoHandler := connect.NewUnaryHandler(
 		ControlPlaneServiceGetServiceInfoProcedure,
 		svc.GetServiceInfo,
 		connect.WithSchema(controlPlaneServiceMethods.ByName("GetServiceInfo")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetDashboardSummaryHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetDashboardSummaryProcedure,
+		svc.GetDashboardSummary,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetDashboardSummary")),
 		connect.WithHandlerOptions(opts...),
 	)
 	controlPlaneServiceListRunnerSetsHandler := connect.NewUnaryHandler(
@@ -178,16 +327,42 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("GetMachineVitals")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceGetConfigStatusHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetConfigStatusProcedure,
+		svc.GetConfigStatus,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetConfigStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetSystemInfoHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetSystemInfoProcedure,
+		svc.GetSystemInfo,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetSystemInfo")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/controlplane.v1.ControlPlaneService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		case ControlPlaneServiceGetSessionProcedure:
+			controlPlaneServiceGetSessionHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceSetupAdminProcedure:
+			controlPlaneServiceSetupAdminHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceLoginProcedure:
+			controlPlaneServiceLoginHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceLogoutProcedure:
+			controlPlaneServiceLogoutHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetServiceInfoProcedure:
 			controlPlaneServiceGetServiceInfoHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetDashboardSummaryProcedure:
+			controlPlaneServiceGetDashboardSummaryHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceListRunnerSetsProcedure:
 			controlPlaneServiceListRunnerSetsHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceListJobRecordsProcedure:
 			controlPlaneServiceListJobRecordsHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetMachineVitalsProcedure:
 			controlPlaneServiceGetMachineVitalsHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetConfigStatusProcedure:
+			controlPlaneServiceGetConfigStatusHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetSystemInfoProcedure:
+			controlPlaneServiceGetSystemInfoHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -197,8 +372,28 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 // UnimplementedControlPlaneServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedControlPlaneServiceHandler struct{}
 
+func (UnimplementedControlPlaneServiceHandler) GetSession(context.Context, *connect.Request[v1.GetSessionRequest]) (*connect.Response[v1.GetSessionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetSession is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) SetupAdmin(context.Context, *connect.Request[v1.SetupAdminRequest]) (*connect.Response[v1.SetupAdminResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.SetupAdmin is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) Login(context.Context, *connect.Request[v1.LoginRequest]) (*connect.Response[v1.LoginResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.Login is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) Logout(context.Context, *connect.Request[v1.LogoutRequest]) (*connect.Response[v1.LogoutResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.Logout is not implemented"))
+}
+
 func (UnimplementedControlPlaneServiceHandler) GetServiceInfo(context.Context, *connect.Request[v1.GetServiceInfoRequest]) (*connect.Response[v1.GetServiceInfoResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetServiceInfo is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetDashboardSummary(context.Context, *connect.Request[v1.GetDashboardSummaryRequest]) (*connect.Response[v1.GetDashboardSummaryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetDashboardSummary is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) ListRunnerSets(context.Context, *connect.Request[v1.ListRunnerSetsRequest]) (*connect.Response[v1.ListRunnerSetsResponse], error) {
@@ -211,4 +406,12 @@ func (UnimplementedControlPlaneServiceHandler) ListJobRecords(context.Context, *
 
 func (UnimplementedControlPlaneServiceHandler) GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetMachineVitals is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetConfigStatus(context.Context, *connect.Request[v1.GetConfigStatusRequest]) (*connect.Response[v1.GetConfigStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetConfigStatus is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetSystemInfo is not implemented"))
 }
