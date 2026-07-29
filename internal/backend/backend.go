@@ -1,6 +1,9 @@
 package backend
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // Backend abstracts the runner execution environment.
 // Implementations handle the full lifecycle: start the GitHub Actions runner
@@ -18,4 +21,26 @@ type Backend interface {
 	// CleanupAll removes all resources whose name starts with prefix.
 	// Called once at controller startup to ensure a clean slate.
 	CleanupAll(ctx context.Context, prefix string)
+}
+
+// ResourceSample is a resource reading from a runner backend.
+type ResourceSample struct {
+	RecordedAt           time.Time
+	Source               string
+	Accuracy             string
+	CPUPercent           float64
+	MemoryUsedBytes      int64
+	MemoryAvailableBytes int64
+	DiskUsedBytes        int64
+	DiskAvailableBytes   int64
+	DiskReadBytes        int64
+	DiskWriteBytes       int64
+	NetworkReceiveBytes  int64
+	NetworkSendBytes     int64
+}
+
+// Diagnostics reads logs and resource data before a runner is removed.
+type Diagnostics interface {
+	ReadLogs(ctx context.Context, name string) (string, error)
+	ReadResource(ctx context.Context, name string) (ResourceSample, error)
 }

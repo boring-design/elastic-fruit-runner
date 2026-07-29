@@ -2,10 +2,13 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"go.opentelemetry.io/otel"
@@ -13,6 +16,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type dockerStats struct {
+	CPUPercent string `json:"CPUPerc"`
+	Memory     string `json:"MemUsage"`
+	Network    string `json:"NetIO"`
+	Block      string `json:"BlockIO"`
+}
 
 var dockerTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/docker")
 
@@ -114,4 +124,73 @@ func (b *DockerBackend) CleanupAll(ctx context.Context, prefix string) {
 		b.logger.Info("removing orphaned container", "container", name)
 		b.Cleanup(ctx, name)
 	}
+}
+
+func (b *DockerBackend) ReadLogs(ctx context.Context, name string) (string, error) {
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "logs", name)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("read Docker logs for %s: %w: %s", name, err, strings.TrimSpace(string(out)))
+	}
+	return string(out), nil
+}
+
+func (b *DockerBackend) ReadResource(ctx context.Context, name string) (ResourceSample, error) {
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "stats", "--no-stream", "--format", "{{json .}}", name)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return ResourceSample{}, fmt.Errorf("read Docker resource data for %s: %w: %s", name, err, strings.TrimSpace(string(out)))
+	}
+	var stats dockerStats
+	if err := json.Unmarshal(out, &stats); err != nil {
+		return ResourceSample{}, fmt.Errorf("parse Docker resource data for %s: %w", name, err)
+	}
+	memoryUsed, memoryAvailable := parsePair(stats.Memory)
+	networkReceive, networkSend := parsePair(stats.Network)
+	diskRead, diskWrite := parsePair(stats.Block)
+	cpu, _ := strconv.ParseFloat(strings.TrimSuffix(strings.TrimSpace(stats.CPUPercent), "%"), 64)
+	return ResourceSample{
+		RecordedAt:           time.Now(),
+		Source:               "docker",
+		Accuracy:             "exact",
+		CPUPercent:           cpu,
+		MemoryUsedBytes:      memoryUsed,
+		MemoryAvailableBytes: memoryAvailable,
+		DiskReadBytes:        diskRead,
+		DiskWriteBytes:       diskWrite,
+		NetworkReceiveBytes:  networkReceive,
+		NetworkSendBytes:     networkSend,
+	}, nil
+}
+
+func parsePair(value string) (first, second int64) {
+	parts := strings.Split(value, "/")
+	if len(parts) != 2 {
+		return 0, 0
+	}
+	return parseSize(parts[0]), parseSize(parts[1])
+}
+
+func parseSize(value string) int64 {
+	value = strings.TrimSpace(value)
+	units := []struct {
+		name   string
+		factor float64
+	}{
+		{"KiB", 1024}, {"MiB", 1024 * 1024}, {"GiB", 1024 * 1024 * 1024},
+		{"TiB", 1024 * 1024 * 1024 * 1024}, {"kB", 1000}, {"KB", 1000},
+		{"MB", 1000 * 1000}, {"GB", 1000 * 1000 * 1000},
+		{"TB", 1000 * 1000 * 1000 * 1000}, {"B", 1},
+	}
+	for _, unit := range units {
+		if strings.HasSuffix(value, unit.name) {
+			number := strings.TrimSpace(strings.TrimSuffix(value, unit.name))
+			parsed, err := strconv.ParseFloat(number, 64)
+			if err == nil {
+				return int64(parsed * unit.factor)
+			}
+			return 0
+		}
+	}
+	return 0
 }

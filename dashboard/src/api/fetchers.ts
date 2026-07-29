@@ -10,6 +10,8 @@ import type {
   Module,
   Runner,
   RunnerSet,
+  ResourceSample,
+  JobLog,
   SessionState,
   SystemInfo,
 } from '../types'
@@ -185,24 +187,142 @@ const JOB_RESULT_MAP: Record<string, JobRecord['result']> = {
 }
 
 export async function fetchRecentJobs(): Promise<JobRecord[]> {
+  const page = await fetchJobs({})
+  return page.jobs
+}
+
+interface JobResponse {
+  id: string
+  runnerName: string
+  runnerSetName: string
+  result: string
+  startedAt: string
+  completedAt?: string
+  owner?: string
+  repository?: string
+  workflowRef?: string
+  displayName?: string
+  workflowRunId?: number
+  eventName?: string
+  labels?: string[]
+  queuedAt?: string
+  scaleSetAssignedAt?: string
+  runnerAssignedAt?: string
+  backend?: string
+  actionsUrl?: string
+}
+
+export async function fetchJobs(filters: {
+  status?: string
+  runnerSet?: string
+  repository?: string
+  workflow?: string
+  cursor?: string
+  pageSize?: number
+}): Promise<{ jobs: JobRecord[]; nextCursor: string }> {
   const data = await rpc<{
-    jobRecords?: Array<{
-      id: string
-      runnerName: string
-      runnerSetName: string
-      result: string
-      startedAt: string
-      completedAt?: string
-    }>
-  }>('ListJobRecords')
-  return (data.jobRecords ?? []).map(job => ({
+    jobRecords?: JobResponse[]
+    nextCursor?: string
+  }>('ListJobRecords', filters)
+  return {
+    jobs: (data.jobRecords ?? []).map(toJob),
+    nextCursor: data.nextCursor ?? '',
+  }
+}
+
+export async function fetchJobDetail(id: string): Promise<JobRecord> {
+  const data = await rpc<{ job: JobResponse }>('GetJobDetail', { id })
+  return toJob(data.job)
+}
+
+export async function fetchJobLogs(jobId: string, afterSequence = 0): Promise<{ lines: JobLog[]; nextSequence: number }> {
+  const data = await rpc<{
+    lines?: Array<{ sequence: number; recordedAt: string; text: string }>
+    nextSequence?: number
+  }>('GetJobLogs', { jobId, afterSequence, pageSize: 500 })
+  return {
+    lines: (data.lines ?? []).map(line => ({
+      sequence: line.sequence,
+      recordedAt: new Date(line.recordedAt),
+      text: line.text,
+    })),
+    nextSequence: data.nextSequence ?? afterSequence,
+  }
+}
+
+export async function fetchJobResources(jobId: string): Promise<ResourceSample[]> {
+  const data = await rpc<{ samples?: ResourceSampleResponse[] }>('GetJobResourceSamples', { jobId })
+  return (data.samples ?? []).map(toResourceSample)
+}
+
+export async function fetchHostResources(from: Date, to: Date): Promise<{ samples: ResourceSample[]; earliestAt: Date | null }> {
+  const data = await rpc<{ samples?: ResourceSampleResponse[]; earliestAt?: string }>(
+    'GetHostResourceSamples',
+    { from: from.toISOString(), to: to.toISOString() },
+  )
+  return {
+    samples: (data.samples ?? []).map(toResourceSample),
+    earliestAt: data.earliestAt ? new Date(data.earliestAt) : null,
+  }
+}
+
+interface ResourceSampleResponse {
+  recordedAt: string
+  source?: string
+  accuracy?: string
+  cpuPercent?: number
+  memoryUsedBytes?: number
+  memoryAvailableBytes?: number
+  diskUsedBytes?: number
+  diskAvailableBytes?: number
+  diskReadBytes?: number
+  diskWriteBytes?: number
+  networkReceiveBytes?: number
+  networkSendBytes?: number
+  loadOne?: number
+  temperatureCelsius?: number
+}
+
+function toResourceSample(sample: ResourceSampleResponse): ResourceSample {
+  return {
+    recordedAt: new Date(sample.recordedAt),
+    source: sample.source ?? '',
+    accuracy: sample.accuracy === 'RESOURCE_ACCURACY_ESTIMATE' ? 'estimate' : 'exact',
+    cpuPercent: sample.cpuPercent ?? 0,
+    memoryUsedBytes: sample.memoryUsedBytes ?? 0,
+    memoryAvailableBytes: sample.memoryAvailableBytes ?? 0,
+    diskUsedBytes: sample.diskUsedBytes ?? 0,
+    diskAvailableBytes: sample.diskAvailableBytes ?? 0,
+    diskReadBytes: sample.diskReadBytes ?? 0,
+    diskWriteBytes: sample.diskWriteBytes ?? 0,
+    networkReceiveBytes: sample.networkReceiveBytes ?? 0,
+    networkSendBytes: sample.networkSendBytes ?? 0,
+    loadOne: sample.loadOne ?? 0,
+    temperatureCelsius: sample.temperatureCelsius ?? 0,
+  }
+}
+
+function toJob(job: JobResponse): JobRecord {
+  return {
     id: job.id,
     runnerName: job.runnerName,
     runnerSetName: job.runnerSetName,
     result: JOB_RESULT_MAP[job.result] ?? (job.completedAt ? 'failure' : 'running'),
     startedAt: new Date(job.startedAt),
     completedAt: job.completedAt ? new Date(job.completedAt) : null,
-  }))
+    owner: job.owner ?? '',
+    repository: job.repository ?? '',
+    workflowRef: job.workflowRef ?? '',
+    displayName: job.displayName ?? '',
+    workflowRunId: job.workflowRunId ?? 0,
+    eventName: job.eventName ?? '',
+    labels: job.labels ?? [],
+    queuedAt: job.queuedAt ? new Date(job.queuedAt) : null,
+    scaleSetAssignedAt: job.scaleSetAssignedAt ? new Date(job.scaleSetAssignedAt) : null,
+    runnerAssignedAt: job.runnerAssignedAt ? new Date(job.runnerAssignedAt) : null,
+    backend: BACKEND_MAP[job.backend ?? ''] ?? 'unknown',
+    actionsURL: job.actionsUrl ?? '',
+  }
 }
 
 export async function fetchMachineVitals(): Promise<MachineVitals> {

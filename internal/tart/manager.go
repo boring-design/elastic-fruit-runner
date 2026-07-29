@@ -159,6 +159,12 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 // The default Cirrus Labs macos base images use admin:admin credentials.
 // It waits for SSH to become reachable with exponential backoff before executing.
 func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
+	_, err := m.ExecOutput(ctx, name, args...)
+	return err
+}
+
+// ExecOutput runs a command inside the VM and returns its output.
+func (m *Manager) ExecOutput(ctx context.Context, name string, args ...string) (string, error) {
 	ctx, span := tracer.Start(ctx, "tart.ssh_exec",
 		trace.WithAttributes(attribute.String("vm.name", name)),
 	)
@@ -168,13 +174,13 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return "", err
 	}
 
 	if err := m.waitForSSH(ctx, name, ip); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return "", err
 	}
 
 	sshArgs := m.buildSSHArgs(ip, args...)
@@ -187,9 +193,9 @@ func (m *Manager) Exec(ctx context.Context, name string, args ...string) error {
 		err = fmt.Errorf("ssh exec %s (%s): %w\n%s", name, ip, err, buf.Bytes())
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return "", err
 	}
-	return nil
+	return buf.String(), nil
 }
 
 // waitForSSH verifies the actual SSH transport used by Exec instead of only

@@ -30,10 +30,12 @@ type RunnerSetView struct {
 
 // Service manages all ScaleSetControllers and provides aggregated read access.
 type Service struct {
-	cfg         *config.Config
-	controllers []*controller.ScaleSetController
-	jobs        *JobStore
-	db          *sql.DB
+	cfg             *config.Config
+	controllers     []*controller.ScaleSetController
+	jobs            *JobStore
+	db              *sql.DB
+	databasePath    string
+	hostSampleCount int
 
 	wg sync.WaitGroup
 }
@@ -42,15 +44,20 @@ type Service struct {
 // It initializes the SQLite database, runs migrations, creates GitHub clients,
 // backends, and controllers but does not start them.
 func New(cfg *config.Config) (*Service, error) {
-	db, err := openJobsDB(cfg.DBPath)
+	databasePath, err := cfg.DatabasePath()
+	if err != nil {
+		return nil, fmt.Errorf("resolve jobs database path: %w", err)
+	}
+	db, err := openJobsDB(databasePath)
 	if err != nil {
 		return nil, fmt.Errorf("open jobs database: %w", err)
 	}
 
 	svc := &Service{
-		cfg:  cfg,
-		db:   db,
-		jobs: NewJobStore(db),
+		cfg:          cfg,
+		db:           db,
+		jobs:         NewJobStore(db),
+		databasePath: databasePath,
 	}
 
 	for i := range cfg.Orgs {
@@ -122,6 +129,22 @@ func (svc *Service) ListRunnerSets() []RunnerSetView {
 // ListJobRecords returns job history, most-recent-first.
 func (svc *Service) ListJobRecords() []JobRecord {
 	return svc.jobs.Snapshot()
+}
+
+func (svc *Service) FindJobRecords(filter JobFilter) JobPage {
+	return svc.jobs.List(filter)
+}
+
+func (svc *Service) GetJobRecord(jobID string) (*JobRecord, error) {
+	return svc.jobs.Get(jobID)
+}
+
+func (svc *Service) GetJobLogs(jobID string, after int64, pageSize int) (logs []JobLog, nextSequence int64) {
+	return svc.jobs.Logs(jobID, after, pageSize)
+}
+
+func (svc *Service) GetJobSamples(jobID string) []ResourceSample {
+	return svc.jobs.Samples(jobID)
 }
 
 func (svc *Service) runController(ctx context.Context, ctrl *controller.ScaleSetController) {

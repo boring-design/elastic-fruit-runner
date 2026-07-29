@@ -58,6 +58,18 @@ const (
 	// ControlPlaneServiceListJobRecordsProcedure is the fully-qualified name of the
 	// ControlPlaneService's ListJobRecords RPC.
 	ControlPlaneServiceListJobRecordsProcedure = "/controlplane.v1.ControlPlaneService/ListJobRecords"
+	// ControlPlaneServiceGetJobDetailProcedure is the fully-qualified name of the ControlPlaneService's
+	// GetJobDetail RPC.
+	ControlPlaneServiceGetJobDetailProcedure = "/controlplane.v1.ControlPlaneService/GetJobDetail"
+	// ControlPlaneServiceGetJobLogsProcedure is the fully-qualified name of the ControlPlaneService's
+	// GetJobLogs RPC.
+	ControlPlaneServiceGetJobLogsProcedure = "/controlplane.v1.ControlPlaneService/GetJobLogs"
+	// ControlPlaneServiceGetJobResourceSamplesProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetJobResourceSamples RPC.
+	ControlPlaneServiceGetJobResourceSamplesProcedure = "/controlplane.v1.ControlPlaneService/GetJobResourceSamples"
+	// ControlPlaneServiceGetHostResourceSamplesProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetHostResourceSamples RPC.
+	ControlPlaneServiceGetHostResourceSamplesProcedure = "/controlplane.v1.ControlPlaneService/GetHostResourceSamples"
 	// ControlPlaneServiceGetMachineVitalsProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetMachineVitals RPC.
 	ControlPlaneServiceGetMachineVitalsProcedure = "/controlplane.v1.ControlPlaneService/GetMachineVitals"
@@ -85,6 +97,10 @@ type ControlPlaneServiceClient interface {
 	// ListJobRecords returns a bounded history of job executions
 	// across all runner sets, ordered most-recent-first.
 	ListJobRecords(context.Context, *connect.Request[v1.ListJobRecordsRequest]) (*connect.Response[v1.ListJobRecordsResponse], error)
+	GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error)
+	GetJobLogs(context.Context, *connect.Request[v1.GetJobLogsRequest]) (*connect.Response[v1.GetJobLogsResponse], error)
+	GetJobResourceSamples(context.Context, *connect.Request[v1.GetJobResourceSamplesRequest]) (*connect.Response[v1.GetJobResourceSamplesResponse], error)
+	GetHostResourceSamples(context.Context, *connect.Request[v1.GetHostResourceSamplesRequest]) (*connect.Response[v1.GetHostResourceSamplesResponse], error)
 	// GetMachineVitals returns a point-in-time snapshot of host-level
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
@@ -151,6 +167,30 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("ListJobRecords")),
 			connect.WithClientOptions(opts...),
 		),
+		getJobDetail: connect.NewClient[v1.GetJobDetailRequest, v1.GetJobDetailResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetJobDetailProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobDetail")),
+			connect.WithClientOptions(opts...),
+		),
+		getJobLogs: connect.NewClient[v1.GetJobLogsRequest, v1.GetJobLogsResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetJobLogsProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobLogs")),
+			connect.WithClientOptions(opts...),
+		),
+		getJobResourceSamples: connect.NewClient[v1.GetJobResourceSamplesRequest, v1.GetJobResourceSamplesResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetJobResourceSamplesProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobResourceSamples")),
+			connect.WithClientOptions(opts...),
+		),
+		getHostResourceSamples: connect.NewClient[v1.GetHostResourceSamplesRequest, v1.GetHostResourceSamplesResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetHostResourceSamplesProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetHostResourceSamples")),
+			connect.WithClientOptions(opts...),
+		),
 		getMachineVitals: connect.NewClient[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse](
 			httpClient,
 			baseURL+ControlPlaneServiceGetMachineVitalsProcedure,
@@ -174,17 +214,21 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // controlPlaneServiceClient implements ControlPlaneServiceClient.
 type controlPlaneServiceClient struct {
-	getSession          *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
-	setupAdmin          *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
-	login               *connect.Client[v1.LoginRequest, v1.LoginResponse]
-	logout              *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
-	getServiceInfo      *connect.Client[v1.GetServiceInfoRequest, v1.GetServiceInfoResponse]
-	getDashboardSummary *connect.Client[v1.GetDashboardSummaryRequest, v1.GetDashboardSummaryResponse]
-	listRunnerSets      *connect.Client[v1.ListRunnerSetsRequest, v1.ListRunnerSetsResponse]
-	listJobRecords      *connect.Client[v1.ListJobRecordsRequest, v1.ListJobRecordsResponse]
-	getMachineVitals    *connect.Client[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse]
-	getConfigStatus     *connect.Client[v1.GetConfigStatusRequest, v1.GetConfigStatusResponse]
-	getSystemInfo       *connect.Client[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse]
+	getSession             *connect.Client[v1.GetSessionRequest, v1.GetSessionResponse]
+	setupAdmin             *connect.Client[v1.SetupAdminRequest, v1.SetupAdminResponse]
+	login                  *connect.Client[v1.LoginRequest, v1.LoginResponse]
+	logout                 *connect.Client[v1.LogoutRequest, v1.LogoutResponse]
+	getServiceInfo         *connect.Client[v1.GetServiceInfoRequest, v1.GetServiceInfoResponse]
+	getDashboardSummary    *connect.Client[v1.GetDashboardSummaryRequest, v1.GetDashboardSummaryResponse]
+	listRunnerSets         *connect.Client[v1.ListRunnerSetsRequest, v1.ListRunnerSetsResponse]
+	listJobRecords         *connect.Client[v1.ListJobRecordsRequest, v1.ListJobRecordsResponse]
+	getJobDetail           *connect.Client[v1.GetJobDetailRequest, v1.GetJobDetailResponse]
+	getJobLogs             *connect.Client[v1.GetJobLogsRequest, v1.GetJobLogsResponse]
+	getJobResourceSamples  *connect.Client[v1.GetJobResourceSamplesRequest, v1.GetJobResourceSamplesResponse]
+	getHostResourceSamples *connect.Client[v1.GetHostResourceSamplesRequest, v1.GetHostResourceSamplesResponse]
+	getMachineVitals       *connect.Client[v1.GetMachineVitalsRequest, v1.GetMachineVitalsResponse]
+	getConfigStatus        *connect.Client[v1.GetConfigStatusRequest, v1.GetConfigStatusResponse]
+	getSystemInfo          *connect.Client[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse]
 }
 
 // GetSession calls controlplane.v1.ControlPlaneService.GetSession.
@@ -227,6 +271,26 @@ func (c *controlPlaneServiceClient) ListJobRecords(ctx context.Context, req *con
 	return c.listJobRecords.CallUnary(ctx, req)
 }
 
+// GetJobDetail calls controlplane.v1.ControlPlaneService.GetJobDetail.
+func (c *controlPlaneServiceClient) GetJobDetail(ctx context.Context, req *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error) {
+	return c.getJobDetail.CallUnary(ctx, req)
+}
+
+// GetJobLogs calls controlplane.v1.ControlPlaneService.GetJobLogs.
+func (c *controlPlaneServiceClient) GetJobLogs(ctx context.Context, req *connect.Request[v1.GetJobLogsRequest]) (*connect.Response[v1.GetJobLogsResponse], error) {
+	return c.getJobLogs.CallUnary(ctx, req)
+}
+
+// GetJobResourceSamples calls controlplane.v1.ControlPlaneService.GetJobResourceSamples.
+func (c *controlPlaneServiceClient) GetJobResourceSamples(ctx context.Context, req *connect.Request[v1.GetJobResourceSamplesRequest]) (*connect.Response[v1.GetJobResourceSamplesResponse], error) {
+	return c.getJobResourceSamples.CallUnary(ctx, req)
+}
+
+// GetHostResourceSamples calls controlplane.v1.ControlPlaneService.GetHostResourceSamples.
+func (c *controlPlaneServiceClient) GetHostResourceSamples(ctx context.Context, req *connect.Request[v1.GetHostResourceSamplesRequest]) (*connect.Response[v1.GetHostResourceSamplesResponse], error) {
+	return c.getHostResourceSamples.CallUnary(ctx, req)
+}
+
 // GetMachineVitals calls controlplane.v1.ControlPlaneService.GetMachineVitals.
 func (c *controlPlaneServiceClient) GetMachineVitals(ctx context.Context, req *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error) {
 	return c.getMachineVitals.CallUnary(ctx, req)
@@ -259,6 +323,10 @@ type ControlPlaneServiceHandler interface {
 	// ListJobRecords returns a bounded history of job executions
 	// across all runner sets, ordered most-recent-first.
 	ListJobRecords(context.Context, *connect.Request[v1.ListJobRecordsRequest]) (*connect.Response[v1.ListJobRecordsResponse], error)
+	GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error)
+	GetJobLogs(context.Context, *connect.Request[v1.GetJobLogsRequest]) (*connect.Response[v1.GetJobLogsResponse], error)
+	GetJobResourceSamples(context.Context, *connect.Request[v1.GetJobResourceSamplesRequest]) (*connect.Response[v1.GetJobResourceSamplesResponse], error)
+	GetHostResourceSamples(context.Context, *connect.Request[v1.GetHostResourceSamplesRequest]) (*connect.Response[v1.GetHostResourceSamplesResponse], error)
 	// GetMachineVitals returns a point-in-time snapshot of host-level
 	// resource metrics (CPU, memory, disk, temperature).
 	GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error)
@@ -321,6 +389,30 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("ListJobRecords")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceGetJobDetailHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetJobDetailProcedure,
+		svc.GetJobDetail,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobDetail")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetJobLogsHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetJobLogsProcedure,
+		svc.GetJobLogs,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobLogs")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetJobResourceSamplesHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetJobResourceSamplesProcedure,
+		svc.GetJobResourceSamples,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetJobResourceSamples")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceGetHostResourceSamplesHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetHostResourceSamplesProcedure,
+		svc.GetHostResourceSamples,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetHostResourceSamples")),
+		connect.WithHandlerOptions(opts...),
+	)
 	controlPlaneServiceGetMachineVitalsHandler := connect.NewUnaryHandler(
 		ControlPlaneServiceGetMachineVitalsProcedure,
 		svc.GetMachineVitals,
@@ -357,6 +449,14 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceListRunnerSetsHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceListJobRecordsProcedure:
 			controlPlaneServiceListJobRecordsHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetJobDetailProcedure:
+			controlPlaneServiceGetJobDetailHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetJobLogsProcedure:
+			controlPlaneServiceGetJobLogsHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetJobResourceSamplesProcedure:
+			controlPlaneServiceGetJobResourceSamplesHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetHostResourceSamplesProcedure:
+			controlPlaneServiceGetHostResourceSamplesHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetMachineVitalsProcedure:
 			controlPlaneServiceGetMachineVitalsHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetConfigStatusProcedure:
@@ -402,6 +502,22 @@ func (UnimplementedControlPlaneServiceHandler) ListRunnerSets(context.Context, *
 
 func (UnimplementedControlPlaneServiceHandler) ListJobRecords(context.Context, *connect.Request[v1.ListJobRecordsRequest]) (*connect.Response[v1.ListJobRecordsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.ListJobRecords is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetJobDetail(context.Context, *connect.Request[v1.GetJobDetailRequest]) (*connect.Response[v1.GetJobDetailResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetJobDetail is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetJobLogs(context.Context, *connect.Request[v1.GetJobLogsRequest]) (*connect.Response[v1.GetJobLogsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetJobLogs is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetJobResourceSamples(context.Context, *connect.Request[v1.GetJobResourceSamplesRequest]) (*connect.Response[v1.GetJobResourceSamplesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetJobResourceSamples is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetHostResourceSamples(context.Context, *connect.Request[v1.GetHostResourceSamplesRequest]) (*connect.Response[v1.GetHostResourceSamplesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetHostResourceSamples is not implemented"))
 }
 
 func (UnimplementedControlPlaneServiceHandler) GetMachineVitals(context.Context, *connect.Request[v1.GetMachineVitalsRequest]) (*connect.Response[v1.GetMachineVitalsResponse], error) {

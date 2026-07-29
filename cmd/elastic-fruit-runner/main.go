@@ -66,13 +66,14 @@ func runDaemon() error {
 	}()
 
 	vitalsService := vitals.New(startedAt)
-	go vitalsService.Start(ctx, 5*time.Second)
 
 	managementService, err := management.New(cfg)
 	if err != nil {
 		return fmt.Errorf("initialize scale set controller management service: %w", err)
 	}
 	defer managementService.Close()
+	vitalsService.SetOnUpdate(managementService.RecordHostVitals)
+	go vitalsService.Start(ctx, 5*time.Second)
 	managementService.Start(ctx)
 
 	databasePath, err := cfg.DatabasePath()

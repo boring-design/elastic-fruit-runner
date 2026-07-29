@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import useSWR from 'swr'
 import { fetchSession, login, logout, setupAdmin } from './api/fetchers'
+import {
+  fetchHostResources,
+  fetchJobLogs,
+  fetchJobResources,
+  fetchJobs,
+} from './api/fetchers'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
 import type {
@@ -9,6 +15,7 @@ import type {
   JobRecord,
   MachineVitals,
   RunnerSet,
+  ResourceSample,
   SessionState,
 } from './types'
 
@@ -232,19 +239,42 @@ function Overview() {
   )
 }
 
-function JobsPage({ jobs, now }: { jobs: JobRecord[]; now: Date }) {
+function JobsPage({ jobs: initialJobs, now }: { jobs: JobRecord[]; now: Date }) {
+  const [status, setStatus] = useState('')
+  const [repository, setRepository] = useState('')
+  const [workflow, setWorkflow] = useState('')
+  const [selected, setSelected] = useState<JobRecord | null>(null)
+  const jobs = useSWR(
+    ['jobs', status, repository, workflow],
+    () => fetchJobs({ status, repository, workflow, pageSize: 100 }),
+    { refreshInterval: 5000, fallbackData: { jobs: initialJobs, nextCursor: '' } },
+  )
   return (
     <>
       <PageHeader title="Jobs" detail="Recent job history from local storage." />
-      <section className="panel">
-        <PanelHeader title="Job records" detail={`${jobs.length} records`} />
-        <JobTable jobs={jobs} now={now} />
+      <section className="filter-bar">
+        <select aria-label="Job status" value={status} onChange={event => setStatus(event.target.value)}>
+          <option value="">All results</option>
+          <option value="running">Running</option>
+          <option value="succeeded">Success</option>
+          <option value="failed">Failure</option>
+          <option value="canceled">Canceled</option>
+        </select>
+        <input aria-label="Repository filter" placeholder="Repository" value={repository} onChange={event => setRepository(event.target.value)} />
+        <input aria-label="Workflow filter" placeholder="Workflow" value={workflow} onChange={event => setWorkflow(event.target.value)} />
       </section>
+      <section className="panel">
+        <PanelHeader title="Job records" detail={`${jobs.data?.jobs.length ?? 0} records`} />
+        {jobs.error
+          ? <EmptyState title="Job history unavailable" detail={String(jobs.error)} />
+          : <JobTable jobs={jobs.data?.jobs ?? []} now={now} onSelect={setSelected} />}
+      </section>
+      {selected && <JobDetail job={selected} onClose={() => setSelected(null)} />}
     </>
   )
 }
 
-function JobTable({ jobs, now }: { jobs: JobRecord[]; now: Date }) {
+function JobTable({ jobs, now, onSelect }: { jobs: JobRecord[]; now: Date; onSelect?: (job: JobRecord) => void }) {
   if (jobs.length === 0) return <EmptyState title="No jobs recorded" detail="Jobs appear after a runner accepts work." />
   return (
     <div className="table-wrap">
@@ -252,6 +282,7 @@ function JobTable({ jobs, now }: { jobs: JobRecord[]; now: Date }) {
         <thead>
           <tr>
             <th>Job</th>
+            <th>Repository</th>
             <th>Runner set</th>
             <th>Runner</th>
             <th>Result</th>
@@ -261,8 +292,9 @@ function JobTable({ jobs, now }: { jobs: JobRecord[]; now: Date }) {
         </thead>
         <tbody>
           {jobs.map(job => (
-            <tr key={`${job.id}-${job.startedAt.toISOString()}`}>
-              <td className="mono">{job.id}</td>
+            <tr className={onSelect ? 'clickable-row' : ''} key={`${job.id}-${job.startedAt.toISOString()}`} onClick={() => onSelect?.(job)}>
+              <td className="mono">{job.displayName || job.id}</td>
+              <td>{job.owner && job.repository ? `${job.owner}/${job.repository}` : 'Unknown'}</td>
               <td>{job.runnerSetName || 'Unknown'}</td>
               <td>{job.runnerName || 'Unknown'}</td>
               <td><ResultBadge result={job.result} /></td>
@@ -272,6 +304,47 @@ function JobTable({ jobs, now }: { jobs: JobRecord[]; now: Date }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function JobDetail({ job, onClose }: { job: JobRecord; onClose: () => void }) {
+  const logs = useSWR(['jobLogs', job.id], () => fetchJobLogs(job.id), {
+    refreshInterval: job.result === 'running' ? 2000 : 0,
+  })
+  const resources = useSWR(['jobResources', job.id], () => fetchJobResources(job.id), {
+    refreshInterval: job.result === 'running' ? 5000 : 0,
+  })
+  const samples = resources.data ?? []
+  const estimate = samples.some(sample => sample.accuracy === 'estimate')
+  return (
+    <div className="detail-overlay" role="dialog" aria-modal="true" aria-label="Job detail">
+      <section className="detail-panel">
+        <div className="detail-title">
+          <div>
+            <span className="eyebrow">Job detail</span>
+            <h2>{job.displayName || job.id}</h2>
+          </div>
+          <button className="text-button" onClick={onClose}>Close</button>
+        </div>
+        <DefinitionList rows={[
+          ['Repository', job.owner && job.repository ? `${job.owner}/${job.repository}` : 'Unknown'],
+          ['Workflow', job.workflowRef || 'Unknown'],
+          ['Runner', job.runnerName],
+          ['Backend', job.backend || 'Unknown'],
+          ['Queued', job.queuedAt ? formatDate(job.queuedAt) : 'Unavailable'],
+          ['Runner assigned', job.runnerAssignedAt ? formatDate(job.runnerAssignedAt) : 'Unavailable'],
+          ['Started', formatDate(job.startedAt)],
+          ['Completed', job.completedAt ? formatDate(job.completedAt) : 'Running'],
+        ]} />
+        {job.actionsURL && <a className="external-link" href={job.actionsURL} target="_blank" rel="noreferrer">Open in GitHub Actions</a>}
+        <div className="panel-header"><h2>Resource history</h2><span>{estimate ? 'Tart host estimate' : 'Backend data'}</span></div>
+        {estimate && <div className="notice warning">Guest resource usage is unavailable. Tart values show VM allocation and host side estimates.</div>}
+        <ResourceChart samples={samples} field="cpuPercent" label="CPU" suffix="%" />
+        <ResourceChart samples={samples} field="memoryUsedBytes" label="Memory" format={formatBytes} />
+        <div className="panel-header"><h2>Runner log</h2><span>{logs.data?.lines.length ?? 0} chunks</span></div>
+        <pre className="job-log">{logs.data?.lines.map(line => line.text).join('') || 'No log data is available.'}</pre>
+      </section>
     </div>
   )
 }
@@ -367,6 +440,11 @@ function SystemPage() {
   const store = useDashboardStore()
   const system = store.systemInfo
   const daemon = store.daemonStatus
+  const history = useSWR(
+    'hostResources',
+    () => fetchHostResources(new Date(Date.now() - 60 * 60 * 1000), new Date()),
+    { refreshInterval: 5000 },
+  )
   return (
     <>
       <PageHeader title="System" detail="Daemon build, storage, and current host health." />
@@ -395,10 +473,44 @@ function SystemPage() {
         </section>
       </div>
       <section className="panel">
-        <PanelHeader title="Host resources" detail="Current sample" />
+        <PanelHeader title="Host resources" detail={history.data?.earliestAt ? `Available since ${formatDate(history.data.earliestAt)}` : 'Current sample'} />
         <Vitals vitals={store.machineVitals} />
+        <ResourceChart samples={history.data?.samples ?? []} field="cpuPercent" label="CPU history" suffix="%" />
+        <ResourceChart samples={history.data?.samples ?? []} field="memoryUsedBytes" label="Memory history" format={formatBytes} />
       </section>
     </>
+  )
+}
+
+function ResourceChart({
+  samples,
+  field,
+  label,
+  suffix = '',
+  format,
+}: {
+  samples: ResourceSample[]
+  field: 'cpuPercent' | 'memoryUsedBytes'
+  label: string
+  suffix?: string
+  format?: (value: number) => string
+}) {
+  if (samples.length < 2) return <EmptyState title={`${label} has no history yet`} />
+  const values = samples.map(sample => sample[field])
+  const maxValue = Math.max(...values, 1)
+  const points = values.map((value, index) => {
+    const x = values.length === 1 ? 0 : index / (values.length - 1) * 100
+    const y = 34 - value / maxValue * 30
+    return `${x},${y}`
+  }).join(' ')
+  const latest = values.at(-1) ?? 0
+  return (
+    <div className="resource-chart">
+      <div><span>{label}</span><strong>{format ? format(latest) : `${latest.toFixed(1)}${suffix}`}</strong></div>
+      <svg viewBox="0 0 100 36" preserveAspectRatio="none" role="img" aria-label={label}>
+        <polyline points={points} />
+      </svg>
+    </div>
   )
 }
 
