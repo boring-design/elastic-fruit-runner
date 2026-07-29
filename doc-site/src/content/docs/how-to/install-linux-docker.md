@@ -131,10 +131,7 @@ docker logs elastic-fruit-runner 2>&1 | jq 'select(.level == "ERROR")'
 
 ## Update
 
-```sh
-docker pull ghcr.io/boring-design/elastic-fruit-runner:latest
-docker compose up -d
-```
+Follow [How to upgrade Elastic Fruit Runner](/how-to/upgrade/) to check running jobs, update the image, and verify the Console.
 
 ## systemd integration (optional)
 

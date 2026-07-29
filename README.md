@@ -5,6 +5,7 @@ Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 - **Tart mode** — ephemeral macOS VMs via [Tart](https://tart.run), one per job, auto-scaled
 - **Linux arm64 / amd64** via Docker (Docker-in-Docker)
 - Powered by the official [GitHub Runner Scale Set Client](https://github.com/actions/scaleset) (Go)
+- Embedded operations console for jobs, logs, resources, runner sets, config, and host health
 
 > **Status:** PoC — core flow works, not production-hardened yet.
 
@@ -12,15 +13,16 @@ Elastic GitHub Actions self-hosted runner manager for Apple Silicon.
 
 ## Getting Started
 
-See the [documentation site](https://elastic-fruit-runner.pages.dev) for full guides:
+See the [documentation site](https://elastic-fruit-runner.boringboring.design) for full guides:
 
-- [Getting Started Tutorial](https://elastic-fruit-runner.pages.dev/tutorials/getting-started/)
-- [macOS Installation](https://elastic-fruit-runner.pages.dev/how-to/install-macos/)
-- [Linux Deployment (Docker)](https://elastic-fruit-runner.pages.dev/how-to/install-linux-docker/)
-- [Configuration Reference](https://elastic-fruit-runner.pages.dev/reference/configuration/)
-- [GitHub App Auth](https://elastic-fruit-runner.pages.dev/how-to/configure-github-app/)
-- [CLI Reference](https://elastic-fruit-runner.pages.dev/reference/cli/)
-- [How it works](https://elastic-fruit-runner.pages.dev/explanation/what-is-elastic-fruit-runner/)
+- [Getting Started Tutorial](https://elastic-fruit-runner.boringboring.design/tutorials/getting-started/)
+- [macOS Installation](https://elastic-fruit-runner.boringboring.design/how-to/install-macos/)
+- [Linux Deployment with Docker](https://elastic-fruit-runner.boringboring.design/how-to/install-linux-docker/)
+- [Operations Console](https://elastic-fruit-runner.boringboring.design/how-to/use-console/)
+- [Configuration Reference](https://elastic-fruit-runner.boringboring.design/reference/configuration/)
+- [GitHub App Auth](https://elastic-fruit-runner.boringboring.design/how-to/configure-github-app/)
+- [CLI Reference](https://elastic-fruit-runner.boringboring.design/reference/cli/)
+- [How it works](https://elastic-fruit-runner.boringboring.design/explanation/what-is-elastic-fruit-runner/)
 
 ---
 
@@ -47,5 +49,5 @@ make check
 - [x] Linux arm64 runner (Docker)
 - [x] Linux amd64 runner (Docker + Rosetta 2)
 - [x] GitHub App auth
+- [x] Embedded operations console
 - [ ] Warm pool (pre-clone VMs to reduce job start latency)
-- [ ] Wails GUI dashboard

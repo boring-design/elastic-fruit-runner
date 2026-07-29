@@ -1,39 +1,55 @@
 ---
 title: Getting Started
-description: Set up elastic-fruit-runner on macOS and run your first GitHub Actions job on an ephemeral Tart VM.
+description: Install Elastic Fruit Runner on an Apple Silicon Mac, open the Console, and run your first job.
 ---
 
-This tutorial walks you through installing elastic-fruit-runner on a macOS Apple Silicon machine, configuring it, and running your first GitHub Actions workflow on an ephemeral Tart VM.
+This tutorial takes you from an empty Mac to one completed GitHub Actions job. You will also use the Console to see what the runner is doing.
 
-By the end, you will have a working self-hosted runner that automatically scales up VMs for incoming jobs and destroys them after completion.
+## What you need
 
-## Prerequisites
+* A Mac with Apple Silicon
+* Homebrew
+* Tart
+* A GitHub organization where you have admin access
+* A GitHub Personal Access Token with Organization Self hosted runners read and write access
 
-- A Mac with Apple Silicon (M1 or later)
-- [Homebrew](https://brew.sh) installed
-- [Tart](https://tart.run) installed (`brew install cirruslabs/cli/tart`)
-- A GitHub organization or repository where you have admin access
-- A GitHub Personal Access Token (PAT) with **Organization > Self-hosted runners: Read and write** scope
+Install Tart before you continue:
 
-## Step 1: Install elastic-fruit-runner
+```sh
+brew install cirruslabs/cli/tart
+```
+
+Check that Tart is ready:
+
+```sh
+tart --version
+```
+
+You should see a version number.
+
+## Install Elastic Fruit Runner
 
 ```sh
 brew install boring-design/tap/elastic-fruit-runner
 ```
 
-Verify the installation:
+Check the installed command:
 
 ```sh
 elastic-fruit-runner --help
 ```
 
-## Step 2: Create a configuration file
+The command should print its available options.
+
+## Create the config
+
+Create the config directory:
 
 ```sh
 mkdir -p ~/.elastic-fruit-runner
 ```
 
-Create `~/.elastic-fruit-runner/config.yaml` with the following content. Replace `your-org` with your GitHub organization name and `ghp_xxx` with your PAT:
+Create `~/.elastic-fruit-runner/config.yaml` with this content. Replace `your-org` and `ghp_xxx` with your own values.
 
 ```yaml
 orgs:
@@ -42,91 +58,95 @@ orgs:
       pat_token: ghp_xxx
     runner_group: Default
     runner_sets:
-      # macOS runners via Tart VMs (Apple Silicon only)
       - name: efr-macos-arm64
         backend: tart
         image: ghcr.io/cirruslabs/macos-tahoe-xcode:26.3
         labels: [self-hosted, macos, arm64]
         max_runners: 2
 
-      # Linux arm64 runners via Docker
-      - name: efr-linux-arm64
-        backend: docker
-        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-        labels: [self-hosted, linux, arm64]
-        max_runners: 4
-        platform: linux/arm64
-
-      # Linux amd64 runners via Docker (Rosetta 2 emulation on Apple Silicon)
-      - name: efr-linux-amd64
-        backend: docker
-        image: ghcr.io/actions-runner-controller/actions-runner-controller/actions-runner-dind:latest
-        labels: [self-hosted, linux, amd64]
-        max_runners: 4
-        platform: linux/amd64
-
 idle_timeout: 15m
 log_level: info
 ```
 
-## Step 3: Start the service
+Elastic Fruit Runner checks the config when it starts. If a field is not valid, the local log names the field and the problem.
 
-Start elastic-fruit-runner as a background service that auto-starts on login:
+## Start the service
 
 ```sh
 brew services start elastic-fruit-runner
 ```
 
-Check that it is running:
+Check the service:
 
 ```sh
 brew services info elastic-fruit-runner
 ```
 
-You should see `elastic-fruit-runner` listed as `started`.
+The output should show `Running: true`.
 
-## Step 4: Verify in the logs
+## Set up the Console
 
-Watch the logs to confirm the daemon connected to GitHub:
+The first start writes a one time setup code to the local log.
 
 ```sh
-tail -f /opt/homebrew/var/log/elastic-fruit-runner.log
+grep '"msg":"console admin setup required"' /opt/homebrew/var/log/elastic-fruit-runner.log | tail -n 1
 ```
 
-You should see log lines indicating the scale set was registered and the daemon is polling for jobs.
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080). Enter the setup code, choose an admin password, and sign in.
 
-## Step 5: Run a workflow
+The Overview page should show:
 
-In your GitHub repository, create a workflow file `.github/workflows/test-efr.yaml`:
+* One configured runner set
+* The GitHub connection state
+* No running job yet
+* Current host resources
+* Config state `In sync`
+
+## Run your first workflow
+
+In a repository that belongs to the configured organization, create `.github/workflows/test-efr.yaml`:
 
 ```yaml
-name: Test elastic-fruit-runner
-on: workflow_dispatch
+name: Test Elastic Fruit Runner
+on:
+  workflow_dispatch:
 
 jobs:
   hello:
     runs-on: efr-macos-arm64
     steps:
       - run: |
-          echo "Hello from elastic-fruit-runner!"
+          echo "Hello from Elastic Fruit Runner"
           sw_vers
           uname -m
 ```
 
-Go to your repository on GitHub, navigate to **Actions**, select the **Test elastic-fruit-runner** workflow, and click **Run workflow**.
+Open the Actions page in GitHub, select **Test Elastic Fruit Runner**, and choose **Run workflow**.
 
-Switch back to the log output. You should see:
-1. The daemon detecting the new job
-2. A Tart VM being cloned and started
-3. The runner registering and executing the job
-4. The VM being destroyed after completion
+## Watch the job
 
-## Step 6: Check the workflow result
+Return to the Console and open **Jobs**. The new job moves through its lifecycle while the Tart VM starts and runs the workflow.
 
-Go back to GitHub Actions. The workflow run should show a green checkmark, with output displaying the macOS version and `arm64` architecture.
+Open the job to see:
 
-## Next steps
+* Repository and workflow name
+* Runner set and runner name
+* Start and completion times
+* Runner log
+* Available resource data
+* A link back to GitHub Actions
 
-- [Configure GitHub App auth](/how-to/configure-github-app/) for production org deployments
-- [Deploy on Linux with Docker](/how-to/install-linux-docker/) for Linux arm64/amd64 runners
-- [What is elastic-fruit-runner?](/explanation/what-is-elastic-fruit-runner/) to understand the project
+## Confirm the result
+
+Wait for the job to finish. The Jobs page should show `Success`.
+
+Open the job in GitHub Actions. Its output should contain the macOS version and `arm64`.
+
+You now have an elastic macOS runner and a working operations Console.
+
+## Continue
+
+* [Use the operations Console](/how-to/use-console/)
+* [Configure GitHub App authentication](/how-to/configure-github-app/)
+* [Manage multiple organizations and repositories](/how-to/multiple-orgs-repos/)
+* [Read the configuration reference](/reference/configuration/)
