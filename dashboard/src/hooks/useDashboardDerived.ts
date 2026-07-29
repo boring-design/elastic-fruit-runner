@@ -1,9 +1,11 @@
 import { useDashboardStore } from '../store/useDashboardStore'
 import { elapsed } from '../utils'
+import { REFRESH_INTERVAL_MS } from '../config'
 import type { PetMood } from '../components/petMood'
+import { deriveDashboardStatus } from '../derived/status'
 
 export function useDashboardDerived() {
-  const { daemonStatus, runnerSets, recentJobs, machineVitals, now } = useDashboardStore()
+  const { daemonStatus, runnerSets, recentJobs, machineVitals, now, lastSyncedAt } = useDashboardStore()
 
   const uptime = daemonStatus ? elapsed(daemonStatus.startedAt, now) : 0
 
@@ -26,6 +28,18 @@ export function useDashboardDerived() {
     idle > 0      ? 'idle'  :
     'sleeping'
 
+  const status = deriveDashboardStatus(runnerSets)
+
+  const refreshIntervalSeconds = Math.max(1, Math.round(REFRESH_INTERVAL_MS / 1000))
+  let secondsUntilRefresh = refreshIntervalSeconds
+  if (lastSyncedAt) {
+    const sinceLastSync = elapsed(lastSyncedAt, now)
+    const remaining = refreshIntervalSeconds - sinceLastSync
+    secondsUntilRefresh = remaining < 0
+      ? 0
+      : Math.min(remaining, refreshIntervalSeconds)
+  }
+
   return {
     daemonStatus,
     runnerSets,
@@ -43,5 +57,8 @@ export function useDashboardDerived() {
     failureCount,
     canceledCount,
     mood,
+    status,
+    refreshIntervalSeconds,
+    secondsUntilRefresh,
   }
 }

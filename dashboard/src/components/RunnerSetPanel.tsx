@@ -51,6 +51,16 @@ export function RunnerSetPanel({ rs, now }: { rs: RunnerSet; now: Date }) {
         </span>
       </div>
 
+      {/* Scope + connection */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4, gap: 8 }}>
+        <span style={{ color: '#888', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+          SCOPE: {rs.scope}
+        </span>
+        <span style={{ color: rs.connected ? '#7cb87c' : '#ff3b30', fontSize: 10, letterSpacing: '0.12em', flexShrink: 0 }}>
+          {rs.connected ? 'CONNECTED' : 'DISCONNECTED'}
+        </span>
+      </div>
+
       {/* Image */}
       <div style={{ color: '#555', fontSize: 10, marginBottom: 10, letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {rs.image}
