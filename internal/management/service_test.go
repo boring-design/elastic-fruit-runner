@@ -7,6 +7,7 @@ import (
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
+	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 )
 
 func TestOpenJobsDB_CreatesAndMigrates(t *testing.T) {
@@ -65,7 +66,14 @@ func TestOpenJobsDB_JobStoreOperations(t *testing.T) {
 
 	store := NewJobStore(db)
 
-	store.RecordJobStarted("set-1", "job-1", "runner-1")
+	store.RecordJobStarted(controller.JobStart{
+		RunnerSetName: "set-1",
+		JobID:         "job-1",
+		RunnerName:    "runner-1",
+		Repository:    "boring-design/elastic-fruit-runner",
+		WorkflowName:  "Unit Test",
+		WorkflowRunID: "1234567890",
+	})
 	store.RecordJobCompleted("job-1", "succeeded")
 
 	jobs := store.Snapshot()
@@ -80,6 +88,15 @@ func TestOpenJobsDB_JobStoreOperations(t *testing.T) {
 	}
 	if jobs[0].CompletedAt == nil {
 		t.Error("expected CompletedAt to be set")
+	}
+	if jobs[0].Repository != "boring-design/elastic-fruit-runner" {
+		t.Errorf("repository = %q, want %q", jobs[0].Repository, "boring-design/elastic-fruit-runner")
+	}
+	if jobs[0].WorkflowName != "Unit Test" {
+		t.Errorf("workflow_name = %q, want %q", jobs[0].WorkflowName, "Unit Test")
+	}
+	if jobs[0].WorkflowRunID != "1234567890" {
+		t.Errorf("workflow_run_id = %q, want %q", jobs[0].WorkflowRunID, "1234567890")
 	}
 }
 

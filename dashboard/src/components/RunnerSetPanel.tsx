@@ -1,5 +1,5 @@
 import type { Runner, RunnerSet } from '../types'
-import { elapsed, fmtDuration, shortName } from '../utils'
+import { elapsed, fmtDuration, runnerSetGitHubURL, shortName } from '../utils'
 
 function StateLabel({ state }: { state: Runner['state'] }) {
   const map: Record<Runner['state'], { label: string; color: string }> = {
@@ -39,13 +39,30 @@ export function RunnerSetPanel({ rs, now }: { rs: RunnerSet; now: Date }) {
   const prepCount    = rs.runners.filter(r => r.state === 'preparing').length
   const unknownCount = rs.runners.filter(r => r.state === 'unknown').length
 
+  const githubURL = runnerSetGitHubURL(rs.scope)
+
   return (
     <div style={{ marginBottom: 28 }}>
       {/* Set header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-        <span style={{ fontWeight: 700, fontSize: 13, letterSpacing: '0.04em' }}>
-          {rs.name}
-        </span>
+        {githubURL
+          ? (
+            <a
+              href={githubURL}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Open GitHub runners page for ${rs.scope}`}
+              className="runner-set-link"
+              style={{ fontWeight: 700, fontSize: 13, letterSpacing: '0.04em', color: '#f0f0f0', textDecoration: 'none' }}
+            >
+              {rs.name}
+            </a>
+          )
+          : (
+            <span style={{ fontWeight: 700, fontSize: 13, letterSpacing: '0.04em' }}>
+              {rs.name}
+            </span>
+          )}
         <span style={{ color: '#666', fontSize: 10, letterSpacing: '0.12em' }}>
           {rs.backend.toUpperCase()} · {count}/{rs.maxRunners}
         </span>

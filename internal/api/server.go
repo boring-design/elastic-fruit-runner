@@ -147,6 +147,9 @@ func (s *Server) ListJobRecords(_ context.Context, _ *connect.Request[controlpla
 			RunnerSetName: j.RunnerSetName,
 			Result:        toProtoJobResult(j.Result),
 			StartedAt:     timestamppb.New(j.StartedAt),
+			Repository:    j.Repository,
+			WorkflowName:  j.WorkflowName,
+			WorkflowRunId: j.WorkflowRunID,
 		}
 		if j.CompletedAt != nil {
 			rec.CompletedAt = timestamppb.New(*j.CompletedAt)

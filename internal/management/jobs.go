@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
 )
 
@@ -17,6 +18,15 @@ type JobRecord struct {
 	Result        string
 	StartedAt     time.Time
 	CompletedAt   *time.Time
+	// Repository is the GitHub repository the job belongs to in "owner/repo"
+	// form. Captured at job-start time; empty if the start event was missed.
+	Repository string
+	// WorkflowName is the human-readable workflow name from the GitHub
+	// JobMessageBase.JobDisplayName field (best-effort; may be empty).
+	WorkflowName string
+	// WorkflowRunID is the GitHub Actions workflow run identifier. Combined
+	// with Repository, callers can build an Actions URL.
+	WorkflowRunID string
 }
 
 // JobStore persists job lifecycle events in SQLite.
@@ -38,18 +48,27 @@ var knownJobResults = map[string]struct{}{
 	"canceled":  {},
 }
 
-// RecordJobStarted inserts a new job with result "running".
-func (s *JobStore) RecordJobStarted(setName, jobID, runnerName string) {
+// RecordJobStarted inserts a new job with result "running" along with the
+// context metadata captured at start time (repository, workflow name, run ID).
+func (s *JobStore) RecordJobStarted(start controller.JobStart) {
 	ctx := context.Background()
 	err := s.queries.InsertJob(ctx, sqlcdb.InsertJobParams{
-		ID:            jobID,
-		RunnerName:    runnerName,
-		RunnerSetName: setName,
+		ID:            start.JobID,
+		RunnerName:    start.RunnerName,
+		RunnerSetName: start.RunnerSetName,
 		Result:        "running",
 		StartedAt:     time.Now(),
+		Repository:    start.Repository,
+		WorkflowName:  start.WorkflowName,
+		WorkflowRunID: start.WorkflowRunID,
 	})
 	if err != nil {
-		slog.Error("failed to record job started", "job_id", jobID, "err", err)
+		slog.Error("failed to record job started",
+			"job_id", start.JobID,
+			"runner_set", start.RunnerSetName,
+			"repository", start.Repository,
+			"err", err,
+		)
 	}
 }
 
@@ -111,6 +130,9 @@ func (s *JobStore) Snapshot() []JobRecord {
 			RunnerSetName: row.RunnerSetName,
 			Result:        row.Result,
 			StartedAt:     row.StartedAt,
+			Repository:    row.Repository,
+			WorkflowName:  row.WorkflowName,
+			WorkflowRunID: row.WorkflowRunID,
 		}
 		if row.CompletedAt.Valid {
 			t := row.CompletedAt.Time

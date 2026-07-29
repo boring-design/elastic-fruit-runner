@@ -147,6 +147,16 @@ message JobRecord {
   google.protobuf.Timestamp started_at = 5;
   // When the job finished. Absent if still running.
   optional google.protobuf.Timestamp completed_at = 6;
+  // GitHub repository in "owner/repo" form. Captured at job-start time.
+  // Empty for jobs whose start event was missed (e.g. daemon restarted).
+  string repository = 7;
+  // Human-readable workflow name (e.g. "Unit Test"). Best-effort, may
+  // contain the workflow file basename if the display name is not surfaced.
+  string workflow_name = 8;
+  // GitHub Actions workflow run identifier. Empty when the start event
+  // was missed. Combined with repository, this builds an Actions URL like
+  // https://github.com/{repository}/actions/runs/{workflow_run_id}.
+  string workflow_run_id = 9;
 }
 
 // ---------------------------------------------------------------------------

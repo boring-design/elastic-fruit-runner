@@ -30,6 +30,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1/controlplanev1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/api"
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
+	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
 	"github.com/boring-design/elastic-fruit-runner/internal/tart"
@@ -328,11 +329,19 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	})
 
 	sc.Step(`^I record job "([^"]*)" started on runner "([^"]*)" in set "([^"]*)"$`, func(jobID, runner, set string) {
-		state.jobStore.RecordJobStarted(set, jobID, runner)
+		state.jobStore.RecordJobStarted(controller.JobStart{
+			RunnerSetName: set,
+			JobID:         jobID,
+			RunnerName:    runner,
+		})
 	})
 
 	sc.Step(`^job "([^"]*)" was started on runner "([^"]*)" in set "([^"]*)"$`, func(jobID, runner, set string) {
-		state.jobStore.RecordJobStarted(set, jobID, runner)
+		state.jobStore.RecordJobStarted(controller.JobStart{
+			RunnerSetName: set,
+			JobID:         jobID,
+			RunnerName:    runner,
+		})
 	})
 
 	sc.Step(`^I record job "([^"]*)" completed with result "([^"]*)"$`, func(jobID, result string) {
@@ -409,7 +418,11 @@ func initializeScenario(sc *godog.ScenarioContext) {
 
 	sc.Step(`^the following jobs were started:$`, func(table *godog.Table) {
 		for _, row := range table.Rows[1:] {
-			state.jobStore.RecordJobStarted(row.Cells[2].Value, row.Cells[0].Value, row.Cells[1].Value)
+			state.jobStore.RecordJobStarted(controller.JobStart{
+				RunnerSetName: row.Cells[2].Value,
+				JobID:         row.Cells[0].Value,
+				RunnerName:    row.Cells[1].Value,
+			})
 		}
 	})
 
@@ -429,7 +442,11 @@ func initializeScenario(sc *godog.ScenarioContext) {
 
 	sc.Step(`^(\d+) jobs were started in set "([^"]*)"$`, func(n int, set string) {
 		for i := range n {
-			state.jobStore.RecordJobStarted(set, fmt.Sprintf("job-%d", i), fmt.Sprintf("runner-%d", i))
+			state.jobStore.RecordJobStarted(controller.JobStart{
+				RunnerSetName: set,
+				JobID:         fmt.Sprintf("job-%d", i),
+				RunnerName:    fmt.Sprintf("runner-%d", i),
+			})
 		}
 	})
 
@@ -440,7 +457,11 @@ func initializeScenario(sc *godog.ScenarioContext) {
 			go func(idx int) {
 				defer wg.Done()
 				id := fmt.Sprintf("job-%d", idx)
-				state.jobStore.RecordJobStarted(set, id, fmt.Sprintf("runner-%d", idx))
+				state.jobStore.RecordJobStarted(controller.JobStart{
+					RunnerSetName: set,
+					JobID:         id,
+					RunnerName:    fmt.Sprintf("runner-%d", idx),
+				})
 				state.jobStore.RecordJobCompleted(id, "succeeded")
 			}(i)
 		}

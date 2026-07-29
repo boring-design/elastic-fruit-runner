@@ -27,9 +27,22 @@ type RunnerSnapshot struct {
 	Since time.Time
 }
 
+// JobStart carries the metadata captured when a job is first observed
+// starting on a runner. The fields mirror scaleset.JobStarted /
+// JobMessageBase. Empty strings are tolerated so the recorder can persist
+// whatever the upstream event surfaces.
+type JobStart struct {
+	RunnerSetName string
+	JobID         string
+	RunnerName    string
+	Repository    string
+	WorkflowName  string
+	WorkflowRunID string
+}
+
 // JobRecorder records job lifecycle events.
 // Implemented by the management service; injected into controllers.
 type JobRecorder interface {
-	RecordJobStarted(setName, jobID, runnerName string)
+	RecordJobStarted(start JobStart)
 	RecordJobCompleted(jobID, result string)
 }
