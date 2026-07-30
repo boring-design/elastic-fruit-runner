@@ -21,7 +21,7 @@ Feature: Configuration loading
             github_app:
               client_id: Iv23li_test
               installation_id: 116416405
-              private_key_path: /path/to/key.pem
+              private_key_path: "TEST_PRIVATE_KEY_PATH"
           runner_group: MyGroup
           runner_sets:
             - name: efr-linux-arm64
@@ -62,6 +62,15 @@ Feature: Configuration loading
   Scenario: custom idle timeout duration
     Given a config file with content:
       """
+      repos:
+        - repo: boring-design/configtest
+          auth:
+            pat_token: testtoken
+          runner_sets:
+            - name: configtest
+              backend: docker
+              image: testimage:latest
+              max_runners: 1
       idle_timeout: 45m
       """
     When I load the configuration with that file
@@ -70,6 +79,15 @@ Feature: Configuration loading
   Scenario: log level from config file
     Given a config file with content:
       """
+      repos:
+        - repo: boring-design/configtest
+          auth:
+            pat_token: testtoken
+          runner_sets:
+            - name: configtest
+              backend: docker
+              image: testimage:latest
+              max_runners: 1
       log_level: debug
       """
     When I load the configuration with that file

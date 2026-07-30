@@ -114,8 +114,17 @@ func initializeScenario(sc *godog.ScenarioContext) {
 		if state.tempDir == "" {
 			state.tempDir, _ = os.MkdirTemp("", "efr-bdd-*")
 		}
+		configText := content.Content
+		if strings.Contains(configText, "TEST_PRIVATE_KEY_PATH") {
+			privateKeyPath := filepath.Join(state.tempDir, "private_key.pem")
+			privateKey := []byte("-----BEGIN PRIVATE KEY-----\ndGVzdA==\n-----END PRIVATE KEY-----\n")
+			if err := os.WriteFile(privateKeyPath, privateKey, 0o600); err != nil {
+				return fmt.Errorf("write test private key %s: %w", privateKeyPath, err)
+			}
+			configText = strings.ReplaceAll(configText, "TEST_PRIVATE_KEY_PATH", privateKeyPath)
+		}
 		state.configFile = filepath.Join(state.tempDir, "config.yaml")
-		return os.WriteFile(state.configFile, []byte(content.Content), 0o644)
+		return os.WriteFile(state.configFile, []byte(configText), 0o644)
 	})
 
 	sc.Step(`^the environment variable "([^"]*)" is set to "([^"]*)"$`, func(key, value string) {
