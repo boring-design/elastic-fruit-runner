@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   integration-test:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: Integration Test (${{ matrix.name }})
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
@@ -28,7 +29,7 @@ jobs:
             features: ../../features/config,../../features/binpath,../../features/jobstore,../../features/vitals,../../features/management
             needs-app-key: true
           - name: Tart
-            runs-on: [self-hosted, macos, arm64]
+            runs-on: [self-hosted, macos, arm64, tart-host]
             features: ../../features/tart
             needs-app-key: false
     steps:
@@ -51,7 +52,7 @@ jobs:
       - name: Build dashboard (required for go:embed)
         run: cd dashboard && pnpm install --frozen-lockfile && pnpm run build
 
-      - name: Install Tart integration dependencies
+      - name: Check Tart integration dependencies
         if: matrix.name == 'Tart'
         run: |
           if [ -x /opt/homebrew/bin/brew ]; then
@@ -66,9 +67,14 @@ jobs:
           brew_prefix="$("$brew_bin" --prefix)"
           echo "$brew_prefix/bin" >> "$GITHUB_PATH"
 
-          "$brew_bin" update
-          "$brew_bin" trust --formula cirruslabs/cli/softnet
-          "$brew_bin" install cirruslabs/cli/tart cirruslabs/cli/sshpass gnupg
+          for tool in tart sshpass gpg; do
+            tool_path="$brew_prefix/bin/$tool"
+            if [ ! -x "$tool_path" ]; then
+              echo "::error::Required Tart integration tool is missing: path=$tool_path"
+              exit 1
+            fi
+          done
+
           "$brew_prefix/bin/tart" --version
           "$brew_prefix/bin/sshpass" -V
           "$brew_prefix/bin/gpg" --version
