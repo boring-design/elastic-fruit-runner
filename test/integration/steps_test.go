@@ -861,7 +861,7 @@ func (s *scenarioState) buildMgmtConfig(auth config.AuthConfig) error {
 	parts := strings.Split(strings.TrimRight(configURL, "/"), "/")
 	orgName := parts[len(parts)-1]
 
-	image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.332.0")
+	image := envOrDefault("EFR_TEST_RUNNER_IMAGE", "ghcr.io/quipper/actions-runner:2.337.0")
 	s.scaleSetName = "efr-test-" + randomSuffix()
 	s.cfg = &config.Config{
 		Orgs: []config.OrgConfig{

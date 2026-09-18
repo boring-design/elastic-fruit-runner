@@ -106,7 +106,7 @@ env PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin dock
 Test pulling the runner image:
 
 ```sh
-env PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin docker pull --platform linux/arm64 ghcr.io/quipper/actions-runner:2.332.0
+env PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin docker pull --platform linux/arm64 ghcr.io/quipper/actions-runner:2.337.0
 ```
 
 If Docker reports `docker-credential-osxkeychain` is missing, check where the

@@ -26,7 +26,7 @@ type dockerStats struct {
 
 var dockerTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/docker")
 
-const defaultDockerRunnerImage = "ghcr.io/quipper/actions-runner:2.332.0"
+const defaultDockerRunnerImage = "ghcr.io/quipper/actions-runner:2.337.0"
 
 // DockerBackend runs each job inside an ephemeral Docker container.
 type DockerBackend struct {
