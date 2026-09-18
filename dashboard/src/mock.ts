@@ -41,7 +41,7 @@ export const runnerSets: RunnerSet[] = [
   {
     name: 'docker-linux-arm64',
     backend: 'docker',
-    image: 'ghcr.io/quipper/actions-runner:2.332.0',
+    image: 'ghcr.io/quipper/actions-runner:2.337.0',
     labels: ['linux', 'arm64'],
     maxRunners: 5,
     scope: 'org: acme-corp',

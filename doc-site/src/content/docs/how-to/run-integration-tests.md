@@ -95,7 +95,7 @@ The two controller scenarios (PAT auth + GitHub App auth) each execute the same 
 | `EFR_TEST_APP_INSTALLATION_ID` | Yes | — | GitHub App Installation ID |
 | `EFR_TEST_APP_PRIVATE_KEY_PATH` | Yes | — | Absolute path to App private key |
 | `EFR_TEST_WORKFLOW_FILE` | No | `test-job.yaml` | Workflow filename to dispatch |
-| `EFR_TEST_RUNNER_IMAGE` | No | `ghcr.io/quipper/actions-runner:2.332.0` | Runner Docker image |
+| `EFR_TEST_RUNNER_IMAGE` | No | `ghcr.io/quipper/actions-runner:2.337.0` | Runner Docker image |
 | `EFR_TEST_RUNNER_GROUP` | No | `Default` | Runner group name |
 
 ## CI
