@@ -102,7 +102,6 @@ function AuthScreen({
           <input
             autoComplete={setupRequired ? 'new-password' : 'current-password'}
             type="password"
-            minLength={setupRequired ? 12 : undefined}
             value={password}
             onChange={event => setPassword(event.target.value)}
             required
@@ -114,7 +113,6 @@ function AuthScreen({
             <input
               autoComplete="new-password"
               type="password"
-              minLength={12}
               value={confirmPassword}
               onChange={event => setConfirmPassword(event.target.value)}
               required

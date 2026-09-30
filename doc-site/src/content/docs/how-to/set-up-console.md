@@ -30,7 +30,7 @@ sudo systemctl start elastic-fruit-runner
 The Console asks for a new admin password only when no admin password exists.
 
 1. Open [http://127.0.0.1:8080](http://127.0.0.1:8080).
-2. Enter an admin password with 12 to 256 characters.
+2. Enter an admin password.
 3. Enter the password again.
 4. Select **Create admin**.
 

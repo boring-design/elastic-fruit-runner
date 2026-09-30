@@ -257,12 +257,10 @@ func (s *Service) clearLoginFailures() {
 	s.mu.Unlock()
 }
 
+// bcrypt cannot hash more than 72 bytes, this is the only password rule.
 func validatePassword(password string) error {
-	if len(password) < 12 {
-		return fmt.Errorf("%w: password must have at least 12 characters", ErrInvalidPassword)
-	}
-	if len(password) > 256 {
-		return fmt.Errorf("%w: password must have at most 256 characters", ErrInvalidPassword)
+	if len(password) > 72 {
+		return fmt.Errorf("%w: password must have at most 72 bytes, got %d", ErrInvalidPassword, len(password))
 	}
 	return nil
 }
