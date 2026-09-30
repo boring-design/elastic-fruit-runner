@@ -133,13 +133,13 @@ func initializeScenario(sc *godog.ScenarioContext) {
 
 	sc.Step(`^I load the configuration without arguments$`, func() error {
 		var err error
-		state.cfg, err = config.LoadWithArgs(nil)
+		state.cfg, err = config.Load("")
 		return err
 	})
 
 	sc.Step(`^I load the configuration with that file$`, func() error {
 		var err error
-		state.cfg, err = config.LoadWithArgs([]string{"--config", state.configFile})
+		state.cfg, err = config.Load(state.configFile)
 		return err
 	})
 

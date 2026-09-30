@@ -14,8 +14,11 @@ The daemon loads config, starts runner controllers, starts the Console, and wait
 | Flag | Default | Description |
 |---|---|---|
 | `--config PATH` | Config search paths | Select one YAML config file |
+| `--help` | | Show usage for the command |
 
-Without `--config`, see [Configuration Reference](/reference/configuration/) for the search order.
+The environment variable `ELASTIC_FRUIT_RUNNER_CONFIG` is an alternative to `--config`. When both are set, the flag wins.
+
+Without `--config` or the environment variable, see [Configuration Reference](/reference/configuration/) for the search order.
 
 Example:
 

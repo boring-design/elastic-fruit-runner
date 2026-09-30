@@ -8,27 +8,14 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 // Load reads configuration from a YAML config file.
-// The --config flag overrides the default search paths.
-func Load() (*Config, error) {
-	return LoadWithArgs(os.Args[1:])
-}
-
-// LoadWithArgs reads configuration with explicit CLI arguments instead of os.Args.
-func LoadWithArgs(args []string) (*Config, error) {
-	flags := pflag.NewFlagSet("elastic-fruit-runner", pflag.ContinueOnError)
-	configPath := flags.String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
-	if err := flags.Parse(args); err != nil {
-		return nil, fmt.Errorf("parse flags: %w", err)
-	}
-
+// A non empty configPath selects that file, an empty one uses the default search paths.
+func Load(configPath string) (*Config, error) {
 	v := viper.New()
 
 	// Defaults
@@ -36,8 +23,8 @@ func LoadWithArgs(args []string) (*Config, error) {
 	v.SetDefault("log_level", "info")
 
 	// Config file search
-	if *configPath != "" {
-		v.SetConfigFile(*configPath)
+	if configPath != "" {
+		v.SetConfigFile(configPath)
 	} else {
 		v.SetConfigName("config")
 		v.SetConfigType("yaml")
@@ -100,17 +87,12 @@ func LoadWithArgs(args []string) (*Config, error) {
 	return cfg, nil
 }
 
-// FindConfigPath returns the requested config path or the first default path.
-func FindConfigPath(args []string) string {
-	for index, arg := range args {
-		if arg == "--config" && index+1 < len(args) {
-			path, _ := filepath.Abs(args[index+1])
-			return path
-		}
-		if value, found := strings.CutPrefix(arg, "--config="); found {
-			path, _ := filepath.Abs(value)
-			return path
-		}
+// FindConfigPath returns the absolute form of the requested config path,
+// or the first existing default path when configPath is empty.
+func FindConfigPath(configPath string) string {
+	if configPath != "" {
+		path, _ := filepath.Abs(configPath)
+		return path
 	}
 	if home, err := os.UserHomeDir(); err == nil {
 		paths := []string{

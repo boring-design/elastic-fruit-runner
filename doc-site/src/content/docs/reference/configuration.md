@@ -14,7 +14,7 @@ Without `--config`, the daemon checks these paths in order:
 3. `/usr/local/var/elastic-fruit-runner/config.yaml`
 4. `/etc/elastic-fruit-runner/config.yaml`
 
-Use `--config PATH` to select another file.
+Use `--config PATH` or the environment variable `ELASTIC_FRUIT_RUNNER_CONFIG` to select another file. The flag wins when both are set.
 
 ## Complete example
 
