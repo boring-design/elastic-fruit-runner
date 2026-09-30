@@ -19,6 +19,6 @@ The production build is written to `dist` and embedded in the Go binary.
 
 ## Security
 
-The console uses a one time setup code, one admin password, an HttpOnly session cookie, and CSRF tokens for changes.
+The console uses one admin password, an HttpOnly session cookie, and CSRF tokens for changes.
 
 Secret values are masked by the API. A masked PAT in the editor keeps the current disk value when saved.

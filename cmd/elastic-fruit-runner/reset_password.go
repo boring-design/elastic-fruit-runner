@@ -26,6 +26,6 @@ func resetAdminPassword(configPath string) error {
 	if err := authService.Reset(context.Background()); err != nil {
 		return fmt.Errorf("reset console admin password in %s: %w", databasePath, err)
 	}
-	fmt.Fprintln(os.Stdout, "Admin password cleared. Restart the service to get a new setup code.")
+	fmt.Fprintln(os.Stdout, "Admin password cleared. Restart the service, then open the console to create a new admin password.")
 	return nil
 }

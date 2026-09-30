@@ -86,13 +86,7 @@ The output should show `Running: true`.
 
 ## Set up the Console
 
-The first start writes a one time setup code to the local log.
-
-```sh
-grep '"msg":"console admin setup required"' /opt/homebrew/var/log/elastic-fruit-runner.log | tail -n 1
-```
-
-Open [http://127.0.0.1:8080](http://127.0.0.1:8080). Enter the setup code, choose an admin password, and sign in.
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080). Choose an admin password and sign in.
 
 The Overview page should show:
 

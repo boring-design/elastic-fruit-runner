@@ -63,8 +63,8 @@ export async function fetchSession(): Promise<SessionState> {
   }
 }
 
-export async function setupAdmin(setupCode: string, password: string): Promise<string> {
-  const data = await rpc<{ csrfToken?: string }>('SetupAdmin', { setupCode, password })
+export async function setupAdmin(password: string): Promise<string> {
+  const data = await rpc<{ csrfToken?: string }>('SetupAdmin', { password })
   return data.csrfToken ?? ''
 }
 

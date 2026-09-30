@@ -67,6 +67,6 @@ sudo systemctl start elastic-fruit-runner
 
 ## Create the new password
 
-Read the new setup code from the local daemon log. Then follow [How to set up the Console](/how-to/set-up-console/).
+Open the Console and create a new admin password. See [How to set up the Console](/how-to/set-up-console/).
 
 Old browser sessions no longer work after the reset.

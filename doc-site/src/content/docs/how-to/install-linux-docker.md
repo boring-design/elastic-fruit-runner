@@ -54,7 +54,7 @@ services:
 docker compose up -d
 ```
 
-Open `http://127.0.0.1:8080` and use the setup code from the container log. The config mount must be writable to use the editor. See [Use the operations console](/how-to/use-console/).
+Open `http://127.0.0.1:8080` and create the admin password. The config mount must be writable to use the editor. See [Use the operations console](/how-to/use-console/).
 
 ## Docker Compose with GitHub App auth
 

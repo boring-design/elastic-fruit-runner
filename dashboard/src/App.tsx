@@ -60,7 +60,6 @@ function AuthScreen({
   setupRequired: boolean
   onComplete: () => Promise<SessionState | undefined>
 }) {
-  const [setupCode, setSetupCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -76,7 +75,7 @@ function AuthScreen({
     setSubmitting(true)
     try {
       if (setupRequired) {
-        await setupAdmin(setupCode, password)
+        await setupAdmin(password)
       } else {
         await login(password)
       }
@@ -95,20 +94,9 @@ function AuthScreen({
         <h1>{setupRequired ? 'Set up console' : 'Sign in'}</h1>
         <p>
           {setupRequired
-            ? 'Enter the setup code from the daemon log and create the admin password.'
+            ? 'Create the admin password.'
             : 'Enter the console admin password.'}
         </p>
-        {setupRequired && (
-          <label>
-            Setup code
-            <input
-              autoComplete="one-time-code"
-              value={setupCode}
-              onChange={event => setSetupCode(event.target.value)}
-              required
-            />
-          </label>
-        )}
         <label>
           Password
           <input

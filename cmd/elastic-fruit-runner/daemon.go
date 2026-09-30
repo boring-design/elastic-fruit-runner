@@ -98,7 +98,7 @@ func runDaemon(requestedPath string) error {
 		return fmt.Errorf("initialize console auth: %w", err)
 	}
 	defer authService.Close()
-	logSetupCode(authService)
+	logSetupRequired(ctx, authService)
 
 	var configStateService *configstate.Service
 	if cfg != nil {
@@ -177,9 +177,14 @@ func runDaemon(requestedPath string) error {
 	}
 }
 
-func logSetupCode(authService *auth.Service) {
-	if setupCode := authService.SetupCode(); setupCode != "" {
-		slog.Warn("console admin setup required", "setup_code", setupCode)
+func logSetupRequired(ctx context.Context, authService *auth.Service) {
+	setupRequired, err := authService.SetupRequired(ctx)
+	if err != nil {
+		slog.Warn("check console admin setup state", "err", err)
+		return
+	}
+	if setupRequired {
+		slog.Warn("console admin setup required, open the console to create the admin password")
 	}
 }
 

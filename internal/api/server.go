@@ -119,12 +119,12 @@ func (s *Server) SetupAdmin(ctx context.Context, req *connect.Request[controlpla
 	if s.authService == nil {
 		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("console auth is disabled"))
 	}
-	session, err := s.authService.Setup(ctx, req.Msg.SetupCode, req.Msg.Password)
+	session, err := s.authService.Setup(ctx, req.Msg.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrAlreadySetup):
 			return nil, connect.NewError(connect.CodeAlreadyExists, err)
-		case errors.Is(err, auth.ErrInvalidSetupCode), errors.Is(err, auth.ErrInvalidPassword):
+		case errors.Is(err, auth.ErrInvalidPassword):
 			return nil, connect.NewError(connect.CodeInvalidArgument, err)
 		default:
 			return nil, connect.NewError(connect.CodeInternal, err)

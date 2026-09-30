@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"database/sql"
 	"encoding/hex"
 	"errors"
@@ -26,7 +25,6 @@ const (
 
 var (
 	ErrAlreadySetup       = errors.New("admin password is already set")
-	ErrInvalidSetupCode   = errors.New("setup code is not valid")
 	ErrInvalidCredentials = errors.New("password is not valid")
 	ErrInvalidPassword    = errors.New("password does not meet requirements")
 	ErrLoginBlocked       = errors.New("too many failed login attempts")
@@ -44,11 +42,9 @@ type Session struct {
 type Service struct {
 	db *sql.DB
 
-	mu               sync.Mutex
-	setupCodeHash    []byte
-	pendingSetupCode string
-	failedAttempts   []time.Time
-	blockedUntil     time.Time
+	mu             sync.Mutex
+	failedAttempts []time.Time
+	blockedUntil   time.Time
 }
 
 // Open opens auth storage in the main SQLite database.
@@ -82,35 +78,12 @@ func Open(dbPath string) (*Service, error) {
 		}
 	}
 
-	service := &Service{db: db}
-	setupRequired, err := service.SetupRequired(context.Background())
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-	if setupRequired {
-		code, err := randomToken(12)
-		if err != nil {
-			db.Close()
-			return nil, fmt.Errorf("create admin setup code: %w", err)
-		}
-		sum := sha256.Sum256([]byte(code))
-		service.setupCodeHash = sum[:]
-		service.pendingSetupCode = code
-	}
-	return service, nil
+	return &Service{db: db}, nil
 }
 
 // Close closes the auth database.
 func (s *Service) Close() error {
 	return s.db.Close()
-}
-
-// SetupCode returns the setup code created for this process.
-func (s *Service) SetupCode() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.pendingSetupCode
 }
 
 // SetupRequired reports whether an admin password exists.
@@ -122,8 +95,8 @@ func (s *Service) SetupRequired(ctx context.Context) (bool, error) {
 	return count == 0, nil
 }
 
-// Setup creates the admin password after setup code verification.
-func (s *Service) Setup(ctx context.Context, code, password string) (Session, error) {
+// Setup creates the admin password when none exists.
+func (s *Service) Setup(ctx context.Context, password string) (Session, error) {
 	required, err := s.SetupRequired(ctx)
 	if err != nil {
 		return Session{}, err
@@ -133,14 +106,6 @@ func (s *Service) Setup(ctx context.Context, code, password string) (Session, er
 	}
 	if err := validatePassword(password); err != nil {
 		return Session{}, err
-	}
-
-	sum := sha256.Sum256([]byte(code))
-	s.mu.Lock()
-	codeHash := append([]byte(nil), s.setupCodeHash...)
-	s.mu.Unlock()
-	if len(codeHash) == 0 || subtle.ConstantTimeCompare(sum[:], codeHash) != 1 {
-		return Session{}, ErrInvalidSetupCode
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -154,11 +119,6 @@ func (s *Service) Setup(ctx context.Context, code, password string) (Session, er
 	`, passwordHash, time.Now().Unix()); err != nil {
 		return Session{}, fmt.Errorf("save admin password: %w", err)
 	}
-
-	s.mu.Lock()
-	s.setupCodeHash = nil
-	s.pendingSetupCode = ""
-	s.mu.Unlock()
 	return s.createSession(ctx)
 }
 

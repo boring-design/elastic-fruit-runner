@@ -34,7 +34,7 @@ elastic-fruit-runner reset-password [--config PATH]
 
 The command opens the configured SQLite database, removes the local admin password, and removes every Console session.
 
-Stop the daemon before running this command. Start it again to create a new setup code.
+Stop the daemon before running this command. Start it again, then create a new admin password in the Console.
 
 Example:
 

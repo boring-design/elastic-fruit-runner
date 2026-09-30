@@ -33,7 +33,7 @@ See [How to recover config](/how-to/recover-config/) for both recovery cases.
 
 The Console has one local admin because it manages one local daemon. It does not provide teams, roles, or an identity provider.
 
-The first start uses a one time setup code from the daemon log. The admin password is stored as a bcrypt hash. Sessions use an HttpOnly, SameSite Strict cookie, and write calls also need a CSRF token.
+The first start asks for an admin password in the Console. The admin password is stored as a bcrypt hash. Sessions use an HttpOnly, SameSite Strict cookie, and write calls also need a CSRF token.
 
 These controls protect the application session. They do not create a safe public network boundary. The daemon has no built in TLS, so the Console should stay local or sit behind a trusted TLS reverse proxy.
 

@@ -65,8 +65,7 @@ message GetSessionResponse {
 }
 
 message SetupAdminRequest {
-  string setup_code = 1;
-  string password = 2;
+  string password = 1;
 }
 
 message SetupAdminResponse {
