@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,7 +35,6 @@ func newRootCommand() *cobra.Command {
 				return fmt.Errorf("bind --config flag: %w", err)
 			}
 			v.SetEnvPrefix("ELASTIC_FRUIT_RUNNER")
-			v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 			v.AutomaticEnv()
 			return nil
 		},
