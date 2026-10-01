@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -39,7 +40,11 @@ func newRootCommand() *cobra.Command {
 			return nil
 		},
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return runDaemon(v.GetString("config"))
+			err := runDaemon(v.GetString("config"))
+			if errors.Is(err, errRestartRequested) {
+				return restartSelf()
+			}
+			return err
 		},
 	}
 	root.CompletionOptions.DisableDefaultCmd = true

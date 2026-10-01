@@ -13,7 +13,9 @@ The active config is the copy loaded when the daemon started. The disk config is
 
 Keeping these as separate identities makes changes visible without claiming that they are already active. The Console reports whether they match, whether a valid disk change needs a restart, or whether the disk file is invalid.
 
-Saving does not replace live controllers. Changing a scope, auth method, backend, image, or capacity can affect running jobs and GitHub connections. An automatic restart would choose an interruption time for the operator. The Console therefore writes the file and leaves activation to a manual service restart.
+Saving does not replace live controllers. Changing a scope, auth method, backend, image, or capacity can affect running jobs and GitHub connections. An automatic restart would choose an interruption time for the operator. The Console therefore writes the file and waits for the operator to click **Restart to apply**. When jobs are running, the Console reports the count and asks for confirmation before it cancels them.
+
+The restart replaces the process in place. The daemon finishes its shutdown, then starts the same binary again with the same arguments, so the process id stays the same and service managers see one process that keeps running. The shell commands stay available as a fallback when the daemon does not come back.
 
 See [How to edit and activate config](/how-to/edit-config/) for the task and [Console Reference](/reference/console/) for the states.
 
@@ -25,7 +27,7 @@ If the disk file becomes invalid, the last active revision gives the daemon a kn
 
 If there is no active revision, the daemon cannot safely start runner controllers. It enters config mode instead. The Console and config editor remain available, but runner management does not start. This gives the operator a recovery path without pretending that an unknown config is active.
 
-Restoring a revision writes it to disk. It still needs a manual restart for the same reason as any other config change.
+Restoring a revision writes it to disk. It still needs a restart for the same reason as any other config change.
 
 See [How to recover config](/how-to/recover-config/) for both recovery cases.
 

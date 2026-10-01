@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -21,6 +22,9 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/tracing"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
+
+// errRestartRequested tells main to re-exec the daemon after a clean shutdown.
+var errRestartRequested = errors.New("restart requested from console")
 
 //nolint:gocyclo // Startup handles normal, recovery, and config mode in one ordered flow.
 func runDaemon(requestedPath string) error {
@@ -68,6 +72,7 @@ func runDaemon(requestedPath string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	startedAt := time.Now()
+	var restartRequested atomic.Bool
 
 	tracingShutdown, err := tracing.Setup(ctx)
 	if err != nil {
@@ -132,6 +137,10 @@ func runDaemon(requestedPath string) error {
 			LogPath:      configLogPath(cfg),
 			ConfigMode:   cfg == nil,
 			ActiveConfig: cfg,
+			RequestRestart: func() {
+				restartRequested.Store(true)
+				stop()
+			},
 		},
 	)
 	go apiServer.RefreshProbes(ctx)
@@ -149,7 +158,9 @@ func runDaemon(requestedPath string) error {
 		}
 	}()
 
+	httpDone := make(chan struct{})
 	go func() {
+		defer close(httpDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -175,7 +186,12 @@ func runDaemon(requestedPath string) error {
 	case err := <-listenErr:
 		return fmt.Errorf("API server failed to start: %w", err)
 	case <-done:
+		// Wait for the listening socket to close so a re-exec can bind the same address.
+		<-httpDone
 		slog.Info("shutdown complete")
+		if restartRequested.Load() {
+			return errRestartRequested
+		}
 		return nil
 	}
 }

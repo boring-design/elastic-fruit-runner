@@ -42,6 +42,7 @@ type Server struct {
 	cors              config.CORSConfig
 	configMode        bool
 	activeConfig      *config.Config
+	requestRestart    func()
 
 	probeMu       sync.Mutex
 	probedAt      time.Time
@@ -59,6 +60,8 @@ type Dependencies struct {
 	ConfigMode bool
 	// ActiveConfig is the running config, nil in config mode.
 	ActiveConfig *config.Config
+	// RequestRestart asks the daemon to shut down and start again with the disk config.
+	RequestRestart func()
 }
 
 // NewServer creates an API server backed by the management and vitals services.
@@ -88,6 +91,7 @@ func NewServer(managementService *management.Service, vitalsService *vitals.Serv
 		server.logPath = dependencies[0].LogPath
 		server.configMode = dependencies[0].ConfigMode
 		server.activeConfig = dependencies[0].ActiveConfig
+		server.requestRestart = dependencies[0].RequestRestart
 	}
 	return server
 }
@@ -576,6 +580,40 @@ func (s *Server) RestoreConfigRevision(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	return connect.NewResponse(&controlplanev1.RestoreConfigRevisionResponse{Status: s.configStatusResponse()}), nil
+}
+
+func (s *Server) RestartService(ctx context.Context, req *connect.Request[controlplanev1.RestartServiceRequest]) (*connect.Response[controlplanev1.RestartServiceResponse], error) {
+	if err := s.requireCSRF(ctx, req.Header()); err != nil {
+		return nil, err
+	}
+	if s.requestRestart == nil {
+		return nil, connect.NewError(connect.CodeFailedPrecondition, errors.New("restart is not available in this process"))
+	}
+	busy := s.busyRunnerCount()
+	if busy > 0 && !req.Msg.Force {
+		return connect.NewResponse(&controlplanev1.RestartServiceResponse{BusyRunnerCount: busy}), nil
+	}
+	// Delay a little so this response reaches the browser before the server shuts down.
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		s.requestRestart()
+	}()
+	return connect.NewResponse(&controlplanev1.RestartServiceResponse{BusyRunnerCount: busy, Accepted: true}), nil
+}
+
+func (s *Server) busyRunnerCount() int32 {
+	if s.managementService == nil {
+		return 0
+	}
+	var busy int32
+	for _, runnerSet := range s.managementService.ListRunnerSets() {
+		for _, runner := range runnerSet.Runners {
+			if runner.State == controller.StateBusy {
+				busy++
+			}
+		}
+	}
+	return busy
 }
 
 func toProtoValidation(result config.ValidationResult) *controlplanev1.ValidateConfigResponse {

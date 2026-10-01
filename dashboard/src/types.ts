@@ -128,6 +128,11 @@ export interface ConfigStatus {
   restartCommands: string[]
 }
 
+export interface RestartResult {
+  busyRunnerCount: number
+  accepted: boolean
+}
+
 export interface ConfigValidationIssue {
   path: string
   message: string

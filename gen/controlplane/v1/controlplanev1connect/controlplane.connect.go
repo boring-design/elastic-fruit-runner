@@ -102,6 +102,9 @@ const (
 	// ControlPlaneServiceGetSetupChecklistProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetSetupChecklist RPC.
 	ControlPlaneServiceGetSetupChecklistProcedure = "/controlplane.v1.ControlPlaneService/GetSetupChecklist"
+	// ControlPlaneServiceRestartServiceProcedure is the fully-qualified name of the
+	// ControlPlaneService's RestartService RPC.
+	ControlPlaneServiceRestartServiceProcedure = "/controlplane.v1.ControlPlaneService/RestartService"
 )
 
 // ControlPlaneServiceClient is a client for the controlplane.v1.ControlPlaneService service.
@@ -141,6 +144,8 @@ type ControlPlaneServiceClient interface {
 	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
 	// GetSetupChecklist reports how far the daemon is from a working setup.
 	GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error)
+	// RestartService restarts the daemon in place so the disk config becomes active.
+	RestartService(context.Context, *connect.Request[v1.RestartServiceRequest]) (*connect.Response[v1.RestartServiceResponse], error)
 }
 
 // NewControlPlaneServiceClient constructs a client for the controlplane.v1.ControlPlaneService
@@ -292,6 +297,12 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("GetSetupChecklist")),
 			connect.WithClientOptions(opts...),
 		),
+		restartService: connect.NewClient[v1.RestartServiceRequest, v1.RestartServiceResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceRestartServiceProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("RestartService")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -320,6 +331,7 @@ type controlPlaneServiceClient struct {
 	checkBackend           *connect.Client[v1.CheckBackendRequest, v1.CheckBackendResponse]
 	probeConfig            *connect.Client[v1.ProbeConfigRequest, v1.ProbeConfigResponse]
 	getSetupChecklist      *connect.Client[v1.GetSetupChecklistRequest, v1.GetSetupChecklistResponse]
+	restartService         *connect.Client[v1.RestartServiceRequest, v1.RestartServiceResponse]
 }
 
 // GetSession calls controlplane.v1.ControlPlaneService.GetSession.
@@ -437,6 +449,11 @@ func (c *controlPlaneServiceClient) GetSetupChecklist(ctx context.Context, req *
 	return c.getSetupChecklist.CallUnary(ctx, req)
 }
 
+// RestartService calls controlplane.v1.ControlPlaneService.RestartService.
+func (c *controlPlaneServiceClient) RestartService(ctx context.Context, req *connect.Request[v1.RestartServiceRequest]) (*connect.Response[v1.RestartServiceResponse], error) {
+	return c.restartService.CallUnary(ctx, req)
+}
+
 // ControlPlaneServiceHandler is an implementation of the controlplane.v1.ControlPlaneService
 // service.
 type ControlPlaneServiceHandler interface {
@@ -475,6 +492,8 @@ type ControlPlaneServiceHandler interface {
 	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
 	// GetSetupChecklist reports how far the daemon is from a working setup.
 	GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error)
+	// RestartService restarts the daemon in place so the disk config becomes active.
+	RestartService(context.Context, *connect.Request[v1.RestartServiceRequest]) (*connect.Response[v1.RestartServiceResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -622,6 +641,12 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("GetSetupChecklist")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceRestartServiceHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceRestartServiceProcedure,
+		svc.RestartService,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("RestartService")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/controlplane.v1.ControlPlaneService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControlPlaneServiceGetSessionProcedure:
@@ -670,6 +695,8 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceProbeConfigHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetSetupChecklistProcedure:
 			controlPlaneServiceGetSetupChecklistHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceRestartServiceProcedure:
+			controlPlaneServiceRestartServiceHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -769,4 +796,8 @@ func (UnimplementedControlPlaneServiceHandler) ProbeConfig(context.Context, *con
 
 func (UnimplementedControlPlaneServiceHandler) GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetSetupChecklist is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) RestartService(context.Context, *connect.Request[v1.RestartServiceRequest]) (*connect.Response[v1.RestartServiceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.RestartService is not implemented"))
 }

@@ -51,7 +51,11 @@ A service restart can interrupt a running job.
 
 ## Restart the service
 
-Use the command for your installation.
+Open **Config** and click **Restart to apply**. The daemon shuts down cleanly and starts again in the same process with the disk config. The page waits for the daemon to come back and then reloads.
+
+When runners are busy, the Console reports how many jobs are running and asks you to confirm. Confirming cancels those jobs.
+
+If the daemon does not come back within 90 seconds, the page shows the shell commands below. Use the command for your installation.
 
 For Homebrew:
 
@@ -71,7 +75,7 @@ For systemd:
 sudo systemctl restart elastic-fruit-runner
 ```
 
-The Console does not restart the daemon and does not hot reload controllers.
+The Console does not hot reload controllers. A restart is always a full stop and start of the daemon.
 
 ## Confirm the active config
 

@@ -64,6 +64,9 @@ service ControlPlaneService {
 
   // GetSetupChecklist reports how far the daemon is from a working setup.
   rpc GetSetupChecklist(GetSetupChecklistRequest) returns (GetSetupChecklistResponse);
+
+  // RestartService restarts the daemon in place so the disk config becomes active.
+  rpc RestartService(RestartServiceRequest) returns (RestartServiceResponse);
 }
 
 // Authentication
@@ -512,4 +515,16 @@ message GetSetupChecklistRequest {
 message GetSetupChecklistResponse {
   repeated SetupStep steps = 1;
   google.protobuf.Timestamp probed_at = 2;
+}
+
+message RestartServiceRequest {
+  // Restart even when runners are busy. Running jobs are canceled.
+  bool force = 1;
+}
+
+message RestartServiceResponse {
+  // Number of runners with a running job at the time of the request.
+  int32 busy_runner_count = 1;
+  // True when the restart was started. False when busy runners blocked it.
+  bool accepted = 2;
 }

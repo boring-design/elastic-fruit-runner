@@ -18,6 +18,7 @@ import type {
   Runner,
   RunnerSet,
   ResourceSample,
+  RestartResult,
   JobLog,
   SessionState,
   SetupChecklist,
@@ -534,5 +535,13 @@ export async function fetchSetupChecklist(refresh = false): Promise<SetupCheckli
       page: step.page ?? '',
     })),
     probedAt: data.probedAt ? new Date(data.probedAt) : null,
+  }
+}
+
+export async function restartService(force: boolean, csrfToken: string): Promise<RestartResult> {
+  const data = await rpc<{ busyRunnerCount?: number; accepted?: boolean }>('RestartService', { force }, csrfToken)
+  return {
+    busyRunnerCount: data.busyRunnerCount ?? 0,
+    accepted: data.accepted ?? false,
   }
 }

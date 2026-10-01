@@ -45,9 +45,9 @@ When the service starts without a config file, **Overview** shows the setup wiza
 3. **Runner sets**: pick from the presets the wizard suggests for this host and edit the name, image, labels, and limits.
 4. **Test**: the wizard checks GitHub access and the backend tools. You can continue even when a check fails.
 5. **Preview**: review the generated YAML. The token is hidden. **Open in advanced editor** moves the YAML to the **Config** page for manual edits.
-6. **Save**: the wizard validates and writes the config file, then shows the restart command for your install.
+6. **Save**: the wizard validates and writes the config file, then offers **Restart to apply**.
 
-Restart the service after the save. You can open the wizard again at any time from `#/setup`.
+Click **Restart to apply** after the save. The daemon starts again with the new config and the page reloads. You can open the wizard again at any time from `#/setup`.
 
 ## Confirm access
 

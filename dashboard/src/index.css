@@ -904,3 +904,17 @@ input:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.restart-fallback {
+  margin-top: 12px;
+}
+
+.restart-fallback summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.restart-fallback pre {
+  margin-top: 8px;
+}

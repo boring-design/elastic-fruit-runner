@@ -15,6 +15,7 @@ import {
 } from './api/fetchers'
 import { CheckRows } from './components/CheckList'
 import { SetupChecklist } from './components/SetupChecklist'
+import { RestartPanel } from './components/RestartPanel'
 import { SetupWizard } from './components/SetupWizard'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
@@ -566,12 +567,12 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
 
   return (
     <>
-      <PageHeader title="Config" detail="Validate and save the disk config. Restart the service manually to apply changes." />
+      <PageHeader title="Config" detail="Validate and save the disk config, then restart the service to apply changes." />
       <div className={`notice ${status.state === 'disk_invalid' ? 'danger' : status.state === 'restart_required' ? 'warning' : 'success'}`}>
         <strong>{configStateLabel(status.state)}</strong>
         <span>
           {status.state === 'in_sync' && 'Disk config matches the active config.'}
-          {status.state === 'restart_required' && 'Disk config changed. Manual service restart is required to apply it.'}
+          {status.state === 'restart_required' && 'Disk config changed. Restart the service to apply it.'}
           {status.state === 'disk_invalid' && 'Disk config cannot be read or parsed. The active config is unchanged.'}
         </span>
       </div>
@@ -610,12 +611,7 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
       </div>
       {probe && <ConnectionTest probe={probe} />}
       {!sameText && <ConfigDiff active={status.activeYAML} disk={status.diskYAML} />}
-      {status.state === 'restart_required' && (
-        <section className="panel">
-          <PanelHeader title="Manual restart" detail="A restart can interrupt running jobs." />
-          {status.restartCommands.map(command => <pre key={command}>{command}</pre>)}
-        </section>
-      )}
+      {status.state === 'restart_required' && <RestartPanel csrfToken={csrfToken} restartCommands={status.restartCommands} />}
       <section className="panel">
         <PanelHeader title="Recent revisions" detail="The newest ten saved versions" />
         {revisions.data?.length

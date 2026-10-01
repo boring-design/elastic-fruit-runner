@@ -7,6 +7,7 @@ import { emptyForm, toAuthInput, toConfig } from '../wizard/form'
 import type { WizardForm } from '../wizard/form'
 import { runnerSetPresets } from '../wizard/presets'
 import { CheckRows } from './CheckList'
+import { RestartPanel } from './RestartPanel'
 import { SetupChecklist } from './SetupChecklist'
 
 const stepTitles = ['Target', 'Credentials', 'Runner sets', 'Test', 'Preview', 'Save']
@@ -345,18 +346,19 @@ function SaveStep({ yaml, csrfToken, onBack }: { yaml: string; csrfToken: string
       ))}
       {saved
         ? (
-          <section className="panel">
-            <div className="panel-header"><h2>Config saved to {configStatus?.path || 'the config file'}</h2></div>
-            <div className="notice warning">
-              <strong>Restart needed</strong>
-              <span>The daemon is still running without this config. Restart it with the command that matches your install.</span>
-            </div>
-            {(configStatus?.restartCommands ?? []).map(command => <pre key={command}>{command}</pre>)}
-            <div className="editor-actions">
-              {/* A restart button for the daemon goes here in a later change. */}
-              <a className="external-link" href="#/overview">Go to overview</a>
-            </div>
-          </section>
+          <>
+            <section className="panel">
+              <div className="panel-header"><h2>Config saved to {configStatus?.path || 'the config file'}</h2></div>
+              <div className="notice warning">
+                <strong>Restart needed</strong>
+                <span>The daemon is still running without this config. Restart it to start the runner sets.</span>
+              </div>
+              <div className="editor-actions">
+                <a className="external-link" href="#/overview">Go to overview</a>
+              </div>
+            </section>
+            <RestartPanel csrfToken={csrfToken} restartCommands={configStatus?.restartCommands ?? []} />
+          </>
         )
         : (
           <section className="panel">
