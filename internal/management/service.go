@@ -5,19 +5,14 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
-
-	"github.com/pressly/goose/v3"
-	_ "modernc.org/sqlite" // register pure-Go SQLite driver
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/githubclient"
-	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 )
 
 // RunnerSetView is the assembled view of a runner set for external consumers.
@@ -34,28 +29,25 @@ type Service struct {
 	controllers     []*controller.ScaleSetController
 	jobs            *JobStore
 	db              *sql.DB
+	queries         *sqlcdb.Queries
 	databasePath    string
 	hostSampleCount int
 
 	wg sync.WaitGroup
 }
 
-// New creates a ScaleSetControllerManagementService from the given config.
-// It initializes the SQLite database, runs migrations, creates GitHub clients,
-// backends, and controllers but does not start them.
-func New(cfg *config.Config) (*Service, error) {
+// New creates a ScaleSetControllerManagementService from the given config
+// and an already opened database. It creates GitHub clients, backends, and
+// controllers but does not start them.
+func New(cfg *config.Config, db *sql.DB) (*Service, error) {
 	databasePath, err := cfg.DatabasePath()
 	if err != nil {
-		return nil, fmt.Errorf("resolve jobs database path: %w", err)
+		return nil, fmt.Errorf("resolve database path: %w", err)
 	}
-	db, err := openJobsDB(databasePath)
-	if err != nil {
-		return nil, fmt.Errorf("open jobs database: %w", err)
-	}
-
 	svc := &Service{
 		cfg:          cfg,
 		db:           db,
+		queries:      sqlcdb.New(db),
 		jobs:         NewJobStore(db),
 		databasePath: databasePath,
 	}
@@ -170,53 +162,4 @@ func createBackend(rs *config.RunnerSetConfig) (backend.Backend, error) {
 	default:
 		return nil, fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
 	}
-}
-
-// Close shuts down the SQLite database connection.
-func (svc *Service) Close() error {
-	if svc.db != nil {
-		return svc.db.Close()
-	}
-	return nil
-}
-
-// openJobsDB opens (or creates) the SQLite database and runs migrations.
-func openJobsDB(dbPath string) (*sql.DB, error) {
-	if dbPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("determine home directory: %w", err)
-		}
-		dbPath = filepath.Join(homeDir, ".elastic-fruit-runner", "jobs.db")
-	}
-
-	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
-		return nil, fmt.Errorf("create database directory %s: %w", filepath.Dir(dbPath), err)
-	}
-
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("open sqlite %s: %w", dbPath, err)
-	}
-	// SQLite does not benefit from multiple connections; a single connection
-	// avoids "database is locked" errors and works correctly with :memory:.
-	db.SetMaxOpenConns(1)
-
-	if _, err := db.ExecContext(context.Background(), "PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("enable WAL mode: %w", err)
-	}
-
-	goose.SetBaseFS(migrations.FS)
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("set goose dialect: %w", err)
-	}
-	if err := goose.Up(db, "."); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("run migrations: %w", err)
-	}
-
-	slog.Info("jobs database ready", "path", dbPath)
-	return db, nil
 }

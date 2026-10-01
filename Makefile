@@ -1,4 +1,6 @@
-.PHONY: build build-dashboard run unit-test test integration-test fmt fmt-check vet lint check ci tidy prek-all prek-install help
+.PHONY: build build-dashboard run unit-test test integration-test fmt fmt-check vet lint sqlc-generate sqlc-check check ci tidy prek-all prek-install help
+
+SQLC_VERSION := v1.30.0
 
 # Build dashboard then Go binary
 build: build-dashboard
@@ -37,8 +39,16 @@ vet: build-dashboard
 lint: build-dashboard
 	golangci-lint run
 
+# Regenerate sqlc code from internal/storage/sqlc/queries.sql
+sqlc-generate:
+	go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) generate -f internal/storage/sqlc/sqlc.yaml
+
+# Fail when generated sqlc code is out of date
+sqlc-check:
+	go run github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION) diff -f internal/storage/sqlc/sqlc.yaml
+
 # Run all checks
-check: fmt-check vet build lint prek-all unit-test
+check: fmt-check vet build lint sqlc-check prek-all unit-test
 
 # Tidy go modules
 tidy:
@@ -62,7 +72,9 @@ help:
 	@echo "  fmt              Format Go code"
 	@echo "  vet              Run go vet"
 	@echo "  lint             Run golangci-lint"
-	@echo "  check            Run fmt + vet + build (quick local check)"
+	@echo "  sqlc-generate    Regenerate sqlc code from queries.sql"
+	@echo "  sqlc-check       Fail when generated sqlc code is out of date"
+	@echo "  check            Run fmt-check + vet + build + lint + sqlc-check + prek + unit-test"
 	@echo "  tidy             Tidy go modules"
 	@echo ""
 	@echo "Testing:"

@@ -11,10 +11,9 @@ import (
 	"time"
 
 	"go.yaml.in/yaml/v3"
-	// Register the SQLite driver.
-	_ "modernc.org/sqlite"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 )
 
 type Revision struct {
@@ -24,49 +23,9 @@ type Revision struct {
 	Hash      string
 }
 
-func openRevisionDB(path string) (*sql.DB, error) {
-	if path != ":memory:" {
-		if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-			return nil, fmt.Errorf("create config revision directory %s: %w", filepath.Dir(path), err)
-		}
-	}
-	db, err := sql.Open("sqlite", path)
-	if err != nil {
-		return nil, fmt.Errorf("open config revision database %s: %w", path, err)
-	}
-	db.SetMaxOpenConns(1)
-	if _, err := db.ExecContext(context.Background(), `
-		PRAGMA busy_timeout=5000;
-		CREATE TABLE IF NOT EXISTS config_revisions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at DATETIME NOT NULL,
-			source TEXT NOT NULL,
-			config_hash TEXT NOT NULL,
-			config_yaml BLOB NOT NULL,
-			active INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE INDEX IF NOT EXISTS idx_config_revisions_created_at
-		ON config_revisions (created_at DESC);
-	`); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("create config revision tables: %w", err)
-	}
-	if path != ":memory:" {
-		_ = os.Chmod(path, 0o600)
-	}
-	return db, nil
-}
-
-func LoadLastActive(databasePath string) ([]byte, error) {
-	db, err := openRevisionDB(databasePath)
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close()
-	var data []byte
-	err = db.QueryRowContext(context.Background(), `
-		SELECT config_yaml FROM config_revisions
-		WHERE active = 1 ORDER BY created_at DESC LIMIT 1`).Scan(&data)
+// LoadLastActive returns the YAML of the config revision that was last applied at startup.
+func LoadLastActive(ctx context.Context, db *sql.DB) ([]byte, error) {
+	data, err := sqlcdb.New(db).GetLastActiveConfigYAML(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("read last active config: %w", err)
 	}
@@ -159,34 +118,25 @@ func safeValidation(result config.ValidationResult) config.ValidationResult {
 }
 
 func (s *Service) Revisions() ([]Revision, error) {
-	if s.db == nil {
-		return nil, nil
-	}
-	rows, err := s.db.QueryContext(context.Background(), `
-		SELECT id, created_at, source, config_hash
-		FROM config_revisions ORDER BY created_at DESC LIMIT 10`)
+	rows, err := s.queries.ListRecentConfigRevisions(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("list config revisions: %w", err)
 	}
-	defer rows.Close()
 	var revisions []Revision
-	for rows.Next() {
-		var revision Revision
-		if err := rows.Scan(&revision.ID, &revision.CreatedAt, &revision.Source, &revision.Hash); err != nil {
-			return nil, fmt.Errorf("read config revision: %w", err)
-		}
-		revisions = append(revisions, revision)
+	for _, row := range rows {
+		revisions = append(revisions, Revision{
+			ID:        row.ID,
+			CreatedAt: row.CreatedAt,
+			Source:    row.Source,
+			Hash:      row.ConfigHash,
+		})
 	}
 	return revisions, nil
 }
 
 func (s *Service) Restore(revisionID int64) error {
-	if s.db == nil {
-		return errors.New("config revision storage is unavailable")
-	}
-	var data []byte
-	if err := s.db.QueryRowContext(context.Background(), `
-		SELECT config_yaml FROM config_revisions WHERE id = ?`, revisionID).Scan(&data); err != nil {
+	data, err := s.queries.GetConfigRevisionYAML(context.Background(), revisionID)
+	if err != nil {
 		return fmt.Errorf("read config revision %d: %w", revisionID, err)
 	}
 	result, err := s.Save(data, "restore")
@@ -200,37 +150,35 @@ func (s *Service) Restore(revisionID int64) error {
 }
 
 func (s *Service) saveRevision(data []byte, source string, active bool) error {
-	if s.db == nil {
-		return nil
-	}
-	tx, err := s.db.BeginTx(context.Background(), nil)
+	ctx := context.Background()
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("start config revision save: %w", err)
 	}
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	ctx := context.Background()
+	queries := s.queries.WithTx(tx)
 	if active {
-		if _, err := tx.ExecContext(ctx, `UPDATE config_revisions SET active = 0`); err != nil {
+		if err := queries.ClearActiveConfigRevision(ctx); err != nil {
 			return fmt.Errorf("clear active config revision: %w", err)
 		}
 	}
-	activeValue := 0
+	var activeValue int64
 	if active {
 		activeValue = 1
 	}
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO config_revisions (created_at, source, config_hash, config_yaml, active)
-		VALUES (?, ?, ?, ?, ?)`,
-		time.Now(), source, hash(data), data, activeValue,
-	); err != nil {
+	err = queries.InsertConfigRevision(ctx, sqlcdb.InsertConfigRevisionParams{
+		CreatedAt:  time.Now(),
+		Source:     source,
+		ConfigHash: hash(data),
+		ConfigYaml: data,
+		Active:     activeValue,
+	})
+	if err != nil {
 		return fmt.Errorf("insert config revision: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, `
-		DELETE FROM config_revisions WHERE id NOT IN (
-			SELECT id FROM config_revisions ORDER BY created_at DESC LIMIT 10
-		)`); err != nil {
+	if err := queries.TrimConfigRevisions(ctx); err != nil {
 		return fmt.Errorf("trim config revisions: %w", err)
 	}
 	if err := tx.Commit(); err != nil {

@@ -22,8 +22,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/cucumber/godog"
 	"github.com/google/go-github/v79/github"
-	"github.com/pressly/goose/v3"
-	_ "modernc.org/sqlite"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	controlplanev1 "github.com/boring-design/elastic-fruit-runner/gen/controlplane/v1"
@@ -31,7 +29,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/api"
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
-	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
+	"github.com/boring-design/elastic-fruit-runner/internal/storage"
 	"github.com/boring-design/elastic-fruit-runner/internal/tart"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
@@ -319,18 +317,9 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	// ---- Jobstore steps ----
 	sc.Step(`^a fresh in-memory job store$`, func() error {
 		var err error
-		state.db, err = sql.Open("sqlite", ":memory:")
+		state.db, err = storage.Open(":memory:")
 		if err != nil {
-			return fmt.Errorf("open in-memory sqlite: %w", err)
-		}
-		state.db.SetMaxOpenConns(1)
-
-		goose.SetBaseFS(migrations.FS)
-		if err := goose.SetDialect("sqlite3"); err != nil {
-			return fmt.Errorf("set goose dialect: %w", err)
-		}
-		if err := goose.Up(state.db, "."); err != nil {
-			return fmt.Errorf("run migrations: %w", err)
+			return fmt.Errorf("open in-memory database: %w", err)
 		}
 		state.jobStore = management.NewJobStore(state.db)
 		return nil
@@ -519,7 +508,11 @@ func initializeScenario(sc *godog.ScenarioContext) {
 
 	sc.Step(`^a management service is created from the config$`, func() error {
 		var err error
-		state.mgmtService, err = management.New(state.cfg)
+		state.db, err = storage.Open(state.cfg.DBPath)
+		if err != nil {
+			return fmt.Errorf("storage.Open(%q): %w", state.cfg.DBPath, err)
+		}
+		state.mgmtService, err = management.New(state.cfg, state.db)
 		if err != nil {
 			return fmt.Errorf("management.New: %w", err)
 		}
@@ -664,7 +657,6 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the management service should shut down cleanly$`, func() {
 		if state.mgmtService != nil {
 			state.mgmtService.Wait()
-			state.mgmtService.Close()
 		}
 	})
 

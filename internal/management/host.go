@@ -3,11 +3,12 @@ package management
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"time"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/storage"
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
@@ -34,16 +35,18 @@ type HostSample struct {
 
 func (svc *Service) RecordHostVitals(value vitals.Vitals) {
 	now := time.Now().UTC()
-	_, err := svc.db.ExecContext(context.Background(), `
-		INSERT INTO host_resource_samples (
-			recorded_at, interval_seconds, cpu_percent, memory_used_bytes,
-			memory_available_bytes, disk_used_bytes, disk_available_bytes,
-			disk_read_bytes, disk_write_bytes, load_one, temperature_celsius
-		) VALUES (?, 5, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		now, value.CPUUsagePercent, value.MemoryUsedBytes, value.MemoryAvailableBytes,
-		value.DiskUsedBytes, value.DiskAvailableBytes, value.DiskReadBytes,
-		value.DiskWriteBytes, value.LoadOne, value.TemperatureCelsius,
-	)
+	err := svc.queries.InsertRawHostSample(context.Background(), sqlcdb.InsertRawHostSampleParams{
+		RecordedAt:           now,
+		CpuPercent:           float64(value.CPUUsagePercent),
+		MemoryUsedBytes:      value.MemoryUsedBytes,
+		MemoryAvailableBytes: value.MemoryAvailableBytes,
+		DiskUsedBytes:        value.DiskUsedBytes,
+		DiskAvailableBytes:   value.DiskAvailableBytes,
+		DiskReadBytes:        value.DiskReadBytes,
+		DiskWriteBytes:       value.DiskWriteBytes,
+		LoadOne:              value.LoadOne,
+		TemperatureCelsius:   float64(value.TemperatureCelsius),
+	})
 	if err != nil {
 		slog.Warn("failed to record host resource data", "err", err)
 		return
@@ -57,21 +60,10 @@ func (svc *Service) RecordHostVitals(value vitals.Vitals) {
 
 func (svc *Service) rollupHostMinute(now time.Time) {
 	minute := now.Truncate(time.Minute).Add(-time.Minute)
-	next := minute.Add(time.Minute)
-	_, err := svc.db.ExecContext(context.Background(), `
-		INSERT OR REPLACE INTO host_resource_samples (
-			recorded_at, interval_seconds, cpu_percent, memory_used_bytes,
-			memory_available_bytes, disk_used_bytes, disk_available_bytes,
-			disk_read_bytes, disk_write_bytes, load_one, temperature_celsius
-		)
-		SELECT ?, 60, AVG(cpu_percent), AVG(memory_used_bytes),
-			AVG(memory_available_bytes), AVG(disk_used_bytes), AVG(disk_available_bytes),
-			MAX(disk_read_bytes), MAX(disk_write_bytes), AVG(load_one),
-			AVG(temperature_celsius)
-		FROM host_resource_samples
-		WHERE interval_seconds = 5 AND recorded_at >= ? AND recorded_at < ?`,
-		minute, minute, next,
-	)
+	err := svc.queries.RollupHostMinute(context.Background(), sqlcdb.RollupHostMinuteParams{
+		MinuteStart: minute,
+		MinuteEnd:   minute.Add(time.Minute),
+	})
 	if err != nil {
 		slog.Warn("failed to roll up host resource data", "minute", minute, "err", err)
 	}
@@ -79,35 +71,16 @@ func (svc *Service) rollupHostMinute(now time.Time) {
 
 func (svc *Service) cleanHistory(now time.Time) {
 	ctx := context.Background()
-	_, _ = svc.db.ExecContext(ctx, `
-		DELETE FROM host_resource_samples
-		WHERE (interval_seconds = 5 AND recorded_at < ?)
-			OR recorded_at < ?`,
-		now.Add(-rawHostRetention), now.Add(-historyRetention),
-	)
-	_, _ = svc.db.ExecContext(ctx, `
-		DELETE FROM job_logs
-		WHERE recorded_at < ? OR job_id IN (
-			SELECT id FROM jobs
-			WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?
-		)`,
-		now.Add(-historyRetention), now.Add(-historyRetention),
-	)
-	_, _ = svc.db.ExecContext(ctx, `
-		DELETE FROM job_resource_samples
-		WHERE recorded_at < ? OR job_id IN (
-			SELECT id FROM jobs
-			WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?
-		)`,
-		now.Add(-historyRetention), now.Add(-historyRetention),
-	)
-	_, _ = svc.db.ExecContext(ctx, `
-		DELETE FROM jobs
-		WHERE result != 'running' AND COALESCE(completed_at, started_at) < ?`,
-		now.Add(-historyRetention),
-	)
+	historyCutoff := now.Add(-historyRetention)
+	_ = svc.queries.DeleteExpiredHostSamples(ctx, sqlcdb.DeleteExpiredHostSamplesParams{
+		RawCutoff:     now.Add(-rawHostRetention),
+		HistoryCutoff: historyCutoff,
+	})
+	_ = svc.queries.DeleteExpiredJobLogs(ctx, historyCutoff)
+	_ = svc.queries.DeleteExpiredJobResourceSamples(ctx, historyCutoff)
+	_ = svc.queries.DeleteExpiredJobs(ctx, sql.NullTime{Time: historyCutoff, Valid: true})
 
-	currentSize := databaseSize(svc.databasePath)
+	currentSize := storage.FileSize(svc.databasePath)
 	if currentSize <= maxHistoryBytes {
 		return
 	}
@@ -115,85 +88,62 @@ func (svc *Service) cleanHistory(now time.Time) {
 		bytesToFree := currentSize - targetHistoryBytes
 		var freed int64
 		for freed < bytesToFree {
-			var jobID string
-			var estimatedBytes int64
-			err := svc.db.QueryRowContext(ctx, `
-				SELECT jobs.id,
-					4096
-					+ COALESCE((SELECT SUM(LENGTH(text)) FROM job_logs WHERE job_id = jobs.id), 0)
-					+ COALESCE((SELECT COUNT(*) * 256 FROM job_resource_samples WHERE job_id = jobs.id), 0)
-				FROM jobs
-				WHERE result != 'running'
-				ORDER BY COALESCE(completed_at, started_at)
-				LIMIT 1`).Scan(&jobID, &estimatedBytes)
+			oldest, err := svc.queries.GetOldestCompletedJobSize(ctx)
 			if err != nil {
 				break
 			}
-			_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_logs WHERE job_id = ?`, jobID)
-			_, _ = svc.db.ExecContext(ctx, `DELETE FROM job_resource_samples WHERE job_id = ?`, jobID)
-			_, _ = svc.db.ExecContext(ctx, `DELETE FROM jobs WHERE id = ? AND result != 'running'`, jobID)
-			freed += estimatedBytes
+			_ = svc.queries.DeleteJobLogs(ctx, oldest.ID)
+			_ = svc.queries.DeleteJobResourceSamples(ctx, oldest.ID)
+			_ = svc.queries.DeleteCompletedJob(ctx, oldest.ID)
+			freed += oldest.EstimatedBytes
 		}
 		if freed == 0 {
 			break
 		}
-		_, _ = svc.db.ExecContext(ctx, `PRAGMA wal_checkpoint(TRUNCATE)`)
-		if _, err := svc.db.ExecContext(ctx, `VACUUM`); err != nil {
-			slog.Warn("failed to compact history database", "err", err)
+		if err := storage.Compact(ctx, svc.db); err != nil {
+			slog.Warn("failed to compact history database", "path", svc.databasePath, "err", err)
 			break
 		}
-		currentSize = databaseSize(svc.databasePath)
+		currentSize = storage.FileSize(svc.databasePath)
 	}
 }
 
 func (svc *Service) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {
-	interval := 60
+	interval := int64(60)
 	if from.After(time.Now().Add(-rawHostRetention)) {
 		interval = 5
 	}
-	rows, err := svc.db.QueryContext(context.Background(), `
-		SELECT recorded_at, interval_seconds, cpu_percent, memory_used_bytes,
-			memory_available_bytes, disk_used_bytes, disk_available_bytes,
-			disk_read_bytes, disk_write_bytes, load_one, temperature_celsius
-		FROM host_resource_samples
-		WHERE interval_seconds = ? AND recorded_at >= ? AND recorded_at <= ?
-		ORDER BY recorded_at`, interval, from, to)
+	ctx := context.Background()
+	rows, err := svc.queries.ListHostSamples(ctx, sqlcdb.ListHostSamplesParams{
+		IntervalSeconds: interval,
+		RecordedAt:      from,
+		RecordedAt_2:    to,
+	})
 	if err != nil {
 		return nil, nil
 	}
-	defer rows.Close()
 	var samples []HostSample
-	for rows.Next() {
-		var sample HostSample
-		if err := rows.Scan(
-			&sample.RecordedAt, &sample.IntervalSeconds, &sample.CPUPercent,
-			&sample.MemoryUsedBytes, &sample.MemoryAvailableBytes,
-			&sample.DiskUsedBytes, &sample.DiskAvailableBytes,
-			&sample.DiskReadBytes, &sample.DiskWriteBytes, &sample.LoadOne,
-			&sample.TemperatureCelsius,
-		); err == nil {
-			samples = append(samples, sample)
+	for _, row := range rows {
+		samples = append(samples, HostSample{
+			RecordedAt:           row.RecordedAt,
+			IntervalSeconds:      int(row.IntervalSeconds),
+			CPUPercent:           row.CpuPercent,
+			MemoryUsedBytes:      row.MemoryUsedBytes,
+			MemoryAvailableBytes: row.MemoryAvailableBytes,
+			DiskUsedBytes:        row.DiskUsedBytes,
+			DiskAvailableBytes:   row.DiskAvailableBytes,
+			DiskReadBytes:        row.DiskReadBytes,
+			DiskWriteBytes:       row.DiskWriteBytes,
+			LoadOne:              row.LoadOne,
+			TemperatureCelsius:   row.TemperatureCelsius,
+		})
+	}
+	earliest, err := svc.queries.GetEarliestHostSampleTime(ctx)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("failed to read earliest host sample time", "err", err)
 		}
+		return samples, nil
 	}
-	var earliest sql.NullTime
-	_ = svc.db.QueryRowContext(context.Background(), `SELECT MIN(recorded_at) FROM host_resource_samples`).Scan(&earliest)
-	if earliest.Valid {
-		value := earliest.Time
-		return samples, &value
-	}
-	return samples, nil
-}
-
-func databaseSize(path string) int64 {
-	if path == "" || path == ":memory:" {
-		return 0
-	}
-	var size int64
-	for _, suffix := range []string{"", "-wal", "-shm"} {
-		info, err := os.Stat(filepath.Clean(path + suffix))
-		if err == nil {
-			size += info.Size()
-		}
-	}
-	return size
+	return samples, &earliest
 }

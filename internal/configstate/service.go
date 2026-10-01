@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/boring-design/elastic-fruit-runner/config"
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -44,13 +45,14 @@ type Service struct {
 	activeYAML     string
 	activeLoadedAt time.Time
 	db             *sql.DB
+	queries        *sqlcdb.Queries
 
 	mu       sync.RWMutex
 	snapshot Snapshot
 }
 
 // New creates a config state service from the config loaded at startup.
-func New(cfg *config.Config, loadedAt time.Time, databasePath ...string) *Service {
+func New(cfg *config.Config, loadedAt time.Time, db *sql.DB) *Service {
 	activeData := cfg.LoadedYAML
 	activeHash := cfg.LoadedHash
 	if len(activeData) == 0 {
@@ -64,40 +66,26 @@ func New(cfg *config.Config, loadedAt time.Time, databasePath ...string) *Servic
 		activeHash:     activeHash,
 		activeYAML:     redactYAML(activeData),
 		activeLoadedAt: loadedAt,
+		db:             db,
+		queries:        sqlcdb.New(db),
 	}
-	if len(databasePath) > 0 && databasePath[0] != "" {
-		if db, err := openRevisionDB(databasePath[0]); err == nil {
-			service.db = db
-			if len(cfg.LoadedYAML) > 0 {
-				_ = service.saveRevision(cfg.LoadedYAML, "startup", true)
-			}
-		}
+	if len(cfg.LoadedYAML) > 0 {
+		_ = service.saveRevision(cfg.LoadedYAML, "startup", true)
 	}
 	service.refresh()
 	return service
 }
 
 // NewForConfigMode creates state when no valid runtime config exists.
-func NewForConfigMode(path, databasePath string, loadedAt time.Time) *Service {
+func NewForConfigMode(path string, db *sql.DB, loadedAt time.Time) *Service {
 	service := &Service{
 		path:           path,
 		activeLoadedAt: loadedAt,
-	}
-	if databasePath != "" {
-		if db, err := openRevisionDB(databasePath); err == nil {
-			service.db = db
-		}
+		db:             db,
+		queries:        sqlcdb.New(db),
 	}
 	service.refresh()
 	return service
-}
-
-// Close closes config revision storage.
-func (s *Service) Close() error {
-	if s.db == nil {
-		return nil
-	}
-	return s.db.Close()
 }
 
 // Start refreshes disk state until the context ends.

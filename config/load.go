@@ -110,12 +110,3 @@ func FindConfigPath(configPath string) string {
 	}
 	return "/etc/elastic-fruit-runner/config.yaml"
 }
-
-// DefaultDatabasePath returns the local console database path.
-func DefaultDatabasePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("determine home directory for database path: %w", err)
-	}
-	return filepath.Join(home, ".elastic-fruit-runner", "jobs.db"), nil
-}

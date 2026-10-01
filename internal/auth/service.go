@@ -8,14 +8,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
-	// Register the SQLite driver.
-	_ "modernc.org/sqlite"
+
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 )
 
 const (
@@ -40,56 +38,23 @@ type Session struct {
 
 // Service stores one admin password and short lived sessions.
 type Service struct {
-	db *sql.DB
+	db      *sql.DB
+	queries *sqlcdb.Queries
 
 	mu             sync.Mutex
 	failedAttempts []time.Time
 	blockedUntil   time.Time
 }
 
-// Open opens auth storage in the main SQLite database.
-func Open(dbPath string) (*Service, error) {
-	if dbPath == "" {
-		return nil, fmt.Errorf("open auth database: database path is empty")
-	}
-	if dbPath != ":memory:" {
-		dir := filepath.Dir(dbPath)
-		if err := os.MkdirAll(dir, 0o750); err != nil {
-			return nil, fmt.Errorf("create auth database directory %s: %w", dir, err)
-		}
-	}
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("open auth database %s: %w", dbPath, err)
-	}
-	db.SetMaxOpenConns(1)
-	if _, err := db.ExecContext(context.Background(), "PRAGMA busy_timeout=5000"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("set auth database busy timeout for %s: %w", dbPath, err)
-	}
-	if err := migrate(db); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("migrate auth database %s: %w", dbPath, err)
-	}
-	if dbPath != ":memory:" {
-		if err := os.Chmod(dbPath, 0o600); err != nil {
-			db.Close()
-			return nil, fmt.Errorf("set auth database permissions %s: %w", dbPath, err)
-		}
-	}
-
-	return &Service{db: db}, nil
-}
-
-// Close closes the auth database.
-func (s *Service) Close() error {
-	return s.db.Close()
+// New creates the auth service on top of an already opened and migrated database.
+func New(db *sql.DB) *Service {
+	return &Service{db: db, queries: sqlcdb.New(db)}
 }
 
 // SetupRequired reports whether an admin password exists.
 func (s *Service) SetupRequired(ctx context.Context) (bool, error) {
-	var count int
-	if err := s.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM console_admin WHERE id = 1").Scan(&count); err != nil {
+	count, err := s.queries.CountAdmin(ctx)
+	if err != nil {
 		return false, fmt.Errorf("check admin setup state: %w", err)
 	}
 	return count == 0, nil
@@ -112,11 +77,11 @@ func (s *Service) Setup(ctx context.Context, password string) (Session, error) {
 	if err != nil {
 		return Session{}, fmt.Errorf("hash admin password: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, `
-		INSERT INTO console_admin (id, password_hash, created_at)
-		VALUES (1, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET password_hash = excluded.password_hash, created_at = excluded.created_at
-	`, passwordHash, time.Now().Unix()); err != nil {
+	err = s.queries.UpsertAdminPassword(ctx, sqlcdb.UpsertAdminPasswordParams{
+		PasswordHash: passwordHash,
+		CreatedAt:    time.Now().Unix(),
+	})
+	if err != nil {
 		return Session{}, fmt.Errorf("save admin password: %w", err)
 	}
 	return s.createSession(ctx)
@@ -128,8 +93,8 @@ func (s *Service) Login(ctx context.Context, password string) (Session, error) {
 		return Session{}, err
 	}
 
-	var passwordHash []byte
-	if err := s.db.QueryRowContext(ctx, "SELECT password_hash FROM console_admin WHERE id = 1").Scan(&passwordHash); err != nil {
+	passwordHash, err := s.queries.GetAdminPasswordHash(ctx)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Session{}, ErrInvalidCredentials
 		}
@@ -149,24 +114,19 @@ func (s *Service) FindSession(ctx context.Context, token string) (Session, error
 		return Session{}, ErrSessionNotFound
 	}
 	tokenHash := hashToken(token)
-	var csrfToken string
-	var expiresAtUnix int64
-	if err := s.db.QueryRowContext(ctx, `
-		SELECT csrf_token, expires_at
-		FROM console_sessions
-		WHERE token_hash = ?
-	`, tokenHash).Scan(&csrfToken, &expiresAtUnix); err != nil {
+	stored, err := s.queries.GetSession(ctx, tokenHash)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Session{}, ErrSessionNotFound
 		}
 		return Session{}, fmt.Errorf("read console session: %w", err)
 	}
-	expiresAt := time.Unix(expiresAtUnix, 0)
+	expiresAt := time.Unix(stored.ExpiresAt, 0)
 	if !expiresAt.After(time.Now()) {
-		_, _ = s.db.ExecContext(ctx, "DELETE FROM console_sessions WHERE token_hash = ?", tokenHash)
+		_ = s.queries.DeleteSession(ctx, tokenHash)
 		return Session{}, ErrSessionNotFound
 	}
-	return Session{Token: token, CSRFToken: csrfToken, ExpiresAt: expiresAt}, nil
+	return Session{Token: token, CSRFToken: stored.CsrfToken, ExpiresAt: expiresAt}, nil
 }
 
 // Logout deletes one session.
@@ -174,7 +134,7 @@ func (s *Service) Logout(ctx context.Context, token string) error {
 	if token == "" {
 		return nil
 	}
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM console_sessions WHERE token_hash = ?", hashToken(token)); err != nil {
+	if err := s.queries.DeleteSession(ctx, hashToken(token)); err != nil {
 		return fmt.Errorf("delete console session: %w", err)
 	}
 	return nil
@@ -189,10 +149,11 @@ func (s *Service) Reset(ctx context.Context) error {
 	defer func() {
 		_ = tx.Rollback()
 	}()
-	if _, err := tx.ExecContext(ctx, "DELETE FROM console_sessions"); err != nil {
+	queries := s.queries.WithTx(tx)
+	if err := queries.DeleteAllSessions(ctx); err != nil {
 		return fmt.Errorf("delete console sessions during admin reset: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM console_admin"); err != nil {
+	if err := queries.DeleteAdmin(ctx); err != nil {
 		return fmt.Errorf("delete admin password during reset: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -211,13 +172,16 @@ func (s *Service) createSession(ctx context.Context) (Session, error) {
 		return Session{}, fmt.Errorf("create CSRF token: %w", err)
 	}
 	expiresAt := time.Now().Add(sessionLifetime)
-	if _, err := s.db.ExecContext(ctx, "DELETE FROM console_sessions WHERE expires_at <= ?", time.Now().Unix()); err != nil {
+	if err := s.queries.DeleteExpiredSessions(ctx, time.Now().Unix()); err != nil {
 		return Session{}, fmt.Errorf("delete expired console sessions: %w", err)
 	}
-	if _, err := s.db.ExecContext(ctx, `
-		INSERT INTO console_sessions (token_hash, csrf_token, expires_at, created_at)
-		VALUES (?, ?, ?, ?)
-	`, hashToken(token), csrfToken, expiresAt.Unix(), time.Now().Unix()); err != nil {
+	err = s.queries.InsertSession(ctx, sqlcdb.InsertSessionParams{
+		TokenHash: hashToken(token),
+		CsrfToken: csrfToken,
+		ExpiresAt: expiresAt.Unix(),
+		CreatedAt: time.Now().Unix(),
+	})
+	if err != nil {
 		return Session{}, fmt.Errorf("save console session: %w", err)
 	}
 	return Session{Token: token, CSRFToken: csrfToken, ExpiresAt: expiresAt}, nil
@@ -276,26 +240,4 @@ func randomToken(size int) (string, error) {
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
-}
-
-func migrate(db *sql.DB) error {
-	_, err := db.ExecContext(context.Background(), `
-		CREATE TABLE IF NOT EXISTS console_admin (
-			id INTEGER PRIMARY KEY CHECK (id = 1),
-			password_hash BLOB NOT NULL,
-			created_at INTEGER NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS console_sessions (
-			token_hash TEXT PRIMARY KEY,
-			csrf_token TEXT NOT NULL,
-			expires_at INTEGER NOT NULL,
-			created_at INTEGER NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_console_sessions_expires_at
-		ON console_sessions (expires_at);
-	`)
-	if err != nil {
-		return fmt.Errorf("create console auth tables: %w", err)
-	}
-	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/actions/scaleset"
 
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
-	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/management/sqlc"
+	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
 )
 
 type JobRecord struct {
@@ -67,7 +67,6 @@ type captureState struct {
 }
 
 type JobStore struct {
-	db      *sql.DB
 	queries *sqlcdb.Queries
 
 	captureMu sync.Mutex
@@ -76,7 +75,6 @@ type JobStore struct {
 
 func NewJobStore(db *sql.DB) *JobStore {
 	return &JobStore{
-		db:       db,
 		queries:  sqlcdb.New(db),
 		captures: make(map[string]*captureState),
 	}
@@ -91,43 +89,23 @@ var knownJobResults = map[string]struct{}{
 func (s *JobStore) RecordJobMessageStarted(setName, backendName string, diagnostics backend.Diagnostics, job *scaleset.JobStarted) {
 	ctx := context.Background()
 	labels, _ := json.Marshal(job.RequestLabels)
-	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO jobs (
-			id, runner_name, runner_set_name, result, started_at, owner, repository,
-			workflow_ref, display_name, workflow_run_id, event_name, labels_json,
-			queued_at, scale_set_assigned_at, runner_assigned_at, backend
-		) VALUES (?, ?, ?, 'running', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			runner_name = excluded.runner_name,
-			runner_set_name = excluded.runner_set_name,
-			result = 'running',
-			owner = excluded.owner,
-			repository = excluded.repository,
-			workflow_ref = excluded.workflow_ref,
-			display_name = excluded.display_name,
-			workflow_run_id = excluded.workflow_run_id,
-			event_name = excluded.event_name,
-			labels_json = excluded.labels_json,
-			queued_at = excluded.queued_at,
-			scale_set_assigned_at = excluded.scale_set_assigned_at,
-			runner_assigned_at = excluded.runner_assigned_at,
-			backend = excluded.backend`,
-		job.JobID,
-		job.RunnerName,
-		setName,
-		time.Now(),
-		job.OwnerName,
-		job.RepositoryName,
-		job.JobWorkflowRef,
-		job.JobDisplayName,
-		job.WorkflowRunID,
-		job.EventName,
-		string(labels),
-		nullableTime(job.QueueTime),
-		nullableTime(job.ScaleSetAssignTime),
-		nullableTime(job.RunnerAssignTime),
-		backendName,
-	)
+	err := s.queries.UpsertStartedJob(ctx, sqlcdb.UpsertStartedJobParams{
+		ID:                 job.JobID,
+		RunnerName:         job.RunnerName,
+		RunnerSetName:      setName,
+		StartedAt:          time.Now(),
+		Owner:              job.OwnerName,
+		Repository:         job.RepositoryName,
+		WorkflowRef:        job.JobWorkflowRef,
+		DisplayName:        job.JobDisplayName,
+		WorkflowRunID:      job.WorkflowRunID,
+		EventName:          job.EventName,
+		LabelsJson:         string(labels),
+		QueuedAt:           nullableTime(job.QueueTime),
+		ScaleSetAssignedAt: nullableTime(job.ScaleSetAssignTime),
+		RunnerAssignedAt:   nullableTime(job.RunnerAssignTime),
+		Backend:            backendName,
+	})
 	if err != nil {
 		slog.Error("failed to record job started", "job_id", job.JobID, "err", err)
 		return
@@ -244,7 +222,12 @@ func (s *JobStore) captureLogs(ctx context.Context, jobID, runnerName string, di
 	if len(added) > 1024*1024 {
 		added = added[len(added)-1024*1024:]
 	}
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO job_logs (job_id, recorded_at, text) VALUES (?, ?, ?)`, jobID, time.Now(), added); err != nil {
+	err = s.queries.InsertJobLog(ctx, sqlcdb.InsertJobLogParams{
+		JobID:      jobID,
+		RecordedAt: time.Now(),
+		Text:       added,
+	})
+	if err != nil {
 		slog.Warn("failed to record job logs", "job_id", jobID, "err", err)
 	}
 }
@@ -254,17 +237,21 @@ func (s *JobStore) captureResource(ctx context.Context, jobID, runnerName string
 	if err != nil {
 		return
 	}
-	_, err = s.db.ExecContext(ctx, `
-		INSERT INTO job_resource_samples (
-			job_id, recorded_at, source, accuracy, cpu_percent, memory_used_bytes,
-			memory_available_bytes, disk_used_bytes, disk_available_bytes,
-			disk_read_bytes, disk_write_bytes, network_receive_bytes, network_send_bytes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		jobID, sample.RecordedAt, sample.Source, sample.Accuracy, sample.CPUPercent,
-		sample.MemoryUsedBytes, sample.MemoryAvailableBytes, sample.DiskUsedBytes,
-		sample.DiskAvailableBytes, sample.DiskReadBytes, sample.DiskWriteBytes,
-		sample.NetworkReceiveBytes, sample.NetworkSendBytes,
-	)
+	err = s.queries.InsertJobResourceSample(ctx, sqlcdb.InsertJobResourceSampleParams{
+		JobID:                jobID,
+		RecordedAt:           sample.RecordedAt,
+		Source:               sample.Source,
+		Accuracy:             sample.Accuracy,
+		CpuPercent:           sample.CPUPercent,
+		MemoryUsedBytes:      sample.MemoryUsedBytes,
+		MemoryAvailableBytes: sample.MemoryAvailableBytes,
+		DiskUsedBytes:        sample.DiskUsedBytes,
+		DiskAvailableBytes:   sample.DiskAvailableBytes,
+		DiskReadBytes:        sample.DiskReadBytes,
+		DiskWriteBytes:       sample.DiskWriteBytes,
+		NetworkReceiveBytes:  sample.NetworkReceiveBytes,
+		NetworkSendBytes:     sample.NetworkSendBytes,
+	})
 	if err != nil {
 		slog.Warn("failed to record job resource data", "job_id", jobID, "err", err)
 	}
@@ -276,24 +263,15 @@ func (s *JobStore) Snapshot() []JobRecord {
 }
 
 func (s *JobStore) List(filter JobFilter) JobPage {
-	rows, err := s.db.QueryContext(context.Background(), `
-		SELECT id, runner_name, runner_set_name, result, started_at, completed_at,
-			owner, repository, workflow_ref, display_name, workflow_run_id, event_name,
-			labels_json, queued_at, scale_set_assigned_at, runner_assigned_at, backend
-		FROM jobs ORDER BY started_at DESC LIMIT 2000`)
+	rows, err := s.queries.ListJobsNewestFirst(context.Background())
 	if err != nil {
 		slog.Error("failed to list jobs", "err", err)
 		return JobPage{}
 	}
-	defer rows.Close()
 
 	var records []JobRecord
-	for rows.Next() {
-		record, scanErr := scanJob(rows)
-		if scanErr != nil {
-			slog.Error("failed to read job", "err", scanErr)
-			continue
-		}
+	for _, row := range rows {
+		record := jobRecordFromRow(row)
 		if matchesJob(record, filter) {
 			records = append(records, record)
 		}
@@ -315,42 +293,43 @@ func (s *JobStore) List(filter JobFilter) JobPage {
 }
 
 func (s *JobStore) Get(jobID string) (*JobRecord, error) {
-	row := s.db.QueryRowContext(context.Background(), `
-		SELECT id, runner_name, runner_set_name, result, started_at, completed_at,
-			owner, repository, workflow_ref, display_name, workflow_run_id, event_name,
-			labels_json, queued_at, scale_set_assigned_at, runner_assigned_at, backend
-		FROM jobs WHERE id = ?`, jobID)
-	record, err := scanJob(row)
+	row, err := s.queries.GetJob(context.Background(), jobID)
 	if err != nil {
 		return nil, err
 	}
+	record := jobRecordFromRow(row)
 	return &record, nil
 }
 
-type rowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanJob(row rowScanner) (JobRecord, error) {
-	var record JobRecord
-	var completedAt, queuedAt, scaleSetAssignedAt, runnerAssignedAt sql.NullTime
-	var labels string
-	err := row.Scan(
-		&record.ID, &record.RunnerName, &record.RunnerSetName, &record.Result,
-		&record.StartedAt, &completedAt, &record.Owner, &record.Repository,
-		&record.WorkflowRef, &record.DisplayName, &record.WorkflowRunID,
-		&record.EventName, &labels, &queuedAt, &scaleSetAssignedAt,
-		&runnerAssignedAt, &record.Backend,
-	)
-	if err != nil {
-		return JobRecord{}, err
+func jobRecordFromRow(row sqlcdb.Job) JobRecord {
+	record := JobRecord{
+		ID:            row.ID,
+		RunnerName:    row.RunnerName,
+		RunnerSetName: row.RunnerSetName,
+		Result:        row.Result,
+		StartedAt:     row.StartedAt,
+		Owner:         row.Owner,
+		Repository:    row.Repository,
+		WorkflowRef:   row.WorkflowRef,
+		DisplayName:   row.DisplayName,
+		WorkflowRunID: row.WorkflowRunID,
+		EventName:     row.EventName,
+		Backend:       row.Backend,
 	}
-	_ = json.Unmarshal([]byte(labels), &record.Labels)
-	record.CompletedAt = timePointer(completedAt)
-	record.QueuedAt = timePointer(queuedAt)
-	record.ScaleSetAssignedAt = timePointer(scaleSetAssignedAt)
-	record.RunnerAssignedAt = timePointer(runnerAssignedAt)
-	return record, nil
+	_ = json.Unmarshal([]byte(row.LabelsJson), &record.Labels)
+	if row.CompletedAt.Valid {
+		record.CompletedAt = &row.CompletedAt.Time
+	}
+	if row.QueuedAt.Valid {
+		record.QueuedAt = &row.QueuedAt.Time
+	}
+	if row.ScaleSetAssignedAt.Valid {
+		record.ScaleSetAssignedAt = &row.ScaleSetAssignedAt.Time
+	}
+	if row.RunnerAssignedAt.Valid {
+		record.RunnerAssignedAt = &row.RunnerAssignedAt.Time
+	}
+	return record
 }
 
 func matchesJob(record JobRecord, filter JobFilter) bool {
@@ -380,62 +359,50 @@ func (s *JobStore) Logs(jobID string, after int64, pageSize int) (logs []JobLog,
 	if pageSize <= 0 || pageSize > 500 {
 		pageSize = 200
 	}
-	rows, err := s.db.QueryContext(context.Background(), `
-		SELECT sequence, recorded_at, text FROM job_logs
-		WHERE job_id = ? AND sequence > ? ORDER BY sequence LIMIT ?`,
-		jobID, after, pageSize,
-	)
+	rows, err := s.queries.ListJobLogsAfterSequence(context.Background(), sqlcdb.ListJobLogsAfterSequenceParams{
+		JobID:    jobID,
+		Sequence: after,
+		Limit:    int64(pageSize),
+	})
 	if err != nil {
 		return nil, after
 	}
-	defer rows.Close()
 	next := after
-	for rows.Next() {
-		var line JobLog
-		if err := rows.Scan(&line.Sequence, &line.RecordedAt, &line.Text); err == nil {
-			logs = append(logs, line)
-			next = line.Sequence
-		}
+	for _, row := range rows {
+		logs = append(logs, JobLog{Sequence: row.Sequence, RecordedAt: row.RecordedAt, Text: row.Text})
+		next = row.Sequence
 	}
 	return logs, next
 }
 
 func (s *JobStore) Samples(jobID string) []ResourceSample {
-	rows, err := s.db.QueryContext(context.Background(), `
-		SELECT recorded_at, source, accuracy, cpu_percent, memory_used_bytes,
-			memory_available_bytes, disk_used_bytes, disk_available_bytes,
-			disk_read_bytes, disk_write_bytes, network_receive_bytes, network_send_bytes
-		FROM job_resource_samples WHERE job_id = ? ORDER BY recorded_at`, jobID)
+	rows, err := s.queries.ListJobResourceSamples(context.Background(), jobID)
 	if err != nil {
 		return nil
 	}
-	defer rows.Close()
 	var samples []ResourceSample
-	for rows.Next() {
-		var sample ResourceSample
-		if err := rows.Scan(
-			&sample.RecordedAt, &sample.Source, &sample.Accuracy, &sample.CPUPercent,
-			&sample.MemoryUsedBytes, &sample.MemoryAvailableBytes, &sample.DiskUsedBytes,
-			&sample.DiskAvailableBytes, &sample.DiskReadBytes, &sample.DiskWriteBytes,
-			&sample.NetworkReceiveBytes, &sample.NetworkSendBytes,
-		); err == nil {
-			samples = append(samples, sample)
-		}
+	for _, row := range rows {
+		samples = append(samples, ResourceSample{
+			RecordedAt:           row.RecordedAt,
+			Source:               row.Source,
+			Accuracy:             row.Accuracy,
+			CPUPercent:           row.CpuPercent,
+			MemoryUsedBytes:      row.MemoryUsedBytes,
+			MemoryAvailableBytes: row.MemoryAvailableBytes,
+			DiskUsedBytes:        row.DiskUsedBytes,
+			DiskAvailableBytes:   row.DiskAvailableBytes,
+			DiskReadBytes:        row.DiskReadBytes,
+			DiskWriteBytes:       row.DiskWriteBytes,
+			NetworkReceiveBytes:  row.NetworkReceiveBytes,
+			NetworkSendBytes:     row.NetworkSendBytes,
+		})
 	}
 	return samples
 }
 
-func nullableTime(value time.Time) any {
+func nullableTime(value time.Time) sql.NullTime {
 	if value.IsZero() {
-		return nil
+		return sql.NullTime{}
 	}
-	return value
-}
-
-func timePointer(value sql.NullTime) *time.Time {
-	if !value.Valid {
-		return nil
-	}
-	result := value.Time
-	return &result
+	return sql.NullTime{Time: value, Valid: true}
 }

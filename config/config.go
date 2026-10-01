@@ -29,6 +29,11 @@ func (c *Config) DatabasePath() (string, error) {
 	if c.DBPath != "" {
 		return c.DBPath, nil
 	}
+	return DefaultDatabasePath()
+}
+
+// DefaultDatabasePath returns the database path used when the config does not set one.
+func DefaultDatabasePath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("determine home directory for database path: %w", err)

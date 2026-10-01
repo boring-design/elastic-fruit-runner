@@ -12,6 +12,6 @@ ignore:
   - "cmd/**"
   - "gen/**"
   - "dashboard/**"
-  - "internal/management/sqlc/**"
-  - "internal/management/migrations/**"
+  - "internal/storage/sqlc/**"
+  - "internal/storage/migrations/**"
   - "internal/tracing/**"

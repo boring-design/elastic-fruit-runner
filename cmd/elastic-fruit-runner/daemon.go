@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -19,6 +20,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/auth"
 	"github.com/boring-design/elastic-fruit-runner/internal/configstate"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
+	"github.com/boring-design/elastic-fruit-runner/internal/storage"
 	"github.com/boring-design/elastic-fruit-runner/internal/tracing"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
@@ -26,27 +28,53 @@ import (
 // errRestartRequested tells main to re-exec the daemon after a clean shutdown.
 var errRestartRequested = errors.New("restart requested from console")
 
-//nolint:gocyclo // Startup handles normal, recovery, and config mode in one ordered flow.
-func runDaemon(requestedPath string) error {
-	configPath := config.FindConfigPath(requestedPath)
-	databasePath, err := config.DefaultDatabasePath()
+// startupState holds what the daemon learned before any service starts.
+type startupState struct {
+	configPath   string
+	databasePath string
+	// cfg is nil when the daemon runs in config mode.
+	cfg *config.Config
+	db  *sql.DB
+}
+
+func runDaemon(requestedConfigPath string) error {
+	startup, err := prepareStartup(requestedConfigPath)
 	if err != nil {
 		return err
 	}
-	revisionPath := databasePath
-	cfg, configErr := config.Load(requestedPath)
+	defer startup.db.Close()
+	return runServices(startup)
+}
+
+// prepareStartup loads the config, opens the database, and falls back to the
+// last active config when the disk config is broken.
+func prepareStartup(requestedConfigPath string) (*startupState, error) {
+	configPath := config.FindConfigPath(requestedConfigPath)
+	cfg, configErr := config.Load(requestedConfigPath)
 	if configErr == nil {
 		if err := cfg.Validate(); err != nil {
 			configErr = err
 		}
 	}
+
+	var databasePath string
+	var pathErr error
 	if cfg != nil {
-		if path, pathErr := cfg.DatabasePath(); pathErr == nil {
-			databasePath = path
-		}
+		databasePath, pathErr = cfg.DatabasePath()
+	} else {
+		databasePath, pathErr = config.DefaultDatabasePath()
 	}
+	if pathErr != nil {
+		return nil, pathErr
+	}
+	db, err := storage.Open(databasePath)
+	if err != nil {
+		return nil, err
+	}
+
 	if configErr != nil {
-		recovered, recoverErr := configstate.LoadLastActive(revisionPath)
+		cfg = nil
+		recovered, recoverErr := configstate.LoadLastActive(context.Background(), db)
 		if recoverErr == nil {
 			result := config.ValidateYAML(recovered)
 			if len(result.Errors) == 0 {
@@ -54,20 +82,33 @@ func runDaemon(requestedPath string) error {
 				cfg.FilePath = configPath
 				cfg.LoadedYAML = recovered
 				slog.Warn("disk config is invalid, using last active config", "path", configPath, "err", configErr)
-			} else {
-				cfg = nil
 			}
-		} else {
-			cfg = nil
 		}
 	}
 	if cfg != nil {
 		if err := configureLogging(cfg); err != nil {
-			return err
+			db.Close()
+			return nil, err
 		}
 	} else {
 		slog.Warn("starting in config mode", "path", configPath, "err", configErr)
 	}
+	slog.Info("database ready", "path", databasePath)
+
+	return &startupState{
+		configPath:   configPath,
+		databasePath: databasePath,
+		cfg:          cfg,
+		db:           db,
+	}, nil
+}
+
+//nolint:gocyclo // Startup handles normal, recovery, and config mode in one ordered flow.
+func runServices(startup *startupState) error {
+	cfg := startup.cfg
+	configPath := startup.configPath
+	databasePath := startup.databasePath
+	db := startup.db
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -88,30 +129,24 @@ func runDaemon(requestedPath string) error {
 
 	var managementService *management.Service
 	if cfg != nil {
-		managementService, err = management.New(cfg)
+		managementService, err = management.New(cfg, db)
 		if err != nil {
 			return fmt.Errorf("initialize scale set controller management service: %w", err)
 		}
-		defer managementService.Close()
 		vitalsService.SetOnUpdate(managementService.RecordHostVitals)
 		managementService.Start(ctx)
 	}
 	go vitalsService.Start(ctx, 5*time.Second)
 
-	authService, err := auth.Open(databasePath)
-	if err != nil {
-		return fmt.Errorf("initialize console auth: %w", err)
-	}
-	defer authService.Close()
+	authService := auth.New(db)
 	logSetupRequired(ctx, authService)
 
 	var configStateService *configstate.Service
 	if cfg != nil {
-		configStateService = configstate.New(cfg, startedAt, revisionPath)
+		configStateService = configstate.New(cfg, startedAt, db)
 	} else {
-		configStateService = configstate.NewForConfigMode(configPath, revisionPath, startedAt)
+		configStateService = configstate.NewForConfigMode(configPath, db, startedAt)
 	}
-	defer configStateService.Close()
 	go configStateService.Start(ctx, 2*time.Second)
 
 	apiAddr := ""
