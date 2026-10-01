@@ -88,6 +88,8 @@ The output should show `Running: true`.
 
 Open [http://127.0.0.1:8080](http://127.0.0.1:8080). Choose an admin password and sign in.
 
+If you skipped the config file step, the Console opens the setup wizard instead of the Overview. The wizard asks for the organization, the token, and the runner sets, then writes the config file for you. Restart the service after the wizard saves, and continue below.
+
 The Overview page should show:
 
 * One configured runner set

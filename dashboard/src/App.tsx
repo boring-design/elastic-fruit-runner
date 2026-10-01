@@ -15,6 +15,7 @@ import {
 } from './api/fetchers'
 import { CheckRows } from './components/CheckList'
 import { SetupChecklist } from './components/SetupChecklist'
+import { SetupWizard } from './components/SetupWizard'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
 import type {
@@ -137,6 +138,8 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
   const store = useDashboardStore()
   const [page, setPage] = useState<Page>(() => pageFromHash())
   const version = getVersion(store.daemonStatus?.buildInfo?.main?.version)
+  const configMode = store.daemonStatus?.configMode ?? false
+  const navPages = configMode ? [{ id: 'setup' as Page, label: 'Setup' }, ...pages] : pages
 
   useEffect(() => {
     const updatePage = () => setPage(pageFromHash())
@@ -166,7 +169,7 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
       </header>
       <div className="console-body">
         <nav className="sidebar" aria-label="Console pages">
-          {pages.map(item => (
+          {navPages.map(item => (
             <a
               className={page === item.id ? 'nav-link active' : 'nav-link'}
               href={`#/${item.id}`}
@@ -181,10 +184,11 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
           </div>
         </nav>
         <main className="content">
-          {page === 'overview' && <Overview />}
+          {page === 'overview' && (configMode ? <SetupWizard csrfToken={session.csrfToken} /> : <Overview />)}
+          {page === 'setup' && <SetupWizard csrfToken={session.csrfToken} />}
           {page === 'jobs' && <JobsPage jobs={store.recentJobs} now={store.now} />}
           {page === 'runner-sets' && <RunnerSetsPage runnerSets={store.runnerSets} />}
-          {(page === 'config' || page === 'setup') && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
+          {page === 'config' && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
           {page === 'system' && <SystemPage />}
         </main>
       </div>
@@ -485,7 +489,9 @@ function RunnerSetsPage({ runnerSets }: { runnerSets: RunnerSet[] }) {
 
 function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: string }) {
   const sameText = status.activeYAML === status.diskYAML
-  const [yaml, setYAML] = useState(status.diskYAML)
+  // The setup wizard can hand over a draft. It is used once as the editor text.
+  const [yaml, setYAML] = useState(() => useDashboardStore.getState().draftYAML || status.diskYAML)
+  const [editorDiskHash, setEditorDiskHash] = useState(status.diskHash)
   const [messages, setMessages] = useState<Array<{ path: string; message: string; tone: 'danger' | 'warning' }>>([])
   const [saving, setSaving] = useState(false)
   const [confirmWarnings, setConfirmWarnings] = useState(false)
@@ -494,8 +500,14 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
   const revisions = useSWR('configRevisions', fetchConfigRevisions)
 
   useEffect(() => {
+    useDashboardStore.getState().setDraftYAML('')
+  }, [])
+
+  useEffect(() => {
+    if (editorDiskHash === status.diskHash) return
+    setEditorDiskHash(status.diskHash)
     setYAML(status.diskYAML)
-  }, [status.diskHash, status.diskYAML])
+  }, [editorDiskHash, status.diskHash, status.diskYAML])
 
   async function check() {
     const result = await validateConfig(yaml)

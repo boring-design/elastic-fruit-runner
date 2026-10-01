@@ -18,6 +18,8 @@ export interface DashboardState {
   configStatus: ConfigStatus | null
   systemInfo: SystemInfo | null
   now: Date
+  // YAML handed from the setup wizard to the config editor.
+  draftYAML: string
   setDaemonStatus: (value: DaemonStatus) => void
   setSummary: (value: DashboardSummary) => void
   setRunnerSets: (value: RunnerSet[]) => void
@@ -26,6 +28,7 @@ export interface DashboardState {
   setConfigStatus: (value: ConfigStatus) => void
   setSystemInfo: (value: SystemInfo) => void
   tick: () => void
+  setDraftYAML: (value: string) => void
 }
 
 export const useDashboardStore = create<DashboardState>()(set => ({
@@ -37,6 +40,7 @@ export const useDashboardStore = create<DashboardState>()(set => ({
   configStatus: null,
   systemInfo: null,
   now: new Date(),
+  draftYAML: '',
   setDaemonStatus: daemonStatus => set({ daemonStatus }),
   setSummary: summary => set({ summary }),
   setRunnerSets: runnerSets => set({ runnerSets }),
@@ -45,4 +49,5 @@ export const useDashboardStore = create<DashboardState>()(set => ({
   setConfigStatus: configStatus => set({ configStatus }),
   setSystemInfo: systemInfo => set({ systemInfo }),
   tick: () => set({ now: new Date() }),
+  setDraftYAML: draftYAML => set({ draftYAML }),
 }))

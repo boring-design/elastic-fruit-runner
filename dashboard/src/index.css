@@ -809,3 +809,98 @@ input:focus {
 .check-message a {
   color: var(--blue);
 }
+
+.wizard-steps {
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  font-size: 11px;
+}
+
+.wizard-steps li {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+}
+
+.wizard-steps li.done {
+  color: var(--green);
+}
+
+.wizard-steps li.active {
+  color: var(--text);
+  border-color: var(--border-bright);
+  background: var(--panel-raised);
+}
+
+.wizard-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.radio-row {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.radio-row label,
+.preset-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+}
+
+.radio-row input,
+.preset-title input {
+  width: auto;
+  margin: 0;
+}
+
+.help-text {
+  margin: 0 0 15px;
+  color: var(--dim);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.preset-card {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-raised);
+}
+
+.preset-card.disabled {
+  opacity: 0.6;
+}
+
+.preset-title {
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.preset-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
+
+.preset-fields label {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 760px) {
+  .preset-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
