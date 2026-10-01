@@ -8,13 +8,16 @@ import {
   fetchJobLogs,
   fetchJobResources,
   fetchJobs,
+  probeConfig,
   restoreConfigRevision,
   saveConfig,
   validateConfig,
 } from './api/fetchers'
+import { CheckRows } from './components/CheckList'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
 import type {
+  ConfigProbe,
   ConfigStatus,
   JobLog,
   JobRecord,
@@ -484,6 +487,8 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
   const [messages, setMessages] = useState<Array<{ path: string; message: string; tone: 'danger' | 'warning' }>>([])
   const [saving, setSaving] = useState(false)
   const [confirmWarnings, setConfirmWarnings] = useState(false)
+  const [probing, setProbing] = useState(false)
+  const [probe, setProbe] = useState<ConfigProbe | null>(null)
   const revisions = useSWR('configRevisions', fetchConfigRevisions)
 
   useEffect(() => {
@@ -517,6 +522,19 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
       setMessages([{ path: '$', message: String(error), tone: 'danger' }])
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function testConnections() {
+    setProbing(true)
+    try {
+      const result = await probeConfig(yaml)
+      setProbe(result)
+      setMessages(result.errors.map(issue => ({ ...issue, tone: 'danger' as const })))
+    } catch (error) {
+      setMessages([{ path: '$', message: String(error), tone: 'danger' }])
+    } finally {
+      setProbing(false)
     }
   }
 
@@ -571,10 +589,12 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
           <textarea className="config-editor" spellCheck={false} value={yaml} onChange={event => setYAML(event.target.value)} />
           <div className="editor-actions">
             <button className="text-button" disabled={saving} onClick={check}>Validate</button>
+            <button className="text-button" disabled={saving || probing} onClick={testConnections}>{probing ? 'Testing…' : 'Test GitHub and backends'}</button>
             <button className="primary-button" disabled={saving} onClick={save}>{saving ? 'Working…' : confirmWarnings ? 'Save with warnings' : 'Save to disk'}</button>
           </div>
         </section>
       </div>
+      {probe && <ConnectionTest probe={probe} />}
       {!sameText && <ConfigDiff active={status.activeYAML} disk={status.diskYAML} />}
       {status.state === 'restart_required' && (
         <section className="panel">
@@ -594,6 +614,33 @@ function ConfigPage({ status, csrfToken }: { status: ConfigStatus; csrfToken: st
           : <EmptyState title="No revisions recorded" />}
       </section>
     </>
+  )
+}
+
+function ConnectionTest({ probe }: { probe: ConfigProbe }) {
+  if (probe.errors.length > 0) {
+    return (
+      <section className="panel">
+        <PanelHeader title="Connection test" detail="Fix the config errors above first" />
+      </section>
+    )
+  }
+  return (
+    <section className="panel">
+      <PanelHeader title="Connection test" detail={`${probe.targets.length} GitHub targets, ${probe.backends.length} backends`} />
+      {probe.targets.map(target => (
+        <div key={target.target}>
+          <div className="panel-header"><h2>{target.target}</h2><span className={`status-badge ${target.ok ? 'pass' : 'fail'}`}>{target.ok ? 'pass' : 'fail'}</span></div>
+          <CheckRows checks={target.checks} />
+        </div>
+      ))}
+      <div className="panel-header"><h2>Backends</h2></div>
+      <CheckRows checks={probe.backends.map(backend => ({
+        name: backend.backend,
+        status: backend.available ? 'pass' : 'fail',
+        message: backend.available ? `${backend.version} on ${backend.hostOS}/${backend.hostArch}` : backend.error,
+      }))} />
+    </section>
   )
 }
 

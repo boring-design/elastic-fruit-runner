@@ -20,6 +20,7 @@ export const daemonStatus: DaemonStatus = {
   },
   startedAt: ago(9252),
   idleTimeout: 900,
+  configMode: false,
 }
 
 export const runnerSets: RunnerSet[] = [

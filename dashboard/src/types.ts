@@ -74,6 +74,7 @@ export interface DaemonStatus {
   buildInfo: BuildInfo | null
   startedAt: Date
   idleTimeout: number
+  configMode: boolean
 }
 
 export interface DashboardSummary {
@@ -153,4 +154,33 @@ export interface SystemInfo {
   databaseSizeBytes: number
   logPath: string
   logSizeBytes: number
+}
+
+export type CheckStatus = 'pass' | 'fail' | 'skipped'
+
+export interface Check {
+  name: string
+  status: CheckStatus
+  message: string
+}
+
+export interface GitHubAuthResult {
+  target: string
+  ok: boolean
+  checks: Check[]
+}
+
+export interface BackendCheck {
+  backend: string
+  available: boolean
+  version: string
+  hostOS: string
+  hostArch: string
+  error: string
+}
+
+export interface ConfigProbe {
+  targets: GitHubAuthResult[]
+  backends: BackendCheck[]
+  errors: ConfigValidationIssue[]
 }

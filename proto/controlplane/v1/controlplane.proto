@@ -52,6 +52,15 @@ service ControlPlaneService {
   rpc RestoreConfigRevision(RestoreConfigRevisionRequest) returns (RestoreConfigRevisionResponse);
 
   rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
+
+  // TestGitHubAuth checks one GitHub org or repo with the given credentials.
+  rpc TestGitHubAuth(TestGitHubAuthRequest) returns (TestGitHubAuthResponse);
+
+  // CheckBackend checks that a runner backend CLI is installed and working.
+  rpc CheckBackend(CheckBackendRequest) returns (CheckBackendResponse);
+
+  // ProbeConfig runs GitHub and backend checks for every target in a config draft.
+  rpc ProbeConfig(ProbeConfigRequest) returns (ProbeConfigResponse);
 }
 
 // Authentication
@@ -97,6 +106,8 @@ message GetServiceInfoResponse {
   google.protobuf.Timestamp started_at = 2;
   // Configured idle runner timeout in seconds.
   int32 idle_timeout_seconds = 3;
+  // True when the daemon started without a valid config file.
+  bool config_mode = 4;
 }
 
 message GetDashboardSummaryRequest {}
@@ -409,4 +420,64 @@ message GetSystemInfoResponse {
   int64 database_size_bytes = 5;
   string log_path = 6;
   int64 log_size_bytes = 7;
+}
+
+// Connection probes
+
+enum CheckStatus {
+  CHECK_STATUS_UNSPECIFIED = 0;
+  CHECK_STATUS_PASS = 1;
+  CHECK_STATUS_FAIL = 2;
+  CHECK_STATUS_SKIPPED = 3;
+}
+
+message Check {
+  string name = 1;
+  CheckStatus status = 2;
+  string message = 3;
+}
+
+message GitHubAppInput {
+  string client_id = 1;
+  int64 installation_id = 2;
+  string private_key_path = 3;
+}
+
+message TestGitHubAuthRequest {
+  // Exactly one of org or repo (owner/name) is set.
+  string org = 1;
+  string repo = 2;
+  string pat_token = 3;
+  GitHubAppInput github_app = 4;
+  // Org targets only. Empty means Default.
+  string runner_group = 5;
+}
+
+message TestGitHubAuthResponse {
+  string target = 1;
+  bool ok = 2;
+  repeated Check checks = 3;
+}
+
+message CheckBackendRequest {
+  string backend = 1;
+}
+
+message CheckBackendResponse {
+  string backend = 1;
+  bool available = 2;
+  string version = 3;
+  string host_os = 4;
+  string host_arch = 5;
+  string error = 6;
+}
+
+message ProbeConfigRequest {
+  string yaml = 1;
+}
+
+message ProbeConfigResponse {
+  repeated TestGitHubAuthResponse targets = 1;
+  repeated CheckBackendResponse backends = 2;
+  repeated ConfigValidationIssue errors = 3;
 }

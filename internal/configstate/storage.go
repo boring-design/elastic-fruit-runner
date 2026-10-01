@@ -84,6 +84,21 @@ func (s *Service) Validate(data []byte) config.ValidationResult {
 	return safeValidation(config.ValidateYAML(merged))
 }
 
+// ParseWithSecrets fills masked secrets from the disk file and returns the
+// full config. The result holds real credentials and must never be logged.
+func (s *Service) ParseWithSecrets(data []byte) (*config.Config, []config.ValidationIssue) {
+	current, _ := os.ReadFile(s.path)
+	merged, err := mergeMaskedSecrets(data, current)
+	if err != nil {
+		return nil, []config.ValidationIssue{{Path: "$", Message: err.Error()}}
+	}
+	result := config.ValidateYAML(merged)
+	if len(result.Errors) > 0 {
+		return nil, result.Errors
+	}
+	return result.Config, nil
+}
+
 func (s *Service) Save(data []byte, source string) (config.ValidationResult, error) {
 	current, _ := os.ReadFile(s.path)
 	merged, err := mergeMaskedSecrets(data, current)

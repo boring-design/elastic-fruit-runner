@@ -38,6 +38,7 @@ type Server struct {
 	logPath           string
 	idleTimeout       time.Duration
 	cors              config.CORSConfig
+	configMode        bool
 }
 
 // Dependencies contains optional console services.
@@ -46,6 +47,8 @@ type Dependencies struct {
 	ConfigState  *configstate.Service
 	DatabasePath string
 	LogPath      string
+	// ConfigMode is true when the daemon started without a valid config file.
+	ConfigMode bool
 }
 
 // NewServer creates an API server backed by the management and vitals services.
@@ -73,6 +76,7 @@ func NewServer(managementService *management.Service, vitalsService *vitals.Serv
 		server.configState = dependencies[0].ConfigState
 		server.databasePath = dependencies[0].DatabasePath
 		server.logPath = dependencies[0].LogPath
+		server.configMode = dependencies[0].ConfigMode
 	}
 	return server
 }
@@ -177,6 +181,7 @@ func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlpla
 		BuildInfo:          toProtoBuildInfo(build),
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
+		ConfigMode:         s.configMode,
 	}), nil
 }
 

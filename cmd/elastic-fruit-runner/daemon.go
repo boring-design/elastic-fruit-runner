@@ -130,6 +130,7 @@ func runDaemon(requestedPath string) error {
 			ConfigState:  configStateService,
 			DatabasePath: databasePath,
 			LogPath:      configLogPath(cfg),
+			ConfigMode:   cfg == nil,
 		},
 	)
 	httpServer := &http.Server{

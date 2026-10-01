@@ -755,3 +755,47 @@ input:focus {
     grid-template-columns: 110px minmax(0, 1fr);
   }
 }
+
+.status-badge.pass {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+}
+
+.status-badge.fail {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 55%, var(--border));
+}
+
+.status-badge.pending {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 55%, var(--border));
+}
+
+.check-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.check-row {
+  display: grid;
+  grid-template-columns: 70px 150px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.check-row:last-child {
+  border-bottom: 0;
+}
+
+.check-name {
+  color: var(--text);
+  font-family: "Geist Mono Variable", ui-monospace, monospace;
+}
+
+.check-message {
+  color: var(--dim);
+  overflow-wrap: anywhere;
+}

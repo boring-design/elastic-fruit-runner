@@ -1,12 +1,17 @@
 import type {
   Backend,
+  BackendCheck,
   BuildInfo,
+  Check,
+  CheckStatus,
+  ConfigProbe,
   ConfigStatus,
   ConfigValidation,
   ConfigRevision,
   ConfigSyncState,
   DaemonStatus,
   DashboardSummary,
+  GitHubAuthResult,
   JobRecord,
   MachineVitals,
   Module,
@@ -97,11 +102,13 @@ export async function fetchDaemonStatus(): Promise<DaemonStatus> {
     buildInfo?: BuildInfoResponse
     startedAt: string
     idleTimeoutSeconds: number
+    configMode?: boolean
   }>('GetServiceInfo')
   return {
     buildInfo: data.buildInfo ? toBuildInfo(data.buildInfo) : null,
     startedAt: new Date(data.startedAt),
     idleTimeout: data.idleTimeoutSeconds,
+    configMode: data.configMode ?? false,
   }
 }
 
@@ -426,5 +433,80 @@ export async function fetchSystemInfo(): Promise<SystemInfo> {
     databaseSizeBytes: data.databaseSizeBytes ?? 0,
     logPath: data.logPath ?? '',
     logSizeBytes: data.logSizeBytes ?? 0,
+  }
+}
+
+const CHECK_STATUS_MAP: Record<string, CheckStatus> = {
+  CHECK_STATUS_PASS: 'pass',
+  CHECK_STATUS_FAIL: 'fail',
+  CHECK_STATUS_SKIPPED: 'skipped',
+}
+
+interface GitHubAuthResponse {
+  target?: string
+  ok?: boolean
+  checks?: Array<{ name?: string; status?: string; message?: string }>
+}
+
+function toGitHubAuthResult(data: GitHubAuthResponse): GitHubAuthResult {
+  return {
+    target: data.target ?? '',
+    ok: data.ok ?? false,
+    checks: (data.checks ?? []).map((check): Check => ({
+      name: check.name ?? '',
+      status: CHECK_STATUS_MAP[check.status ?? ''] ?? 'skipped',
+      message: check.message ?? '',
+    })),
+  }
+}
+
+export interface GitHubAuthInput {
+  org?: string
+  repo?: string
+  patToken?: string
+  githubApp?: { clientId: string; installationId: number; privateKeyPath: string }
+  runnerGroup?: string
+}
+
+export async function testGitHubAuth(input: GitHubAuthInput): Promise<GitHubAuthResult> {
+  const data = await rpc<GitHubAuthResponse>('TestGitHubAuth', { ...input })
+  return toGitHubAuthResult(data)
+}
+
+interface BackendCheckResponse {
+  backend?: string
+  available?: boolean
+  version?: string
+  hostOs?: string
+  hostArch?: string
+  error?: string
+}
+
+function toBackendCheck(data: BackendCheckResponse): BackendCheck {
+  return {
+    backend: data.backend ?? '',
+    available: data.available ?? false,
+    version: data.version ?? '',
+    hostOS: data.hostOs ?? '',
+    hostArch: data.hostArch ?? '',
+    error: data.error ?? '',
+  }
+}
+
+export async function checkBackend(name: string): Promise<BackendCheck> {
+  const data = await rpc<BackendCheckResponse>('CheckBackend', { backend: name })
+  return toBackendCheck(data)
+}
+
+export async function probeConfig(yaml: string): Promise<ConfigProbe> {
+  const data = await rpc<{
+    targets?: GitHubAuthResponse[]
+    backends?: BackendCheckResponse[]
+    errors?: Array<{ path?: string; message?: string }>
+  }>('ProbeConfig', { yaml })
+  return {
+    targets: (data.targets ?? []).map(toGitHubAuthResult),
+    backends: (data.backends ?? []).map(toBackendCheck),
+    errors: (data.errors ?? []).map(issue => ({ path: issue.path ?? '$', message: issue.message ?? '' })),
   }
 }

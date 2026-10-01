@@ -90,6 +90,15 @@ const (
 	// ControlPlaneServiceGetSystemInfoProcedure is the fully-qualified name of the
 	// ControlPlaneService's GetSystemInfo RPC.
 	ControlPlaneServiceGetSystemInfoProcedure = "/controlplane.v1.ControlPlaneService/GetSystemInfo"
+	// ControlPlaneServiceTestGitHubAuthProcedure is the fully-qualified name of the
+	// ControlPlaneService's TestGitHubAuth RPC.
+	ControlPlaneServiceTestGitHubAuthProcedure = "/controlplane.v1.ControlPlaneService/TestGitHubAuth"
+	// ControlPlaneServiceCheckBackendProcedure is the fully-qualified name of the ControlPlaneService's
+	// CheckBackend RPC.
+	ControlPlaneServiceCheckBackendProcedure = "/controlplane.v1.ControlPlaneService/CheckBackend"
+	// ControlPlaneServiceProbeConfigProcedure is the fully-qualified name of the ControlPlaneService's
+	// ProbeConfig RPC.
+	ControlPlaneServiceProbeConfigProcedure = "/controlplane.v1.ControlPlaneService/ProbeConfig"
 )
 
 // ControlPlaneServiceClient is a client for the controlplane.v1.ControlPlaneService service.
@@ -121,6 +130,12 @@ type ControlPlaneServiceClient interface {
 	ListConfigRevisions(context.Context, *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error)
 	RestoreConfigRevision(context.Context, *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error)
 	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
+	// TestGitHubAuth checks one GitHub org or repo with the given credentials.
+	TestGitHubAuth(context.Context, *connect.Request[v1.TestGitHubAuthRequest]) (*connect.Response[v1.TestGitHubAuthResponse], error)
+	// CheckBackend checks that a runner backend CLI is installed and working.
+	CheckBackend(context.Context, *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error)
+	// ProbeConfig runs GitHub and backend checks for every target in a config draft.
+	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
 }
 
 // NewControlPlaneServiceClient constructs a client for the controlplane.v1.ControlPlaneService
@@ -248,6 +263,24 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("GetSystemInfo")),
 			connect.WithClientOptions(opts...),
 		),
+		testGitHubAuth: connect.NewClient[v1.TestGitHubAuthRequest, v1.TestGitHubAuthResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceTestGitHubAuthProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("TestGitHubAuth")),
+			connect.WithClientOptions(opts...),
+		),
+		checkBackend: connect.NewClient[v1.CheckBackendRequest, v1.CheckBackendResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceCheckBackendProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("CheckBackend")),
+			connect.WithClientOptions(opts...),
+		),
+		probeConfig: connect.NewClient[v1.ProbeConfigRequest, v1.ProbeConfigResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceProbeConfigProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("ProbeConfig")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -272,6 +305,9 @@ type controlPlaneServiceClient struct {
 	listConfigRevisions    *connect.Client[v1.ListConfigRevisionsRequest, v1.ListConfigRevisionsResponse]
 	restoreConfigRevision  *connect.Client[v1.RestoreConfigRevisionRequest, v1.RestoreConfigRevisionResponse]
 	getSystemInfo          *connect.Client[v1.GetSystemInfoRequest, v1.GetSystemInfoResponse]
+	testGitHubAuth         *connect.Client[v1.TestGitHubAuthRequest, v1.TestGitHubAuthResponse]
+	checkBackend           *connect.Client[v1.CheckBackendRequest, v1.CheckBackendResponse]
+	probeConfig            *connect.Client[v1.ProbeConfigRequest, v1.ProbeConfigResponse]
 }
 
 // GetSession calls controlplane.v1.ControlPlaneService.GetSession.
@@ -369,6 +405,21 @@ func (c *controlPlaneServiceClient) GetSystemInfo(ctx context.Context, req *conn
 	return c.getSystemInfo.CallUnary(ctx, req)
 }
 
+// TestGitHubAuth calls controlplane.v1.ControlPlaneService.TestGitHubAuth.
+func (c *controlPlaneServiceClient) TestGitHubAuth(ctx context.Context, req *connect.Request[v1.TestGitHubAuthRequest]) (*connect.Response[v1.TestGitHubAuthResponse], error) {
+	return c.testGitHubAuth.CallUnary(ctx, req)
+}
+
+// CheckBackend calls controlplane.v1.ControlPlaneService.CheckBackend.
+func (c *controlPlaneServiceClient) CheckBackend(ctx context.Context, req *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error) {
+	return c.checkBackend.CallUnary(ctx, req)
+}
+
+// ProbeConfig calls controlplane.v1.ControlPlaneService.ProbeConfig.
+func (c *controlPlaneServiceClient) ProbeConfig(ctx context.Context, req *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error) {
+	return c.probeConfig.CallUnary(ctx, req)
+}
+
 // ControlPlaneServiceHandler is an implementation of the controlplane.v1.ControlPlaneService
 // service.
 type ControlPlaneServiceHandler interface {
@@ -399,6 +450,12 @@ type ControlPlaneServiceHandler interface {
 	ListConfigRevisions(context.Context, *connect.Request[v1.ListConfigRevisionsRequest]) (*connect.Response[v1.ListConfigRevisionsResponse], error)
 	RestoreConfigRevision(context.Context, *connect.Request[v1.RestoreConfigRevisionRequest]) (*connect.Response[v1.RestoreConfigRevisionResponse], error)
 	GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error)
+	// TestGitHubAuth checks one GitHub org or repo with the given credentials.
+	TestGitHubAuth(context.Context, *connect.Request[v1.TestGitHubAuthRequest]) (*connect.Response[v1.TestGitHubAuthResponse], error)
+	// CheckBackend checks that a runner backend CLI is installed and working.
+	CheckBackend(context.Context, *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error)
+	// ProbeConfig runs GitHub and backend checks for every target in a config draft.
+	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -522,6 +579,24 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("GetSystemInfo")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceTestGitHubAuthHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceTestGitHubAuthProcedure,
+		svc.TestGitHubAuth,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("TestGitHubAuth")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceCheckBackendHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceCheckBackendProcedure,
+		svc.CheckBackend,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("CheckBackend")),
+		connect.WithHandlerOptions(opts...),
+	)
+	controlPlaneServiceProbeConfigHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceProbeConfigProcedure,
+		svc.ProbeConfig,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("ProbeConfig")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/controlplane.v1.ControlPlaneService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControlPlaneServiceGetSessionProcedure:
@@ -562,6 +637,12 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceRestoreConfigRevisionHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceGetSystemInfoProcedure:
 			controlPlaneServiceGetSystemInfoHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceTestGitHubAuthProcedure:
+			controlPlaneServiceTestGitHubAuthHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceCheckBackendProcedure:
+			controlPlaneServiceCheckBackendHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceProbeConfigProcedure:
+			controlPlaneServiceProbeConfigHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -645,4 +726,16 @@ func (UnimplementedControlPlaneServiceHandler) RestoreConfigRevision(context.Con
 
 func (UnimplementedControlPlaneServiceHandler) GetSystemInfo(context.Context, *connect.Request[v1.GetSystemInfoRequest]) (*connect.Response[v1.GetSystemInfoResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetSystemInfo is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) TestGitHubAuth(context.Context, *connect.Request[v1.TestGitHubAuthRequest]) (*connect.Response[v1.TestGitHubAuthResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.TestGitHubAuth is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) CheckBackend(context.Context, *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.CheckBackend is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.ProbeConfig is not implemented"))
 }

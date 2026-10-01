@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/actions/scaleset"
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite" // register pure-Go SQLite driver
 
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
+	"github.com/boring-design/elastic-fruit-runner/internal/githubclient"
 	"github.com/boring-design/elastic-fruit-runner/internal/management/migrations"
 )
 
@@ -62,7 +62,7 @@ func New(cfg *config.Config) (*Service, error) {
 
 	for i := range cfg.Orgs {
 		org := &cfg.Orgs[i]
-		client, err := createClient(org.ConfigURL(), &org.Auth)
+		client, err := githubclient.New(org.ConfigURL(), &org.Auth)
 		if err != nil {
 			return nil, fmt.Errorf("create client for org %s: %w", org.Org, err)
 		}
@@ -80,7 +80,7 @@ func New(cfg *config.Config) (*Service, error) {
 
 	for i := range cfg.Repos {
 		repo := &cfg.Repos[i]
-		client, err := createClient(repo.ConfigURL(), &repo.Auth)
+		client, err := githubclient.New(repo.ConfigURL(), &repo.Auth)
 		if err != nil {
 			return nil, fmt.Errorf("create client for repo %s: %w", repo.Repo, err)
 		}
@@ -158,39 +158,6 @@ func (svc *Service) runController(ctx context.Context, ctrl *controller.ScaleSet
 		}
 		slog.Error("controller exited with error, restarting", "runnerSet", info.Name, "err", err)
 		time.Sleep(5 * time.Second)
-	}
-}
-
-func createClient(configURL string, auth *config.AuthConfig) (*scaleset.Client, error) {
-	switch auth.Mode() {
-	case config.AuthModeGitHubApp:
-		pemBytes, readErr := os.ReadFile(auth.GitHubApp.PrivateKeyPath)
-		if readErr != nil {
-			return nil, fmt.Errorf("read GitHub App private key %s: %w", auth.GitHubApp.PrivateKeyPath, readErr)
-		}
-		slog.Info("authenticating with GitHub App",
-			"configURL", configURL,
-			"clientID", auth.GitHubApp.ClientID,
-			"installationID", auth.GitHubApp.InstallationID,
-		)
-		return scaleset.NewClientWithGitHubApp(scaleset.ClientWithGitHubAppConfig{
-			GitHubConfigURL: configURL,
-			GitHubAppAuth: scaleset.GitHubAppAuth{
-				ClientID:       auth.GitHubApp.ClientID,
-				InstallationID: auth.GitHubApp.InstallationID,
-				PrivateKey:     string(pemBytes),
-			},
-		})
-	case config.AuthModePAT:
-		slog.Info("authenticating with PAT", "configURL", configURL)
-		return scaleset.NewClientWithPersonalAccessToken(
-			scaleset.NewClientWithPersonalAccessTokenConfig{
-				GitHubConfigURL:     configURL,
-				PersonalAccessToken: *auth.PATToken,
-			},
-		)
-	default:
-		return nil, fmt.Errorf("unknown auth mode %q", auth.Mode())
 	}
 }
 
