@@ -184,3 +184,18 @@ export interface ConfigProbe {
   backends: BackendCheck[]
   errors: ConfigValidationIssue[]
 }
+
+export type StepStatus = 'pass' | 'fail' | 'pending' | 'skipped'
+
+export interface SetupStep {
+  id: string
+  title: string
+  status: StepStatus
+  message: string
+  page: string
+}
+
+export interface SetupChecklist {
+  steps: SetupStep[]
+  probedAt: Date | null
+}

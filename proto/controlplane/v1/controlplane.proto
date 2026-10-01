@@ -61,6 +61,9 @@ service ControlPlaneService {
 
   // ProbeConfig runs GitHub and backend checks for every target in a config draft.
   rpc ProbeConfig(ProbeConfigRequest) returns (ProbeConfigResponse);
+
+  // GetSetupChecklist reports how far the daemon is from a working setup.
+  rpc GetSetupChecklist(GetSetupChecklistRequest) returns (GetSetupChecklistResponse);
 }
 
 // Authentication
@@ -480,4 +483,33 @@ message ProbeConfigResponse {
   repeated TestGitHubAuthResponse targets = 1;
   repeated CheckBackendResponse backends = 2;
   repeated ConfigValidationIssue errors = 3;
+}
+
+// Setup checklist
+
+enum StepStatus {
+  STEP_STATUS_UNSPECIFIED = 0;
+  STEP_STATUS_PASS = 1;
+  STEP_STATUS_FAIL = 2;
+  STEP_STATUS_PENDING = 3;
+  STEP_STATUS_SKIPPED = 4;
+}
+
+message SetupStep {
+  string id = 1;
+  string title = 2;
+  StepStatus status = 3;
+  string message = 4;
+  // Console page that fixes this step, for example config or runner-sets.
+  string page = 5;
+}
+
+message GetSetupChecklistRequest {
+  // Run the GitHub and backend probes again before answering.
+  bool refresh = 1;
+}
+
+message GetSetupChecklistResponse {
+  repeated SetupStep steps = 1;
+  google.protobuf.Timestamp probed_at = 2;
 }

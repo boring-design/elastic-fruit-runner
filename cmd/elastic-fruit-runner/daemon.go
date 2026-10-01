@@ -131,8 +131,10 @@ func runDaemon(requestedPath string) error {
 			DatabasePath: databasePath,
 			LogPath:      configLogPath(cfg),
 			ConfigMode:   cfg == nil,
+			ActiveConfig: cfg,
 		},
 	)
+	go apiServer.RefreshProbes(ctx)
 	httpServer := &http.Server{
 		Addr:              apiAddr,
 		Handler:           apiServer.Handler(),

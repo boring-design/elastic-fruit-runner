@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -23,6 +24,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/configstate"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
+	"github.com/boring-design/elastic-fruit-runner/internal/probe"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
@@ -39,6 +41,12 @@ type Server struct {
 	idleTimeout       time.Duration
 	cors              config.CORSConfig
 	configMode        bool
+	activeConfig      *config.Config
+
+	probeMu       sync.Mutex
+	probedAt      time.Time
+	githubProbes  []githubProbe
+	backendProbes []probe.BackendResult
 }
 
 // Dependencies contains optional console services.
@@ -49,6 +57,8 @@ type Dependencies struct {
 	LogPath      string
 	// ConfigMode is true when the daemon started without a valid config file.
 	ConfigMode bool
+	// ActiveConfig is the running config, nil in config mode.
+	ActiveConfig *config.Config
 }
 
 // NewServer creates an API server backed by the management and vitals services.
@@ -77,6 +87,7 @@ func NewServer(managementService *management.Service, vitalsService *vitals.Serv
 		server.databasePath = dependencies[0].DatabasePath
 		server.logPath = dependencies[0].LogPath
 		server.configMode = dependencies[0].ConfigMode
+		server.activeConfig = dependencies[0].ActiveConfig
 	}
 	return server
 }

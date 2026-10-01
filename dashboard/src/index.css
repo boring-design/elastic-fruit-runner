@@ -799,3 +799,13 @@ input:focus {
   color: var(--dim);
   overflow-wrap: anywhere;
 }
+
+.setup-complete {
+  margin-bottom: 12px;
+  color: var(--green);
+  font-size: 11px;
+}
+
+.check-message a {
+  color: var(--blue);
+}

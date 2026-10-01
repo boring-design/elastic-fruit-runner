@@ -14,6 +14,7 @@ import {
   validateConfig,
 } from './api/fetchers'
 import { CheckRows } from './components/CheckList'
+import { SetupChecklist } from './components/SetupChecklist'
 import { useDashboardSync } from './hooks/useDashboardSync'
 import { useDashboardStore } from './store/useDashboardStore'
 import type {
@@ -27,7 +28,7 @@ import type {
   SessionState,
 } from './types'
 
-type Page = 'overview' | 'jobs' | 'runner-sets' | 'config' | 'system'
+type Page = 'overview' | 'jobs' | 'runner-sets' | 'config' | 'system' | 'setup'
 
 const pages: Array<{ id: Page; label: string }> = [
   { id: 'overview', label: 'Overview' },
@@ -183,7 +184,7 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
           {page === 'overview' && <Overview />}
           {page === 'jobs' && <JobsPage jobs={store.recentJobs} now={store.now} />}
           {page === 'runner-sets' && <RunnerSetsPage runnerSets={store.runnerSets} />}
-          {page === 'config' && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
+          {(page === 'config' || page === 'setup') && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
           {page === 'system' && <SystemPage />}
         </main>
       </div>
@@ -200,6 +201,7 @@ function Overview() {
   return (
     <>
       <PageHeader title="Overview" detail="Current daemon, runner, job, and host state." />
+      <SetupChecklist />
       <section className="stat-grid">
         <Stat label="Runner sets" value={summary.runnerSetCount} />
         <Stat label="Active runners" value={activeRunners} />
@@ -812,6 +814,7 @@ function FullPageMessage({ title, detail = '' }: { title: string; detail?: strin
 
 function pageFromHash(): Page {
   const value = window.location.hash.replace(/^#\//, '')
+  if (value === 'setup') return 'setup'
   return pages.some(page => page.id === value) ? value as Page : 'overview'
 }
 

@@ -331,6 +331,61 @@ func (CheckStatus) EnumDescriptor() ([]byte, []int) {
 	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{5}
 }
 
+type StepStatus int32
+
+const (
+	StepStatus_STEP_STATUS_UNSPECIFIED StepStatus = 0
+	StepStatus_STEP_STATUS_PASS        StepStatus = 1
+	StepStatus_STEP_STATUS_FAIL        StepStatus = 2
+	StepStatus_STEP_STATUS_PENDING     StepStatus = 3
+	StepStatus_STEP_STATUS_SKIPPED     StepStatus = 4
+)
+
+// Enum value maps for StepStatus.
+var (
+	StepStatus_name = map[int32]string{
+		0: "STEP_STATUS_UNSPECIFIED",
+		1: "STEP_STATUS_PASS",
+		2: "STEP_STATUS_FAIL",
+		3: "STEP_STATUS_PENDING",
+		4: "STEP_STATUS_SKIPPED",
+	}
+	StepStatus_value = map[string]int32{
+		"STEP_STATUS_UNSPECIFIED": 0,
+		"STEP_STATUS_PASS":        1,
+		"STEP_STATUS_FAIL":        2,
+		"STEP_STATUS_PENDING":     3,
+		"STEP_STATUS_SKIPPED":     4,
+	}
+)
+
+func (x StepStatus) Enum() *StepStatus {
+	p := new(StepStatus)
+	*p = x
+	return p
+}
+
+func (x StepStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (StepStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_controlplane_v1_controlplane_proto_enumTypes[6].Descriptor()
+}
+
+func (StepStatus) Type() protoreflect.EnumType {
+	return &file_controlplane_v1_controlplane_proto_enumTypes[6]
+}
+
+func (x StepStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use StepStatus.Descriptor instead.
+func (StepStatus) EnumDescriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{6}
+}
+
 type GetSessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -3684,6 +3739,180 @@ func (x *ProbeConfigResponse) GetErrors() []*ConfigValidationIssue {
 	return nil
 }
 
+type SetupStep struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Id      string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title   string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Status  StepStatus             `protobuf:"varint,3,opt,name=status,proto3,enum=controlplane.v1.StepStatus" json:"status,omitempty"`
+	Message string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	// Console page that fixes this step, for example config or runner-sets.
+	Page          string `protobuf:"bytes,5,opt,name=page,proto3" json:"page,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupStep) Reset() {
+	*x = SetupStep{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupStep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupStep) ProtoMessage() {}
+
+func (x *SetupStep) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupStep.ProtoReflect.Descriptor instead.
+func (*SetupStep) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *SetupStep) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *SetupStep) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *SetupStep) GetStatus() StepStatus {
+	if x != nil {
+		return x.Status
+	}
+	return StepStatus_STEP_STATUS_UNSPECIFIED
+}
+
+func (x *SetupStep) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *SetupStep) GetPage() string {
+	if x != nil {
+		return x.Page
+	}
+	return ""
+}
+
+type GetSetupChecklistRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Run the GitHub and backend probes again before answering.
+	Refresh       bool `protobuf:"varint,1,opt,name=refresh,proto3" json:"refresh,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSetupChecklistRequest) Reset() {
+	*x = GetSetupChecklistRequest{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSetupChecklistRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSetupChecklistRequest) ProtoMessage() {}
+
+func (x *GetSetupChecklistRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSetupChecklistRequest.ProtoReflect.Descriptor instead.
+func (*GetSetupChecklistRequest) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *GetSetupChecklistRequest) GetRefresh() bool {
+	if x != nil {
+		return x.Refresh
+	}
+	return false
+}
+
+type GetSetupChecklistResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Steps         []*SetupStep           `protobuf:"bytes,1,rep,name=steps,proto3" json:"steps,omitempty"`
+	ProbedAt      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=probed_at,json=probedAt,proto3" json:"probed_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetSetupChecklistResponse) Reset() {
+	*x = GetSetupChecklistResponse{}
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetSetupChecklistResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetSetupChecklistResponse) ProtoMessage() {}
+
+func (x *GetSetupChecklistResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_controlplane_v1_controlplane_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetSetupChecklistResponse.ProtoReflect.Descriptor instead.
+func (*GetSetupChecklistResponse) Descriptor() ([]byte, []int) {
+	return file_controlplane_v1_controlplane_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *GetSetupChecklistResponse) GetSteps() []*SetupStep {
+	if x != nil {
+		return x.Steps
+	}
+	return nil
+}
+
+func (x *GetSetupChecklistResponse) GetProbedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ProbedAt
+	}
+	return nil
+}
+
 var File_controlplane_v1_controlplane_proto protoreflect.FileDescriptor
 
 const file_controlplane_v1_controlplane_proto_rawDesc = "" +
@@ -3954,7 +4183,18 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x13ProbeConfigResponse\x12A\n" +
 	"\atargets\x18\x01 \x03(\v2'.controlplane.v1.TestGitHubAuthResponseR\atargets\x12A\n" +
 	"\bbackends\x18\x02 \x03(\v2%.controlplane.v1.CheckBackendResponseR\bbackends\x12>\n" +
-	"\x06errors\x18\x03 \x03(\v2&.controlplane.v1.ConfigValidationIssueR\x06errors*H\n" +
+	"\x06errors\x18\x03 \x03(\v2&.controlplane.v1.ConfigValidationIssueR\x06errors\"\x94\x01\n" +
+	"\tSetupStep\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x123\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1b.controlplane.v1.StepStatusR\x06status\x12\x18\n" +
+	"\amessage\x18\x04 \x01(\tR\amessage\x12\x12\n" +
+	"\x04page\x18\x05 \x01(\tR\x04page\"4\n" +
+	"\x18GetSetupChecklistRequest\x12\x18\n" +
+	"\arefresh\x18\x01 \x01(\bR\arefresh\"\x86\x01\n" +
+	"\x19GetSetupChecklistResponse\x120\n" +
+	"\x05steps\x18\x01 \x03(\v2\x1a.controlplane.v1.SetupStepR\x05steps\x127\n" +
+	"\tprobed_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\bprobedAt*H\n" +
 	"\aBackend\x12\x17\n" +
 	"\x13BACKEND_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fBACKEND_TART\x10\x01\x12\x12\n" +
@@ -3983,7 +4223,14 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\x18CHECK_STATUS_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11CHECK_STATUS_PASS\x10\x01\x12\x15\n" +
 	"\x11CHECK_STATUS_FAIL\x10\x02\x12\x18\n" +
-	"\x14CHECK_STATUS_SKIPPED\x10\x032\x85\x11\n" +
+	"\x14CHECK_STATUS_SKIPPED\x10\x03*\x87\x01\n" +
+	"\n" +
+	"StepStatus\x12\x1b\n" +
+	"\x17STEP_STATUS_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10STEP_STATUS_PASS\x10\x01\x12\x14\n" +
+	"\x10STEP_STATUS_FAIL\x10\x02\x12\x17\n" +
+	"\x13STEP_STATUS_PENDING\x10\x03\x12\x17\n" +
+	"\x13STEP_STATUS_SKIPPED\x10\x042\xf1\x11\n" +
 	"\x13ControlPlaneService\x12U\n" +
 	"\n" +
 	"GetSession\x12\".controlplane.v1.GetSessionRequest\x1a#.controlplane.v1.GetSessionResponse\x12U\n" +
@@ -4010,7 +4257,8 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"\rGetSystemInfo\x12%.controlplane.v1.GetSystemInfoRequest\x1a&.controlplane.v1.GetSystemInfoResponse\x12a\n" +
 	"\x0eTestGitHubAuth\x12&.controlplane.v1.TestGitHubAuthRequest\x1a'.controlplane.v1.TestGitHubAuthResponse\x12[\n" +
 	"\fCheckBackend\x12$.controlplane.v1.CheckBackendRequest\x1a%.controlplane.v1.CheckBackendResponse\x12X\n" +
-	"\vProbeConfig\x12#.controlplane.v1.ProbeConfigRequest\x1a$.controlplane.v1.ProbeConfigResponseBRZPgithub.com/boring-design/elastic-fruit-runner/gen/controlplane/v1;controlplanev1b\x06proto3"
+	"\vProbeConfig\x12#.controlplane.v1.ProbeConfigRequest\x1a$.controlplane.v1.ProbeConfigResponse\x12j\n" +
+	"\x11GetSetupChecklist\x12).controlplane.v1.GetSetupChecklistRequest\x1a*.controlplane.v1.GetSetupChecklistResponseBRZPgithub.com/boring-design/elastic-fruit-runner/gen/controlplane/v1;controlplanev1b\x06proto3"
 
 var (
 	file_controlplane_v1_controlplane_proto_rawDescOnce sync.Once
@@ -4024,8 +4272,8 @@ func file_controlplane_v1_controlplane_proto_rawDescGZIP() []byte {
 	return file_controlplane_v1_controlplane_proto_rawDescData
 }
 
-var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
+var file_controlplane_v1_controlplane_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_controlplane_v1_controlplane_proto_msgTypes = make([]protoimpl.MessageInfo, 59)
 var file_controlplane_v1_controlplane_proto_goTypes = []any{
 	(Backend)(0),                           // 0: controlplane.v1.Backend
 	(RunnerState)(0),                       // 1: controlplane.v1.RunnerState
@@ -4033,161 +4281,170 @@ var file_controlplane_v1_controlplane_proto_goTypes = []any{
 	(ResourceAccuracy)(0),                  // 3: controlplane.v1.ResourceAccuracy
 	(ConfigSyncState)(0),                   // 4: controlplane.v1.ConfigSyncState
 	(CheckStatus)(0),                       // 5: controlplane.v1.CheckStatus
-	(*GetSessionRequest)(nil),              // 6: controlplane.v1.GetSessionRequest
-	(*GetSessionResponse)(nil),             // 7: controlplane.v1.GetSessionResponse
-	(*SetupAdminRequest)(nil),              // 8: controlplane.v1.SetupAdminRequest
-	(*SetupAdminResponse)(nil),             // 9: controlplane.v1.SetupAdminResponse
-	(*LoginRequest)(nil),                   // 10: controlplane.v1.LoginRequest
-	(*LoginResponse)(nil),                  // 11: controlplane.v1.LoginResponse
-	(*LogoutRequest)(nil),                  // 12: controlplane.v1.LogoutRequest
-	(*LogoutResponse)(nil),                 // 13: controlplane.v1.LogoutResponse
-	(*GetServiceInfoRequest)(nil),          // 14: controlplane.v1.GetServiceInfoRequest
-	(*GetServiceInfoResponse)(nil),         // 15: controlplane.v1.GetServiceInfoResponse
-	(*GetDashboardSummaryRequest)(nil),     // 16: controlplane.v1.GetDashboardSummaryRequest
-	(*GetDashboardSummaryResponse)(nil),    // 17: controlplane.v1.GetDashboardSummaryResponse
-	(*BuildInfo)(nil),                      // 18: controlplane.v1.BuildInfo
-	(*Module)(nil),                         // 19: controlplane.v1.Module
-	(*BuildSetting)(nil),                   // 20: controlplane.v1.BuildSetting
-	(*ListRunnerSetsRequest)(nil),          // 21: controlplane.v1.ListRunnerSetsRequest
-	(*ListRunnerSetsResponse)(nil),         // 22: controlplane.v1.ListRunnerSetsResponse
-	(*RunnerSet)(nil),                      // 23: controlplane.v1.RunnerSet
-	(*Runner)(nil),                         // 24: controlplane.v1.Runner
-	(*ListJobRecordsRequest)(nil),          // 25: controlplane.v1.ListJobRecordsRequest
-	(*ListJobRecordsResponse)(nil),         // 26: controlplane.v1.ListJobRecordsResponse
-	(*JobRecord)(nil),                      // 27: controlplane.v1.JobRecord
-	(*GetJobDetailRequest)(nil),            // 28: controlplane.v1.GetJobDetailRequest
-	(*GetJobDetailResponse)(nil),           // 29: controlplane.v1.GetJobDetailResponse
-	(*GetJobLogsRequest)(nil),              // 30: controlplane.v1.GetJobLogsRequest
-	(*JobLogLine)(nil),                     // 31: controlplane.v1.JobLogLine
-	(*GetJobLogsResponse)(nil),             // 32: controlplane.v1.GetJobLogsResponse
-	(*ResourceSample)(nil),                 // 33: controlplane.v1.ResourceSample
-	(*GetJobResourceSamplesRequest)(nil),   // 34: controlplane.v1.GetJobResourceSamplesRequest
-	(*GetJobResourceSamplesResponse)(nil),  // 35: controlplane.v1.GetJobResourceSamplesResponse
-	(*GetHostResourceSamplesRequest)(nil),  // 36: controlplane.v1.GetHostResourceSamplesRequest
-	(*GetHostResourceSamplesResponse)(nil), // 37: controlplane.v1.GetHostResourceSamplesResponse
-	(*GetMachineVitalsRequest)(nil),        // 38: controlplane.v1.GetMachineVitalsRequest
-	(*GetMachineVitalsResponse)(nil),       // 39: controlplane.v1.GetMachineVitalsResponse
-	(*GetConfigStatusRequest)(nil),         // 40: controlplane.v1.GetConfigStatusRequest
-	(*GetConfigStatusResponse)(nil),        // 41: controlplane.v1.GetConfigStatusResponse
-	(*ConfigValidationIssue)(nil),          // 42: controlplane.v1.ConfigValidationIssue
-	(*ValidateConfigRequest)(nil),          // 43: controlplane.v1.ValidateConfigRequest
-	(*ValidateConfigResponse)(nil),         // 44: controlplane.v1.ValidateConfigResponse
-	(*SaveConfigRequest)(nil),              // 45: controlplane.v1.SaveConfigRequest
-	(*SaveConfigResponse)(nil),             // 46: controlplane.v1.SaveConfigResponse
-	(*ConfigRevision)(nil),                 // 47: controlplane.v1.ConfigRevision
-	(*ListConfigRevisionsRequest)(nil),     // 48: controlplane.v1.ListConfigRevisionsRequest
-	(*ListConfigRevisionsResponse)(nil),    // 49: controlplane.v1.ListConfigRevisionsResponse
-	(*RestoreConfigRevisionRequest)(nil),   // 50: controlplane.v1.RestoreConfigRevisionRequest
-	(*RestoreConfigRevisionResponse)(nil),  // 51: controlplane.v1.RestoreConfigRevisionResponse
-	(*GetSystemInfoRequest)(nil),           // 52: controlplane.v1.GetSystemInfoRequest
-	(*GetSystemInfoResponse)(nil),          // 53: controlplane.v1.GetSystemInfoResponse
-	(*Check)(nil),                          // 54: controlplane.v1.Check
-	(*GitHubAppInput)(nil),                 // 55: controlplane.v1.GitHubAppInput
-	(*TestGitHubAuthRequest)(nil),          // 56: controlplane.v1.TestGitHubAuthRequest
-	(*TestGitHubAuthResponse)(nil),         // 57: controlplane.v1.TestGitHubAuthResponse
-	(*CheckBackendRequest)(nil),            // 58: controlplane.v1.CheckBackendRequest
-	(*CheckBackendResponse)(nil),           // 59: controlplane.v1.CheckBackendResponse
-	(*ProbeConfigRequest)(nil),             // 60: controlplane.v1.ProbeConfigRequest
-	(*ProbeConfigResponse)(nil),            // 61: controlplane.v1.ProbeConfigResponse
-	(*timestamppb.Timestamp)(nil),          // 62: google.protobuf.Timestamp
+	(StepStatus)(0),                        // 6: controlplane.v1.StepStatus
+	(*GetSessionRequest)(nil),              // 7: controlplane.v1.GetSessionRequest
+	(*GetSessionResponse)(nil),             // 8: controlplane.v1.GetSessionResponse
+	(*SetupAdminRequest)(nil),              // 9: controlplane.v1.SetupAdminRequest
+	(*SetupAdminResponse)(nil),             // 10: controlplane.v1.SetupAdminResponse
+	(*LoginRequest)(nil),                   // 11: controlplane.v1.LoginRequest
+	(*LoginResponse)(nil),                  // 12: controlplane.v1.LoginResponse
+	(*LogoutRequest)(nil),                  // 13: controlplane.v1.LogoutRequest
+	(*LogoutResponse)(nil),                 // 14: controlplane.v1.LogoutResponse
+	(*GetServiceInfoRequest)(nil),          // 15: controlplane.v1.GetServiceInfoRequest
+	(*GetServiceInfoResponse)(nil),         // 16: controlplane.v1.GetServiceInfoResponse
+	(*GetDashboardSummaryRequest)(nil),     // 17: controlplane.v1.GetDashboardSummaryRequest
+	(*GetDashboardSummaryResponse)(nil),    // 18: controlplane.v1.GetDashboardSummaryResponse
+	(*BuildInfo)(nil),                      // 19: controlplane.v1.BuildInfo
+	(*Module)(nil),                         // 20: controlplane.v1.Module
+	(*BuildSetting)(nil),                   // 21: controlplane.v1.BuildSetting
+	(*ListRunnerSetsRequest)(nil),          // 22: controlplane.v1.ListRunnerSetsRequest
+	(*ListRunnerSetsResponse)(nil),         // 23: controlplane.v1.ListRunnerSetsResponse
+	(*RunnerSet)(nil),                      // 24: controlplane.v1.RunnerSet
+	(*Runner)(nil),                         // 25: controlplane.v1.Runner
+	(*ListJobRecordsRequest)(nil),          // 26: controlplane.v1.ListJobRecordsRequest
+	(*ListJobRecordsResponse)(nil),         // 27: controlplane.v1.ListJobRecordsResponse
+	(*JobRecord)(nil),                      // 28: controlplane.v1.JobRecord
+	(*GetJobDetailRequest)(nil),            // 29: controlplane.v1.GetJobDetailRequest
+	(*GetJobDetailResponse)(nil),           // 30: controlplane.v1.GetJobDetailResponse
+	(*GetJobLogsRequest)(nil),              // 31: controlplane.v1.GetJobLogsRequest
+	(*JobLogLine)(nil),                     // 32: controlplane.v1.JobLogLine
+	(*GetJobLogsResponse)(nil),             // 33: controlplane.v1.GetJobLogsResponse
+	(*ResourceSample)(nil),                 // 34: controlplane.v1.ResourceSample
+	(*GetJobResourceSamplesRequest)(nil),   // 35: controlplane.v1.GetJobResourceSamplesRequest
+	(*GetJobResourceSamplesResponse)(nil),  // 36: controlplane.v1.GetJobResourceSamplesResponse
+	(*GetHostResourceSamplesRequest)(nil),  // 37: controlplane.v1.GetHostResourceSamplesRequest
+	(*GetHostResourceSamplesResponse)(nil), // 38: controlplane.v1.GetHostResourceSamplesResponse
+	(*GetMachineVitalsRequest)(nil),        // 39: controlplane.v1.GetMachineVitalsRequest
+	(*GetMachineVitalsResponse)(nil),       // 40: controlplane.v1.GetMachineVitalsResponse
+	(*GetConfigStatusRequest)(nil),         // 41: controlplane.v1.GetConfigStatusRequest
+	(*GetConfigStatusResponse)(nil),        // 42: controlplane.v1.GetConfigStatusResponse
+	(*ConfigValidationIssue)(nil),          // 43: controlplane.v1.ConfigValidationIssue
+	(*ValidateConfigRequest)(nil),          // 44: controlplane.v1.ValidateConfigRequest
+	(*ValidateConfigResponse)(nil),         // 45: controlplane.v1.ValidateConfigResponse
+	(*SaveConfigRequest)(nil),              // 46: controlplane.v1.SaveConfigRequest
+	(*SaveConfigResponse)(nil),             // 47: controlplane.v1.SaveConfigResponse
+	(*ConfigRevision)(nil),                 // 48: controlplane.v1.ConfigRevision
+	(*ListConfigRevisionsRequest)(nil),     // 49: controlplane.v1.ListConfigRevisionsRequest
+	(*ListConfigRevisionsResponse)(nil),    // 50: controlplane.v1.ListConfigRevisionsResponse
+	(*RestoreConfigRevisionRequest)(nil),   // 51: controlplane.v1.RestoreConfigRevisionRequest
+	(*RestoreConfigRevisionResponse)(nil),  // 52: controlplane.v1.RestoreConfigRevisionResponse
+	(*GetSystemInfoRequest)(nil),           // 53: controlplane.v1.GetSystemInfoRequest
+	(*GetSystemInfoResponse)(nil),          // 54: controlplane.v1.GetSystemInfoResponse
+	(*Check)(nil),                          // 55: controlplane.v1.Check
+	(*GitHubAppInput)(nil),                 // 56: controlplane.v1.GitHubAppInput
+	(*TestGitHubAuthRequest)(nil),          // 57: controlplane.v1.TestGitHubAuthRequest
+	(*TestGitHubAuthResponse)(nil),         // 58: controlplane.v1.TestGitHubAuthResponse
+	(*CheckBackendRequest)(nil),            // 59: controlplane.v1.CheckBackendRequest
+	(*CheckBackendResponse)(nil),           // 60: controlplane.v1.CheckBackendResponse
+	(*ProbeConfigRequest)(nil),             // 61: controlplane.v1.ProbeConfigRequest
+	(*ProbeConfigResponse)(nil),            // 62: controlplane.v1.ProbeConfigResponse
+	(*SetupStep)(nil),                      // 63: controlplane.v1.SetupStep
+	(*GetSetupChecklistRequest)(nil),       // 64: controlplane.v1.GetSetupChecklistRequest
+	(*GetSetupChecklistResponse)(nil),      // 65: controlplane.v1.GetSetupChecklistResponse
+	(*timestamppb.Timestamp)(nil),          // 66: google.protobuf.Timestamp
 }
 var file_controlplane_v1_controlplane_proto_depIdxs = []int32{
-	18, // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
-	62, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
-	19, // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
-	19, // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
-	20, // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
-	19, // 5: controlplane.v1.Module.replace:type_name -> controlplane.v1.Module
-	23, // 6: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
+	19, // 0: controlplane.v1.GetServiceInfoResponse.build_info:type_name -> controlplane.v1.BuildInfo
+	66, // 1: controlplane.v1.GetServiceInfoResponse.started_at:type_name -> google.protobuf.Timestamp
+	20, // 2: controlplane.v1.BuildInfo.main:type_name -> controlplane.v1.Module
+	20, // 3: controlplane.v1.BuildInfo.deps:type_name -> controlplane.v1.Module
+	21, // 4: controlplane.v1.BuildInfo.settings:type_name -> controlplane.v1.BuildSetting
+	20, // 5: controlplane.v1.Module.replace:type_name -> controlplane.v1.Module
+	24, // 6: controlplane.v1.ListRunnerSetsResponse.runner_sets:type_name -> controlplane.v1.RunnerSet
 	0,  // 7: controlplane.v1.RunnerSet.backend:type_name -> controlplane.v1.Backend
-	24, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
+	25, // 8: controlplane.v1.RunnerSet.runners:type_name -> controlplane.v1.Runner
 	1,  // 9: controlplane.v1.Runner.state:type_name -> controlplane.v1.RunnerState
-	62, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
-	62, // 11: controlplane.v1.ListJobRecordsRequest.from:type_name -> google.protobuf.Timestamp
-	62, // 12: controlplane.v1.ListJobRecordsRequest.to:type_name -> google.protobuf.Timestamp
-	27, // 13: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
+	66, // 10: controlplane.v1.Runner.since:type_name -> google.protobuf.Timestamp
+	66, // 11: controlplane.v1.ListJobRecordsRequest.from:type_name -> google.protobuf.Timestamp
+	66, // 12: controlplane.v1.ListJobRecordsRequest.to:type_name -> google.protobuf.Timestamp
+	28, // 13: controlplane.v1.ListJobRecordsResponse.job_records:type_name -> controlplane.v1.JobRecord
 	2,  // 14: controlplane.v1.JobRecord.result:type_name -> controlplane.v1.JobResult
-	62, // 15: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
-	62, // 16: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
-	62, // 17: controlplane.v1.JobRecord.queued_at:type_name -> google.protobuf.Timestamp
-	62, // 18: controlplane.v1.JobRecord.scale_set_assigned_at:type_name -> google.protobuf.Timestamp
-	62, // 19: controlplane.v1.JobRecord.runner_assigned_at:type_name -> google.protobuf.Timestamp
+	66, // 15: controlplane.v1.JobRecord.started_at:type_name -> google.protobuf.Timestamp
+	66, // 16: controlplane.v1.JobRecord.completed_at:type_name -> google.protobuf.Timestamp
+	66, // 17: controlplane.v1.JobRecord.queued_at:type_name -> google.protobuf.Timestamp
+	66, // 18: controlplane.v1.JobRecord.scale_set_assigned_at:type_name -> google.protobuf.Timestamp
+	66, // 19: controlplane.v1.JobRecord.runner_assigned_at:type_name -> google.protobuf.Timestamp
 	0,  // 20: controlplane.v1.JobRecord.backend:type_name -> controlplane.v1.Backend
-	27, // 21: controlplane.v1.GetJobDetailResponse.job:type_name -> controlplane.v1.JobRecord
-	62, // 22: controlplane.v1.JobLogLine.recorded_at:type_name -> google.protobuf.Timestamp
-	31, // 23: controlplane.v1.GetJobLogsResponse.lines:type_name -> controlplane.v1.JobLogLine
-	62, // 24: controlplane.v1.ResourceSample.recorded_at:type_name -> google.protobuf.Timestamp
+	28, // 21: controlplane.v1.GetJobDetailResponse.job:type_name -> controlplane.v1.JobRecord
+	66, // 22: controlplane.v1.JobLogLine.recorded_at:type_name -> google.protobuf.Timestamp
+	32, // 23: controlplane.v1.GetJobLogsResponse.lines:type_name -> controlplane.v1.JobLogLine
+	66, // 24: controlplane.v1.ResourceSample.recorded_at:type_name -> google.protobuf.Timestamp
 	3,  // 25: controlplane.v1.ResourceSample.accuracy:type_name -> controlplane.v1.ResourceAccuracy
-	33, // 26: controlplane.v1.GetJobResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
-	62, // 27: controlplane.v1.GetHostResourceSamplesRequest.from:type_name -> google.protobuf.Timestamp
-	62, // 28: controlplane.v1.GetHostResourceSamplesRequest.to:type_name -> google.protobuf.Timestamp
-	33, // 29: controlplane.v1.GetHostResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
-	62, // 30: controlplane.v1.GetHostResourceSamplesResponse.earliest_at:type_name -> google.protobuf.Timestamp
+	34, // 26: controlplane.v1.GetJobResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
+	66, // 27: controlplane.v1.GetHostResourceSamplesRequest.from:type_name -> google.protobuf.Timestamp
+	66, // 28: controlplane.v1.GetHostResourceSamplesRequest.to:type_name -> google.protobuf.Timestamp
+	34, // 29: controlplane.v1.GetHostResourceSamplesResponse.samples:type_name -> controlplane.v1.ResourceSample
+	66, // 30: controlplane.v1.GetHostResourceSamplesResponse.earliest_at:type_name -> google.protobuf.Timestamp
 	4,  // 31: controlplane.v1.GetConfigStatusResponse.state:type_name -> controlplane.v1.ConfigSyncState
-	62, // 32: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
-	62, // 33: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
-	42, // 34: controlplane.v1.ValidateConfigResponse.errors:type_name -> controlplane.v1.ConfigValidationIssue
-	42, // 35: controlplane.v1.ValidateConfigResponse.warnings:type_name -> controlplane.v1.ConfigValidationIssue
-	44, // 36: controlplane.v1.SaveConfigResponse.validation:type_name -> controlplane.v1.ValidateConfigResponse
-	41, // 37: controlplane.v1.SaveConfigResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
-	62, // 38: controlplane.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
-	47, // 39: controlplane.v1.ListConfigRevisionsResponse.revisions:type_name -> controlplane.v1.ConfigRevision
-	41, // 40: controlplane.v1.RestoreConfigRevisionResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
+	66, // 32: controlplane.v1.GetConfigStatusResponse.disk_modified_at:type_name -> google.protobuf.Timestamp
+	66, // 33: controlplane.v1.GetConfigStatusResponse.active_loaded_at:type_name -> google.protobuf.Timestamp
+	43, // 34: controlplane.v1.ValidateConfigResponse.errors:type_name -> controlplane.v1.ConfigValidationIssue
+	43, // 35: controlplane.v1.ValidateConfigResponse.warnings:type_name -> controlplane.v1.ConfigValidationIssue
+	45, // 36: controlplane.v1.SaveConfigResponse.validation:type_name -> controlplane.v1.ValidateConfigResponse
+	42, // 37: controlplane.v1.SaveConfigResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
+	66, // 38: controlplane.v1.ConfigRevision.created_at:type_name -> google.protobuf.Timestamp
+	48, // 39: controlplane.v1.ListConfigRevisionsResponse.revisions:type_name -> controlplane.v1.ConfigRevision
+	42, // 40: controlplane.v1.RestoreConfigRevisionResponse.status:type_name -> controlplane.v1.GetConfigStatusResponse
 	5,  // 41: controlplane.v1.Check.status:type_name -> controlplane.v1.CheckStatus
-	55, // 42: controlplane.v1.TestGitHubAuthRequest.github_app:type_name -> controlplane.v1.GitHubAppInput
-	54, // 43: controlplane.v1.TestGitHubAuthResponse.checks:type_name -> controlplane.v1.Check
-	57, // 44: controlplane.v1.ProbeConfigResponse.targets:type_name -> controlplane.v1.TestGitHubAuthResponse
-	59, // 45: controlplane.v1.ProbeConfigResponse.backends:type_name -> controlplane.v1.CheckBackendResponse
-	42, // 46: controlplane.v1.ProbeConfigResponse.errors:type_name -> controlplane.v1.ConfigValidationIssue
-	6,  // 47: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
-	8,  // 48: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
-	10, // 49: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
-	12, // 50: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
-	14, // 51: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
-	16, // 52: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
-	21, // 53: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
-	25, // 54: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
-	28, // 55: controlplane.v1.ControlPlaneService.GetJobDetail:input_type -> controlplane.v1.GetJobDetailRequest
-	30, // 56: controlplane.v1.ControlPlaneService.GetJobLogs:input_type -> controlplane.v1.GetJobLogsRequest
-	34, // 57: controlplane.v1.ControlPlaneService.GetJobResourceSamples:input_type -> controlplane.v1.GetJobResourceSamplesRequest
-	36, // 58: controlplane.v1.ControlPlaneService.GetHostResourceSamples:input_type -> controlplane.v1.GetHostResourceSamplesRequest
-	38, // 59: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
-	40, // 60: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
-	43, // 61: controlplane.v1.ControlPlaneService.ValidateConfig:input_type -> controlplane.v1.ValidateConfigRequest
-	45, // 62: controlplane.v1.ControlPlaneService.SaveConfig:input_type -> controlplane.v1.SaveConfigRequest
-	48, // 63: controlplane.v1.ControlPlaneService.ListConfigRevisions:input_type -> controlplane.v1.ListConfigRevisionsRequest
-	50, // 64: controlplane.v1.ControlPlaneService.RestoreConfigRevision:input_type -> controlplane.v1.RestoreConfigRevisionRequest
-	52, // 65: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
-	56, // 66: controlplane.v1.ControlPlaneService.TestGitHubAuth:input_type -> controlplane.v1.TestGitHubAuthRequest
-	58, // 67: controlplane.v1.ControlPlaneService.CheckBackend:input_type -> controlplane.v1.CheckBackendRequest
-	60, // 68: controlplane.v1.ControlPlaneService.ProbeConfig:input_type -> controlplane.v1.ProbeConfigRequest
-	7,  // 69: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
-	9,  // 70: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
-	11, // 71: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
-	13, // 72: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
-	15, // 73: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
-	17, // 74: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
-	22, // 75: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
-	26, // 76: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
-	29, // 77: controlplane.v1.ControlPlaneService.GetJobDetail:output_type -> controlplane.v1.GetJobDetailResponse
-	32, // 78: controlplane.v1.ControlPlaneService.GetJobLogs:output_type -> controlplane.v1.GetJobLogsResponse
-	35, // 79: controlplane.v1.ControlPlaneService.GetJobResourceSamples:output_type -> controlplane.v1.GetJobResourceSamplesResponse
-	37, // 80: controlplane.v1.ControlPlaneService.GetHostResourceSamples:output_type -> controlplane.v1.GetHostResourceSamplesResponse
-	39, // 81: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
-	41, // 82: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
-	44, // 83: controlplane.v1.ControlPlaneService.ValidateConfig:output_type -> controlplane.v1.ValidateConfigResponse
-	46, // 84: controlplane.v1.ControlPlaneService.SaveConfig:output_type -> controlplane.v1.SaveConfigResponse
-	49, // 85: controlplane.v1.ControlPlaneService.ListConfigRevisions:output_type -> controlplane.v1.ListConfigRevisionsResponse
-	51, // 86: controlplane.v1.ControlPlaneService.RestoreConfigRevision:output_type -> controlplane.v1.RestoreConfigRevisionResponse
-	53, // 87: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
-	57, // 88: controlplane.v1.ControlPlaneService.TestGitHubAuth:output_type -> controlplane.v1.TestGitHubAuthResponse
-	59, // 89: controlplane.v1.ControlPlaneService.CheckBackend:output_type -> controlplane.v1.CheckBackendResponse
-	61, // 90: controlplane.v1.ControlPlaneService.ProbeConfig:output_type -> controlplane.v1.ProbeConfigResponse
-	69, // [69:91] is the sub-list for method output_type
-	47, // [47:69] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	56, // 42: controlplane.v1.TestGitHubAuthRequest.github_app:type_name -> controlplane.v1.GitHubAppInput
+	55, // 43: controlplane.v1.TestGitHubAuthResponse.checks:type_name -> controlplane.v1.Check
+	58, // 44: controlplane.v1.ProbeConfigResponse.targets:type_name -> controlplane.v1.TestGitHubAuthResponse
+	60, // 45: controlplane.v1.ProbeConfigResponse.backends:type_name -> controlplane.v1.CheckBackendResponse
+	43, // 46: controlplane.v1.ProbeConfigResponse.errors:type_name -> controlplane.v1.ConfigValidationIssue
+	6,  // 47: controlplane.v1.SetupStep.status:type_name -> controlplane.v1.StepStatus
+	63, // 48: controlplane.v1.GetSetupChecklistResponse.steps:type_name -> controlplane.v1.SetupStep
+	66, // 49: controlplane.v1.GetSetupChecklistResponse.probed_at:type_name -> google.protobuf.Timestamp
+	7,  // 50: controlplane.v1.ControlPlaneService.GetSession:input_type -> controlplane.v1.GetSessionRequest
+	9,  // 51: controlplane.v1.ControlPlaneService.SetupAdmin:input_type -> controlplane.v1.SetupAdminRequest
+	11, // 52: controlplane.v1.ControlPlaneService.Login:input_type -> controlplane.v1.LoginRequest
+	13, // 53: controlplane.v1.ControlPlaneService.Logout:input_type -> controlplane.v1.LogoutRequest
+	15, // 54: controlplane.v1.ControlPlaneService.GetServiceInfo:input_type -> controlplane.v1.GetServiceInfoRequest
+	17, // 55: controlplane.v1.ControlPlaneService.GetDashboardSummary:input_type -> controlplane.v1.GetDashboardSummaryRequest
+	22, // 56: controlplane.v1.ControlPlaneService.ListRunnerSets:input_type -> controlplane.v1.ListRunnerSetsRequest
+	26, // 57: controlplane.v1.ControlPlaneService.ListJobRecords:input_type -> controlplane.v1.ListJobRecordsRequest
+	29, // 58: controlplane.v1.ControlPlaneService.GetJobDetail:input_type -> controlplane.v1.GetJobDetailRequest
+	31, // 59: controlplane.v1.ControlPlaneService.GetJobLogs:input_type -> controlplane.v1.GetJobLogsRequest
+	35, // 60: controlplane.v1.ControlPlaneService.GetJobResourceSamples:input_type -> controlplane.v1.GetJobResourceSamplesRequest
+	37, // 61: controlplane.v1.ControlPlaneService.GetHostResourceSamples:input_type -> controlplane.v1.GetHostResourceSamplesRequest
+	39, // 62: controlplane.v1.ControlPlaneService.GetMachineVitals:input_type -> controlplane.v1.GetMachineVitalsRequest
+	41, // 63: controlplane.v1.ControlPlaneService.GetConfigStatus:input_type -> controlplane.v1.GetConfigStatusRequest
+	44, // 64: controlplane.v1.ControlPlaneService.ValidateConfig:input_type -> controlplane.v1.ValidateConfigRequest
+	46, // 65: controlplane.v1.ControlPlaneService.SaveConfig:input_type -> controlplane.v1.SaveConfigRequest
+	49, // 66: controlplane.v1.ControlPlaneService.ListConfigRevisions:input_type -> controlplane.v1.ListConfigRevisionsRequest
+	51, // 67: controlplane.v1.ControlPlaneService.RestoreConfigRevision:input_type -> controlplane.v1.RestoreConfigRevisionRequest
+	53, // 68: controlplane.v1.ControlPlaneService.GetSystemInfo:input_type -> controlplane.v1.GetSystemInfoRequest
+	57, // 69: controlplane.v1.ControlPlaneService.TestGitHubAuth:input_type -> controlplane.v1.TestGitHubAuthRequest
+	59, // 70: controlplane.v1.ControlPlaneService.CheckBackend:input_type -> controlplane.v1.CheckBackendRequest
+	61, // 71: controlplane.v1.ControlPlaneService.ProbeConfig:input_type -> controlplane.v1.ProbeConfigRequest
+	64, // 72: controlplane.v1.ControlPlaneService.GetSetupChecklist:input_type -> controlplane.v1.GetSetupChecklistRequest
+	8,  // 73: controlplane.v1.ControlPlaneService.GetSession:output_type -> controlplane.v1.GetSessionResponse
+	10, // 74: controlplane.v1.ControlPlaneService.SetupAdmin:output_type -> controlplane.v1.SetupAdminResponse
+	12, // 75: controlplane.v1.ControlPlaneService.Login:output_type -> controlplane.v1.LoginResponse
+	14, // 76: controlplane.v1.ControlPlaneService.Logout:output_type -> controlplane.v1.LogoutResponse
+	16, // 77: controlplane.v1.ControlPlaneService.GetServiceInfo:output_type -> controlplane.v1.GetServiceInfoResponse
+	18, // 78: controlplane.v1.ControlPlaneService.GetDashboardSummary:output_type -> controlplane.v1.GetDashboardSummaryResponse
+	23, // 79: controlplane.v1.ControlPlaneService.ListRunnerSets:output_type -> controlplane.v1.ListRunnerSetsResponse
+	27, // 80: controlplane.v1.ControlPlaneService.ListJobRecords:output_type -> controlplane.v1.ListJobRecordsResponse
+	30, // 81: controlplane.v1.ControlPlaneService.GetJobDetail:output_type -> controlplane.v1.GetJobDetailResponse
+	33, // 82: controlplane.v1.ControlPlaneService.GetJobLogs:output_type -> controlplane.v1.GetJobLogsResponse
+	36, // 83: controlplane.v1.ControlPlaneService.GetJobResourceSamples:output_type -> controlplane.v1.GetJobResourceSamplesResponse
+	38, // 84: controlplane.v1.ControlPlaneService.GetHostResourceSamples:output_type -> controlplane.v1.GetHostResourceSamplesResponse
+	40, // 85: controlplane.v1.ControlPlaneService.GetMachineVitals:output_type -> controlplane.v1.GetMachineVitalsResponse
+	42, // 86: controlplane.v1.ControlPlaneService.GetConfigStatus:output_type -> controlplane.v1.GetConfigStatusResponse
+	45, // 87: controlplane.v1.ControlPlaneService.ValidateConfig:output_type -> controlplane.v1.ValidateConfigResponse
+	47, // 88: controlplane.v1.ControlPlaneService.SaveConfig:output_type -> controlplane.v1.SaveConfigResponse
+	50, // 89: controlplane.v1.ControlPlaneService.ListConfigRevisions:output_type -> controlplane.v1.ListConfigRevisionsResponse
+	52, // 90: controlplane.v1.ControlPlaneService.RestoreConfigRevision:output_type -> controlplane.v1.RestoreConfigRevisionResponse
+	54, // 91: controlplane.v1.ControlPlaneService.GetSystemInfo:output_type -> controlplane.v1.GetSystemInfoResponse
+	58, // 92: controlplane.v1.ControlPlaneService.TestGitHubAuth:output_type -> controlplane.v1.TestGitHubAuthResponse
+	60, // 93: controlplane.v1.ControlPlaneService.CheckBackend:output_type -> controlplane.v1.CheckBackendResponse
+	62, // 94: controlplane.v1.ControlPlaneService.ProbeConfig:output_type -> controlplane.v1.ProbeConfigResponse
+	65, // 95: controlplane.v1.ControlPlaneService.GetSetupChecklist:output_type -> controlplane.v1.GetSetupChecklistResponse
+	73, // [73:96] is the sub-list for method output_type
+	50, // [50:73] is the sub-list for method input_type
+	50, // [50:50] is the sub-list for extension type_name
+	50, // [50:50] is the sub-list for extension extendee
+	0,  // [0:50] is the sub-list for field type_name
 }
 
 func init() { file_controlplane_v1_controlplane_proto_init() }
@@ -4205,8 +4462,8 @@ func file_controlplane_v1_controlplane_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_controlplane_v1_controlplane_proto_rawDesc), len(file_controlplane_v1_controlplane_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   56,
+			NumEnums:      7,
+			NumMessages:   59,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

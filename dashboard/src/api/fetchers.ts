@@ -20,6 +20,8 @@ import type {
   ResourceSample,
   JobLog,
   SessionState,
+  SetupChecklist,
+  StepStatus,
   SystemInfo,
 } from '../types'
 
@@ -508,5 +510,29 @@ export async function probeConfig(yaml: string): Promise<ConfigProbe> {
     targets: (data.targets ?? []).map(toGitHubAuthResult),
     backends: (data.backends ?? []).map(toBackendCheck),
     errors: (data.errors ?? []).map(issue => ({ path: issue.path ?? '$', message: issue.message ?? '' })),
+  }
+}
+
+const STEP_STATUS_MAP: Record<string, StepStatus> = {
+  STEP_STATUS_PASS: 'pass',
+  STEP_STATUS_FAIL: 'fail',
+  STEP_STATUS_PENDING: 'pending',
+  STEP_STATUS_SKIPPED: 'skipped',
+}
+
+export async function fetchSetupChecklist(refresh = false): Promise<SetupChecklist> {
+  const data = await rpc<{
+    steps?: Array<{ id?: string; title?: string; status?: string; message?: string; page?: string }>
+    probedAt?: string
+  }>('GetSetupChecklist', { refresh })
+  return {
+    steps: (data.steps ?? []).map(step => ({
+      id: step.id ?? '',
+      title: step.title ?? '',
+      status: STEP_STATUS_MAP[step.status ?? ''] ?? 'pending',
+      message: step.message ?? '',
+      page: step.page ?? '',
+    })),
+    probedAt: data.probedAt ? new Date(data.probedAt) : null,
   }
 }

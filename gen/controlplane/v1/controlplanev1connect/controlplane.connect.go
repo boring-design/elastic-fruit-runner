@@ -99,6 +99,9 @@ const (
 	// ControlPlaneServiceProbeConfigProcedure is the fully-qualified name of the ControlPlaneService's
 	// ProbeConfig RPC.
 	ControlPlaneServiceProbeConfigProcedure = "/controlplane.v1.ControlPlaneService/ProbeConfig"
+	// ControlPlaneServiceGetSetupChecklistProcedure is the fully-qualified name of the
+	// ControlPlaneService's GetSetupChecklist RPC.
+	ControlPlaneServiceGetSetupChecklistProcedure = "/controlplane.v1.ControlPlaneService/GetSetupChecklist"
 )
 
 // ControlPlaneServiceClient is a client for the controlplane.v1.ControlPlaneService service.
@@ -136,6 +139,8 @@ type ControlPlaneServiceClient interface {
 	CheckBackend(context.Context, *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error)
 	// ProbeConfig runs GitHub and backend checks for every target in a config draft.
 	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
+	// GetSetupChecklist reports how far the daemon is from a working setup.
+	GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error)
 }
 
 // NewControlPlaneServiceClient constructs a client for the controlplane.v1.ControlPlaneService
@@ -281,6 +286,12 @@ func NewControlPlaneServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(controlPlaneServiceMethods.ByName("ProbeConfig")),
 			connect.WithClientOptions(opts...),
 		),
+		getSetupChecklist: connect.NewClient[v1.GetSetupChecklistRequest, v1.GetSetupChecklistResponse](
+			httpClient,
+			baseURL+ControlPlaneServiceGetSetupChecklistProcedure,
+			connect.WithSchema(controlPlaneServiceMethods.ByName("GetSetupChecklist")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -308,6 +319,7 @@ type controlPlaneServiceClient struct {
 	testGitHubAuth         *connect.Client[v1.TestGitHubAuthRequest, v1.TestGitHubAuthResponse]
 	checkBackend           *connect.Client[v1.CheckBackendRequest, v1.CheckBackendResponse]
 	probeConfig            *connect.Client[v1.ProbeConfigRequest, v1.ProbeConfigResponse]
+	getSetupChecklist      *connect.Client[v1.GetSetupChecklistRequest, v1.GetSetupChecklistResponse]
 }
 
 // GetSession calls controlplane.v1.ControlPlaneService.GetSession.
@@ -420,6 +432,11 @@ func (c *controlPlaneServiceClient) ProbeConfig(ctx context.Context, req *connec
 	return c.probeConfig.CallUnary(ctx, req)
 }
 
+// GetSetupChecklist calls controlplane.v1.ControlPlaneService.GetSetupChecklist.
+func (c *controlPlaneServiceClient) GetSetupChecklist(ctx context.Context, req *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error) {
+	return c.getSetupChecklist.CallUnary(ctx, req)
+}
+
 // ControlPlaneServiceHandler is an implementation of the controlplane.v1.ControlPlaneService
 // service.
 type ControlPlaneServiceHandler interface {
@@ -456,6 +473,8 @@ type ControlPlaneServiceHandler interface {
 	CheckBackend(context.Context, *connect.Request[v1.CheckBackendRequest]) (*connect.Response[v1.CheckBackendResponse], error)
 	// ProbeConfig runs GitHub and backend checks for every target in a config draft.
 	ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error)
+	// GetSetupChecklist reports how far the daemon is from a working setup.
+	GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error)
 }
 
 // NewControlPlaneServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -597,6 +616,12 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 		connect.WithSchema(controlPlaneServiceMethods.ByName("ProbeConfig")),
 		connect.WithHandlerOptions(opts...),
 	)
+	controlPlaneServiceGetSetupChecklistHandler := connect.NewUnaryHandler(
+		ControlPlaneServiceGetSetupChecklistProcedure,
+		svc.GetSetupChecklist,
+		connect.WithSchema(controlPlaneServiceMethods.ByName("GetSetupChecklist")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/controlplane.v1.ControlPlaneService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ControlPlaneServiceGetSessionProcedure:
@@ -643,6 +668,8 @@ func NewControlPlaneServiceHandler(svc ControlPlaneServiceHandler, opts ...conne
 			controlPlaneServiceCheckBackendHandler.ServeHTTP(w, r)
 		case ControlPlaneServiceProbeConfigProcedure:
 			controlPlaneServiceProbeConfigHandler.ServeHTTP(w, r)
+		case ControlPlaneServiceGetSetupChecklistProcedure:
+			controlPlaneServiceGetSetupChecklistHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -738,4 +765,8 @@ func (UnimplementedControlPlaneServiceHandler) CheckBackend(context.Context, *co
 
 func (UnimplementedControlPlaneServiceHandler) ProbeConfig(context.Context, *connect.Request[v1.ProbeConfigRequest]) (*connect.Response[v1.ProbeConfigResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.ProbeConfig is not implemented"))
+}
+
+func (UnimplementedControlPlaneServiceHandler) GetSetupChecklist(context.Context, *connect.Request[v1.GetSetupChecklistRequest]) (*connect.Response[v1.GetSetupChecklistResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("controlplane.v1.ControlPlaneService.GetSetupChecklist is not implemented"))
 }
