@@ -2,6 +2,9 @@ import type { GitHubAuthInput } from '../api/fetchers'
 import type { WizardConfig } from './buildConfigYAML'
 import type { RunnerSetPreset } from './presets'
 
+// The labels input keeps the raw text so a typed comma is not lost on the same keystroke.
+export type RunnerSetForm = Omit<RunnerSetPreset, 'labels'> & { selected: boolean; labelsText: string }
+
 export interface WizardForm {
   targetKind: 'org' | 'repo'
   targetName: string
@@ -11,7 +14,7 @@ export interface WizardForm {
   installationId: string
   privateKeyPath: string
   runnerGroup: string
-  runnerSets: Array<RunnerSetPreset & { selected: boolean }>
+  runnerSets: RunnerSetForm[]
 }
 
 export const emptyForm: WizardForm = {
@@ -26,6 +29,15 @@ export const emptyForm: WizardForm = {
   runnerSets: [],
 }
 
+export function toRunnerSetForm(preset: RunnerSetPreset): RunnerSetForm {
+  const { labels, ...rest } = preset
+  return { ...rest, selected: preset.available, labelsText: labels.join(', ') }
+}
+
+export function parseLabels(text: string): string[] {
+  return text.split(',').map(label => label.trim()).filter(Boolean)
+}
+
 export function toConfig(form: WizardForm): WizardConfig {
   return {
     target: { kind: form.targetKind, name: form.targetName },
@@ -33,7 +45,7 @@ export function toConfig(form: WizardForm): WizardConfig {
       ? { kind: 'pat', token: form.token }
       : { kind: 'app', clientId: form.clientId, installationId: form.installationId, privateKeyPath: form.privateKeyPath },
     runnerGroup: form.runnerGroup,
-    runnerSets: form.runnerSets.filter(set => set.selected),
+    runnerSets: form.runnerSets.filter(set => set.selected).map(set => ({ ...set, labels: parseLabels(set.labelsText) })),
   }
 }
 

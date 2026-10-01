@@ -111,6 +111,8 @@ func FirstFailure(checks []Check) string {
 
 func noRetryClient() *retryablehttp.Client {
 	rc := retryablehttp.NewClient()
+	// Drop the default stderr logger. The scale set client sets its own.
+	rc.Logger = nil
 	rc.RetryMax = 0
 	rc.HTTPClient.Timeout = githubTimeout
 	return rc

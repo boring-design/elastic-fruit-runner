@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchDaemonStatus, restartService } from '../api/fetchers'
 
 const pollInterval = 1000
@@ -15,9 +15,6 @@ export function RestartPanel({ csrfToken, restartCommands }: { csrfToken: string
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  // Phase is read inside the poll timer, so keep the latest value in a ref.
-  const phaseRef = useRef(phase)
-  phaseRef.current = phase
 
   useEffect(() => {
     if (phase.kind !== 'restarting') return

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"time"
 
@@ -24,12 +25,12 @@ type githubProbe struct {
 const connectGracePeriod = 2 * time.Minute
 
 // RefreshProbes runs the GitHub and backend probes and stores the results.
-// In config mode only the docker and tart backends are checked.
+// In config mode only docker is checked, plus tart on macOS.
 func (s *Server) RefreshProbes(ctx context.Context) {
 	var github []githubProbe
 	var backends []probe.BackendResult
 	if s.activeConfig == nil {
-		for _, name := range []string{"docker", "tart"} {
+		for _, name := range configModeBackends() {
 			backends = append(backends, probe.CheckBackend(ctx, name))
 		}
 	} else {
@@ -48,6 +49,13 @@ func (s *Server) RefreshProbes(ctx context.Context) {
 	s.backendProbes = backends
 	s.probedAt = time.Now()
 	s.probeMu.Unlock()
+}
+
+func configModeBackends() []string {
+	if runtime.GOOS == "darwin" {
+		return []string{"docker", "tart"}
+	}
+	return []string{"docker"}
 }
 
 func (s *Server) GetSetupChecklist(ctx context.Context, req *connect.Request[controlplanev1.GetSetupChecklistRequest]) (*connect.Response[controlplanev1.GetSetupChecklistResponse], error) {
@@ -216,7 +224,7 @@ func (s *Server) firstJobStep() *controlplanev1.SetupStep {
 			name = job.ID
 		}
 		step.Status = controlplanev1.StepStatus_STEP_STATUS_PASS
-		step.Message = name + " on " + job.StartedAt.Format("2006-01-02")
+		step.Message = "latest job: " + name + " on " + job.StartedAt.Format("2006-01-02")
 		return step
 	}
 	step.Status = controlplanev1.StepStatus_STEP_STATUS_PENDING

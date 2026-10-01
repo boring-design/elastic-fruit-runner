@@ -3,8 +3,8 @@ import { checkBackend, saveConfig, testGitHubAuth, validateConfig } from '../api
 import { useDashboardStore } from '../store/useDashboardStore'
 import type { BackendCheck, Check, ConfigValidationIssue, GitHubAuthResult } from '../types'
 import { buildConfigYAML, maskToken } from '../wizard/buildConfigYAML'
-import { emptyForm, toAuthInput, toConfig } from '../wizard/form'
-import type { WizardForm } from '../wizard/form'
+import { emptyForm, toAuthInput, toConfig, toRunnerSetForm } from '../wizard/form'
+import type { RunnerSetForm, WizardForm } from '../wizard/form'
 import { runnerSetPresets } from '../wizard/presets'
 import { CheckRows } from './CheckList'
 import { RestartPanel } from './RestartPanel'
@@ -165,7 +165,7 @@ function RunnerSetsStep({ form, update }: { form: WizardForm; update: (changes: 
       .then(([docker, tart]) => {
         if (stopped) return
         const presets = runnerSetPresets(docker, tart)
-        update({ runnerSets: presets.map(preset => ({ ...preset, selected: preset.available })) })
+        update({ runnerSets: presets.map(toRunnerSetForm) })
       })
       .catch(loadError => {
         if (!stopped) setError(String(loadError))
@@ -178,7 +178,7 @@ function RunnerSetsStep({ form, update }: { form: WizardForm; update: (changes: 
     }
   }, [hasSets, update])
 
-  function updateSet(index: number, changes: Partial<WizardForm['runnerSets'][number]>) {
+  function updateSet(index: number, changes: Partial<RunnerSetForm>) {
     update({ runnerSets: form.runnerSets.map((set, i) => i === index ? { ...set, ...changes } : set) })
   }
 
@@ -197,7 +197,7 @@ function RunnerSetsStep({ form, update }: { form: WizardForm; update: (changes: 
           <div className="preset-fields">
             <label>Name<input disabled={!set.available} value={set.name} onChange={event => updateSet(index, { name: event.target.value })} /></label>
             <label>Image<input disabled={!set.available} value={set.image} onChange={event => updateSet(index, { image: event.target.value })} /></label>
-            <label>Labels, comma separated<input disabled={!set.available} value={set.labels.join(', ')} onChange={event => updateSet(index, { labels: event.target.value.split(',').map(label => label.trim()).filter(Boolean) })} /></label>
+            <label>Labels, comma separated<input disabled={!set.available} value={set.labelsText} onChange={event => updateSet(index, { labelsText: event.target.value })} /></label>
             <label>Max runners<input disabled={!set.available} inputMode="numeric" value={set.maxRunners} onChange={event => updateSet(index, { maxRunners: Number(event.target.value) })} /></label>
             <label>Platform, optional<input disabled={!set.available} placeholder="linux/arm64" value={set.platform} onChange={event => updateSet(index, { platform: event.target.value })} /></label>
           </div>
