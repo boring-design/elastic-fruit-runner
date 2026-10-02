@@ -25,6 +25,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/probe"
+	"github.com/boring-design/elastic-fruit-runner/internal/storage"
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
@@ -634,11 +635,7 @@ func (s *Server) GetSystemInfo(_ context.Context, _ *connect.Request[controlplan
 		GoVersion:    runtime.Version(),
 		DatabasePath: s.databasePath,
 	}
-	if s.databasePath != "" {
-		if info, err := os.Stat(s.databasePath); err == nil {
-			response.DatabaseSizeBytes = info.Size()
-		}
-	}
+	response.DatabaseSizeBytes = storage.FileSize(s.databasePath)
 	response.LogPath = s.logPath
 	if s.logPath != "" {
 		if info, err := os.Stat(s.logPath); err == nil {

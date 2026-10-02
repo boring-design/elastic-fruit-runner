@@ -104,6 +104,8 @@ The daemon log file is shown separately on the System page. It is not part of th
 
 The database file is set to mode `0600`.
 
+The same file also stores the console admin password, console sessions, and the saved config revisions. All tables are created and upgraded by goose migrations when the daemon starts, so a database created by an older release is upgraded in place.
+
 `log_path` optionally writes daemon JSON logs to a file. Empty `log_path` sends logs to standard output.
 
 See [Configuration Reference](/reference/configuration/) for path validation rules.
