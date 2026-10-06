@@ -58,16 +58,29 @@ func runEnroll(parent context.Context, requestedConfigPath string, input cloudag
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("read config %s: %w", configPath, err)
 	}
-	// Check the config change before talking to the cloud so a one time token
-	// is not spent on an enrollment whose config write would fail anyway.
+	// Check the config change and open the database before talking to the
+	// cloud so a one time token is never spent when the local save would fail.
 	updatedYAML, err := config.WithCloudBlock(existing, cloud)
 	if err != nil {
 		return fmt.Errorf("prepare cloud block for %s: %w", configPath, err)
+	}
+	if validation := config.ValidateYAML(updatedYAML); len(validation.Errors) > 0 {
+		return fmt.Errorf("config %s would not be valid in cloud mode: %s", configPath, validation.Errors[0].String())
 	}
 	credentialPath, err := cloudagent.CredentialPath()
 	if err != nil {
 		return err
 	}
+	databasePath, err := databasePathForConfig(existing)
+	if err != nil {
+		return err
+	}
+	db, err := storage.Open(databasePath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	configState := configstate.NewForConfigMode(configPath, db, time.Now())
 
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -81,7 +94,7 @@ func runEnroll(parent context.Context, requestedConfigPath string, input cloudag
 	if err := cloudagent.SaveCredential(credentialPath, result.Credential); err != nil {
 		return err
 	}
-	if err := saveCloudConfig(configPath, updatedYAML, existing); err != nil {
+	if err := saveCloudConfig(configState, configPath, updatedYAML); err != nil {
 		return fmt.Errorf("credential saved to %s but config update failed: %w", credentialPath, err)
 	}
 
@@ -105,17 +118,7 @@ func runEnroll(parent context.Context, requestedConfigPath string, input cloudag
 
 // saveCloudConfig writes the config through the config state service so the
 // change is recorded as a revision in the database.
-func saveCloudConfig(configPath string, updatedYAML, existing []byte) error {
-	databasePath, err := databasePathForConfig(existing)
-	if err != nil {
-		return err
-	}
-	db, err := storage.Open(databasePath)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-	state := configstate.NewForConfigMode(configPath, db, time.Now())
+func saveCloudConfig(state *configstate.Service, configPath string, updatedYAML []byte) error {
 	result, err := state.Save(updatedYAML, "enroll")
 	if err != nil {
 		return err

@@ -20,13 +20,18 @@ const (
 	// messages well inside this window.
 	streamIdleTimeout = 90 * time.Second
 	reportTimeout     = 15 * time.Second
+	// downWarnInterval is how often the loop repeats the warning while the
+	// stream stays down with the same error.
+	downWarnInterval = 5 * time.Minute
 )
 
 // runCommandLoop keeps the command stream open and reconnects with backoff.
-// It logs once when the stream goes down and once when it is back.
+// While the stream is down it warns when the error changes or once per
+// downWarnInterval, and logs every other retry at debug level.
 func (s *Service) runCommandLoop(ctx context.Context) {
 	delay := initialReconnectDelay
-	downLogged := false
+	var lastWarnText string
+	var lastWarnAt time.Time
 	for {
 		wasUp, err := s.watchCommands(ctx)
 		if ctx.Err() != nil {
@@ -35,13 +40,14 @@ func (s *Service) runCommandLoop(ctx context.Context) {
 		}
 		if wasUp {
 			delay = initialReconnectDelay
-			downLogged = false
+			lastWarnText = ""
 		}
-		if downLogged {
-			s.logger.Debug("command stream still down", "server_url", s.serverURL, "err", err, "retry_in", delay.String())
-		} else {
+		if err.Error() != lastWarnText || time.Since(lastWarnAt) >= downWarnInterval {
 			s.logger.Warn("command stream down, reconnecting with backoff", "server_url", s.serverURL, "err", err, "retry_in", delay.String())
-			downLogged = true
+			lastWarnText = err.Error()
+			lastWarnAt = time.Now()
+		} else {
+			s.logger.Debug("command stream still down", "server_url", s.serverURL, "err", err, "retry_in", delay.String())
 		}
 		if !sleepWithContext(ctx, withJitter(delay)) {
 			return
@@ -127,11 +133,7 @@ func (s *Service) handleStartRunner(ctx context.Context, commandID string, comma
 		s.reportEvent(ctx, runnerStartFailedEvent(commandID, command.RunnerName, err))
 		return
 	}
-	setState := s.rememberRunnerSet(command.RunnerSetName, command.Backend, command.Image, command.Platform)
-	setState.cleanupOnce.Do(func() {
-		log.Info("cleaning up runners from previous runs")
-		b.CleanupAll(ctx, command.RunnerSetName)
-	})
+	s.rememberRunnerSet(command.RunnerSetName, command.Backend, command.Image, command.Platform)
 
 	if !s.trackRunner(command.RunnerName, command.RunnerSetName, b) {
 		state, _ := s.runnerState(command.RunnerName)
@@ -152,13 +154,21 @@ func (s *Service) handleStartRunner(ctx context.Context, commandID string, comma
 		s.reportEvent(ctx, runnerStartFailedEvent(commandID, command.RunnerName, err))
 		return
 	}
-	s.tracker.MarkIdle(command.RunnerName)
+	// A CleanupRunner for this name may have arrived while the backend was
+	// starting. Then the runner is gone from tracking and must not stay alive.
+	if !s.confirmRunnerStarted(command.RunnerName) {
+		log.Warn("runner was cleaned up while starting, removing it")
+		b.Cleanup(ctx, command.RunnerName)
+		s.reportEvent(ctx, runnerStartFailedEvent(commandID, command.RunnerName, errors.New("runner "+command.RunnerName+" was cleaned up while starting")))
+		return
+	}
 	log.Info("runner started, waiting for job assignment")
 	s.reportEvent(ctx, runnerStartedEvent(commandID, command.RunnerName))
 }
 
-// handleCleanupRunner removes one runner. An unknown runner is reported as
-// cleaned too so the cloud can close the command.
+// handleCleanupRunner removes one runner. A runner the agent does not know,
+// for example one started before a daemon restart, is removed by name on
+// every installed backend. Cleanup by name is cheap and safe to repeat.
 func (s *Service) handleCleanupRunner(ctx context.Context, commandID, runnerName string) {
 	ctx = context.WithoutCancel(ctx)
 	log := s.logger.With("command_id", commandID, "runner", runnerName)
@@ -167,17 +177,25 @@ func (s *Service) handleCleanupRunner(ctx context.Context, commandID, runnerName
 		log.Info("cleaning up runner")
 		info.backend.Cleanup(ctx, runnerName)
 	} else {
-		log.Info("cleanup for unknown runner, nothing to remove")
+		log.Info("cleaning up unknown runner on every installed backend")
+		for _, b := range s.capableBackends() {
+			b.Cleanup(ctx, runnerName)
+		}
 	}
 	s.reportEvent(ctx, runnerCleanedEvent(commandID, runnerName))
 }
 
 // handleCleanupRunnerSet removes every runner of a set and reports one
-// RunnerCleaned per removed runner, each echoing the set command id.
+// RunnerCleaned per removed runner, each echoing the set command id. For a
+// set the agent does not track, every installed backend is asked to remove
+// runners with that name prefix.
 func (s *Service) handleCleanupRunnerSet(ctx context.Context, commandID, setName string) {
 	ctx = context.WithoutCancel(ctx)
 	log := s.logger.With("command_id", commandID, "runner_set", setName)
 	removed, backends := s.forgetRunnerSet(setName)
+	if len(backends) == 0 {
+		backends = s.capableBackends()
+	}
 	log.Info("cleaning up runner set", "runners", removed)
 	for _, b := range backends {
 		b.CleanupAll(ctx, setName)

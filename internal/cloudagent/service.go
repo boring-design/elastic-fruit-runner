@@ -63,8 +63,6 @@ type runnerSetState struct {
 	backend  string
 	image    string
 	platform string
-	// cleanupOnce removes leftovers from previous runs the first time the set is used.
-	cleanupOnce sync.Once
 }
 
 // runnerInfo links a runner to its set and to the backend that runs it.
@@ -227,7 +225,7 @@ func (s *Service) backendFor(name, image, platform string) (backend.Backend, err
 }
 
 // rememberRunnerSet records a runner set the first time a command mentions it.
-func (s *Service) rememberRunnerSet(name, backendName, image, platform string) *runnerSetState {
+func (s *Service) rememberRunnerSet(name, backendName, image, platform string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	state, ok := s.runnerSets[name]
@@ -242,7 +240,6 @@ func (s *Service) rememberRunnerSet(name, backendName, image, platform string) *
 	if platform != "" {
 		state.platform = platform
 	}
-	return state
 }
 
 // trackRunner starts tracking a runner. It returns false when the runner is
@@ -256,6 +253,48 @@ func (s *Service) trackRunner(name, setName string, b backend.Backend) bool {
 	s.runners[name] = runnerInfo{setName: setName, backend: b}
 	s.tracker.MarkStarting(name)
 	return true
+}
+
+// confirmRunnerStarted moves a runner to idle if it is still tracked. It
+// returns false when a cleanup removed the runner while it was starting.
+func (s *Service) confirmRunnerStarted(name string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, known := s.runners[name]; !known {
+		return false
+	}
+	s.tracker.MarkIdle(name)
+	return true
+}
+
+// capableBackends returns one backend instance per installed backend so a
+// cleanup can reach runners the agent did not start itself. Backends that
+// are not cached yet are built with the default image and platform, which
+// cleanup does not use.
+func (s *Service) capableBackends() []backend.Backend {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var result []backend.Backend
+	for _, probed := range s.availableBackends {
+		found := false
+		for key, b := range s.backends {
+			if key.backend == probed.Backend {
+				result = append(result, b)
+				found = true
+			}
+		}
+		if found {
+			continue
+		}
+		created, err := backend.New(probed.Backend, "", "")
+		if err != nil {
+			s.logger.Warn("skip backend for cleanup", "backend", probed.Backend, "err", err)
+			continue
+		}
+		s.backends[backendKey{backend: probed.Backend}] = created
+		result = append(result, created)
+	}
+	return result
 }
 
 // forgetRunner stops tracking one runner and returns what was known about it.

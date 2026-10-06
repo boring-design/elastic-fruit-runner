@@ -25,7 +25,12 @@ func (s *Service) observeSample(jobID string, sample backend.ResourceSample) {
 	select {
 	case s.samples <- report:
 	default:
-		s.logger.Warn("resource sample dropped, upload queue is full", "job_id", jobID, "queue_size", sampleQueueSize)
+		// Drops are expected while the stream is down, so they only warn when it is up.
+		if s.streamUp.Load() {
+			s.logger.Warn("resource sample dropped, upload queue is full", "job_id", jobID, "queue_size", sampleQueueSize)
+		} else {
+			s.logger.Debug("resource sample dropped while the command stream is down", "job_id", jobID, "queue_size", sampleQueueSize)
+		}
 	}
 }
 

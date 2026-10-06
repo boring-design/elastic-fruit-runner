@@ -64,6 +64,8 @@ The daemon refuses to start in cloud mode when the credential file is missing. T
 
 When the stream is down no new runners start. Runners that are already running keep running and finish their jobs. Stopping the daemon does not stop running runners either.
 
+The agent never removes runners on its own. The cloud owns the runner sets, so the agent only removes a runner or a whole runner set when the cloud asks for it. For a runner name it does not know, for example one started before a daemon restart, it runs the cleanup on every installed backend.
+
 ## The Console in cloud mode
 
 The Console shows a banner with the cloud server URL. The setup wizard and the GitHub checks are hidden. The setup checklist has a **Cloud connected** step that follows the command stream. The Config editor and the restart button keep working.
