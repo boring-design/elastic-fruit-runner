@@ -6,7 +6,7 @@ import (
 	"github.com/actions/scaleset"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	agentv1 "github.com/boring-design/elastic-fruit-runner/gen/agent/v1"
+	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/probe"

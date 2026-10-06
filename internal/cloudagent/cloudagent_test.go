@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	agentv1 "github.com/boring-design/elastic-fruit-runner/gen/agent/v1"
+	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
 )
 
 func TestNextReconnectDelay(t *testing.T) {

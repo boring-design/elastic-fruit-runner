@@ -6,11 +6,6 @@ deps:
 lint:
   use:
     - STANDARD
-  ignore_only:
-    # WatchCommands streams AgentCommand messages. The name says what flows
-    # over the stream, so it is kept instead of WatchCommandsResponse.
-    RPC_RESPONSE_STANDARD_NAME:
-      - proto/agent/v1/agent.proto
 breaking:
   use:
     - FILE

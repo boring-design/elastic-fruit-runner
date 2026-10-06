@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/boring-design/elastic-fruit-protocol/gen/agent/v1/agentv1connect"
 	"github.com/boring-design/elastic-fruit-runner/config"
-	"github.com/boring-design/elastic-fruit-runner/gen/agent/v1/agentv1connect"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
