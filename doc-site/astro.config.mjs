@@ -37,6 +37,7 @@ export default defineConfig({
 						{ slug: 'how-to/edit-config' },
 						{ slug: 'how-to/recover-config' },
 						{ slug: 'how-to/multiple-orgs-repos' },
+						{ slug: 'how-to/cloud-mode' },
 						{ slug: 'how-to/prevent-macos-sleep' },
 						{ slug: 'how-to/upgrade' },
 						{ slug: 'how-to/troubleshooting' },

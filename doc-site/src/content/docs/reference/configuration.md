@@ -66,12 +66,24 @@ At least one item must exist in `orgs` or `repos`.
 |---|---|---|---|
 | `orgs` | list | empty | Organization runner scopes |
 | `repos` | list | empty | Repository runner scopes |
+| `cloud` | object | empty | Elastic Fruit Cloud connection, replaces `orgs` and `repos` |
 | `idle_timeout` | duration | `15m` | Greater than zero and no more than `24h` |
 | `log_level` | string | `info` | `debug`, `info`, `warn`, or `error` |
 | `api_addr` | string | `:8080` | Host and port accepted by the Go network listener |
 | `db_path` | string | `~/.elastic-fruit-runner/jobs.db` | Writable file path or `:memory:` |
 | `log_path` | string | empty | Optional writable log file. Empty sends logs to standard output |
 | `cors` | object | runtime defaults | CORS response settings |
+
+A config must set either `cloud` or at least one of `orgs` and `repos`, never both. Validation stops at the first of these that fails.
+
+## Cloud fields
+
+| Field | Type | Default | Rules |
+|---|---|---|---|
+| `server_url` | string | required | `https://` URL of the cloud server. `http://` is accepted only for `localhost` and `127.0.0.1` |
+| `max_runners` | integer | required | At least `1`, the number of runners this host may run at the same time |
+
+The `enroll` command writes this block, see [How to run in cloud mode](/how-to/cloud-mode/).
 
 ## Organization fields
 

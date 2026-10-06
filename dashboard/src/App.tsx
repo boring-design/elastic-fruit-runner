@@ -140,7 +140,11 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
   const [page, setPage] = useState<Page>(() => pageFromHash())
   const version = getVersion(store.daemonStatus?.buildInfo?.main?.version)
   const configMode = store.daemonStatus?.configMode ?? false
-  const navPages = configMode ? [{ id: 'setup' as Page, label: 'Setup' }, ...pages] : pages
+  const cloudMode = store.daemonStatus?.cloudMode ?? false
+  const cloudServerUrl = store.daemonStatus?.cloudServerUrl ?? ''
+  // The setup wizard writes GitHub targets, which cloud mode does not use.
+  const showWizard = configMode && !cloudMode
+  const navPages = showWizard ? [{ id: 'setup' as Page, label: 'Setup' }, ...pages] : pages
 
   useEffect(() => {
     const updatePage = () => setPage(pageFromHash())
@@ -181,12 +185,18 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
           ))}
           <div className="sidebar-status">
             <StatusDot ok={store.summary?.githubConnected ?? false} />
-            GitHub {store.summary?.githubConnected ? 'connected' : 'disconnected'}
+            {cloudMode ? 'Cloud' : 'GitHub'} {store.summary?.githubConnected ? 'connected' : 'disconnected'}
           </div>
         </nav>
         <main className="content">
-          {page === 'overview' && (configMode ? <SetupWizard csrfToken={session.csrfToken} /> : <Overview />)}
-          {page === 'setup' && <SetupWizard csrfToken={session.csrfToken} />}
+          {cloudMode && (
+            <div className="notice">
+              <strong>Managed by Elastic Fruit Cloud</strong>
+              <span>{cloudServerUrl}</span>
+            </div>
+          )}
+          {page === 'overview' && (showWizard ? <SetupWizard csrfToken={session.csrfToken} /> : <Overview />)}
+          {page === 'setup' && showWizard && <SetupWizard csrfToken={session.csrfToken} />}
           {page === 'jobs' && <JobsPage jobs={store.recentJobs} now={store.now} />}
           {page === 'runner-sets' && <RunnerSetsPage runnerSets={store.runnerSets} />}
           {page === 'config' && store.configStatus && <ConfigPage status={store.configStatus} csrfToken={session.csrfToken} />}
@@ -200,6 +210,7 @@ function Console({ session, onLogout }: { session: SessionState; onLogout: () =>
 function Overview() {
   const store = useDashboardStore()
   const summary = store.summary
+  const jobSource = store.daemonStatus?.cloudMode ? 'Cloud' : 'GitHub'
   if (!summary) return <EmptyState title="Summary unavailable" />
 
   const activeRunners = summary.preparingRunnerCount + summary.idleRunnerCount + summary.busyRunnerCount
@@ -224,7 +235,7 @@ function Overview() {
           <PanelHeader title="Service" detail={store.daemonStatus ? `Up ${formatUptime(store.daemonStatus.startedAt, store.now)}` : ''} />
           <DefinitionList
             rows={[
-              ['GitHub', summary.githubConnected ? 'Connected' : 'Disconnected'],
+              [jobSource, summary.githubConnected ? 'Connected' : 'Disconnected'],
               ['Preparing', String(summary.preparingRunnerCount)],
               ['Idle', String(summary.idleRunnerCount)],
               ['Config', configStateLabel(store.configStatus?.state)],
@@ -441,9 +452,13 @@ function JobDetail({ job, onClose }: { job: JobRecord; onClose: () => void }) {
 }
 
 function RunnerSetsPage({ runnerSets }: { runnerSets: RunnerSet[] }) {
+  const cloudMode = useDashboardStore(state => state.daemonStatus?.cloudMode ?? false)
   return (
     <>
-      <PageHeader title="Runner Sets" detail="Live capacity and runner state for each GitHub scope." />
+      <PageHeader
+        title="Runner Sets"
+        detail={cloudMode ? 'Runner sets seen from Elastic Fruit Cloud since the daemon started.' : 'Live capacity and runner state for each GitHub scope.'}
+      />
       {runnerSets.length === 0 && <section className="panel"><EmptyState title="No runner sets configured" /></section>}
       <div className="card-list">
         {runnerSets.map(runnerSet => (
@@ -457,7 +472,7 @@ function RunnerSetsPage({ runnerSets }: { runnerSets: RunnerSet[] }) {
                 ['Scope', runnerSet.scope],
                 ['Image', runnerSet.image],
                 ['Labels', runnerSet.labels.join(', ') || 'None'],
-                ['GitHub', runnerSet.connected ? 'Connected' : 'Disconnected'],
+                [cloudMode ? 'Cloud' : 'GitHub', runnerSet.connected ? 'Connected' : 'Disconnected'],
               ]}
             />
             <div className="runner-counts">

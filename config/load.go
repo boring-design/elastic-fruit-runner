@@ -28,8 +28,8 @@ func Load(configPath string) (*Config, error) {
 	} else {
 		v.SetConfigName("config")
 		v.SetConfigType("yaml")
-		if home, err := os.UserHomeDir(); err == nil {
-			v.AddConfigPath(filepath.Join(home, ".elastic-fruit-runner"))
+		if dataDir, err := DefaultDataDir(); err == nil {
+			v.AddConfigPath(dataDir)
 		}
 		v.AddConfigPath("/opt/homebrew/var/elastic-fruit-runner")
 		v.AddConfigPath("/usr/local/var/elastic-fruit-runner")
@@ -94,9 +94,9 @@ func FindConfigPath(configPath string) string {
 		path, _ := filepath.Abs(configPath)
 		return path
 	}
-	if home, err := os.UserHomeDir(); err == nil {
+	if dataDir, err := DefaultDataDir(); err == nil {
 		paths := []string{
-			filepath.Join(home, ".elastic-fruit-runner", "config.yaml"),
+			filepath.Join(dataDir, "config.yaml"),
 			"/opt/homebrew/var/elastic-fruit-runner/config.yaml",
 			"/usr/local/var/elastic-fruit-runner/config.yaml",
 			"/etc/elastic-fruit-runner/config.yaml",

@@ -26,6 +26,31 @@ Example:
 elastic-fruit-runner --config /etc/elastic-fruit-runner/config.yaml
 ```
 
+## Enroll with Elastic Fruit Cloud
+
+```text
+elastic-fruit-runner enroll --server URL --token TOKEN [--max-runners N] [--config PATH]
+```
+
+The command registers this host with an Elastic Fruit Cloud server, writes the agent credential to `~/.elastic-fruit-runner/agent-credential`, and writes the `cloud` block into the config file.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--server URL` | required | Cloud server URL, `https://` unless the host is `localhost` or `127.0.0.1` |
+| `--token TOKEN` | required | One time enrollment token from the cloud console |
+| `--max-runners N` | `1` | Maximum number of runners on this host |
+| `--config PATH` | Config search paths | Config file to update or create |
+
+The command refuses a config file that still contains `orgs` or `repos`.
+
+Example:
+
+```sh
+elastic-fruit-runner enroll --server https://cloud.example.com --token efc_abc123 --max-runners 2
+```
+
+See [How to run in cloud mode](/how-to/cloud-mode/) for the full flow.
+
 ## Reset the Console password
 
 ```text

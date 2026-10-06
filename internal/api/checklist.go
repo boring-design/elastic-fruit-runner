@@ -25,11 +25,12 @@ type githubProbe struct {
 const connectGracePeriod = 2 * time.Minute
 
 // RefreshProbes runs the GitHub and backend probes and stores the results.
-// In config mode only docker is checked, plus tart on macOS.
+// In config mode and in cloud mode there are no GitHub targets, so only
+// docker is checked, plus tart on macOS.
 func (s *Server) RefreshProbes(ctx context.Context) {
 	var github []githubProbe
 	var backends []probe.BackendResult
-	if s.activeConfig == nil {
+	if s.activeConfig == nil || s.cloud != nil {
 		for _, name := range configModeBackends() {
 			backends = append(backends, probe.CheckBackend(ctx, name))
 		}
@@ -69,9 +70,15 @@ func (s *Server) GetSetupChecklist(ctx context.Context, req *connect.Request[con
 	s.probeMu.Unlock()
 
 	steps := []*controlplanev1.SetupStep{s.configStep()}
-	steps = append(steps, s.githubSteps(github)...)
-	steps = append(steps, s.backendSteps(backends)...)
-	steps = append(steps, s.runnerSetStep(), s.firstJobStep())
+	if s.cloud != nil {
+		steps = append(steps, s.cloudStep())
+		steps = append(steps, s.backendSteps(backends)...)
+		steps = append(steps, s.firstJobStep())
+	} else {
+		steps = append(steps, s.githubSteps(github)...)
+		steps = append(steps, s.backendSteps(backends)...)
+		steps = append(steps, s.runnerSetStep(), s.firstJobStep())
+	}
 
 	response := &controlplanev1.GetSetupChecklistResponse{Steps: steps}
 	if !probedAt.IsZero() {
@@ -104,6 +111,29 @@ func (s *Server) configStep() *controlplanev1.SetupStep {
 		Message: s.configPath(),
 		Page:    "config",
 	}
+}
+
+// cloudStep replaces the GitHub steps in cloud mode. Its status follows the
+// command stream to the cloud.
+func (s *Server) cloudStep() *controlplanev1.SetupStep {
+	step := &controlplanev1.SetupStep{
+		Id:    "cloud",
+		Title: "Cloud connected",
+		Page:  "config",
+	}
+	if s.cloud.Connected() {
+		step.Status = controlplanev1.StepStatus_STEP_STATUS_PASS
+		step.Message = "command stream to " + s.cloud.ServerURL + " is up"
+		return step
+	}
+	if time.Since(s.vitalsService.StartedAt()) < connectGracePeriod {
+		step.Status = controlplanev1.StepStatus_STEP_STATUS_PENDING
+		step.Message = "connecting to " + s.cloud.ServerURL
+		return step
+	}
+	step.Status = controlplanev1.StepStatus_STEP_STATUS_FAIL
+	step.Message = s.cloud.ServerURL + " is not connected, check the daemon log"
+	return step
 }
 
 func (s *Server) githubSteps(results []githubProbe) []*controlplanev1.SetupStep {
@@ -228,6 +258,10 @@ func (s *Server) firstJobStep() *controlplanev1.SetupStep {
 		return step
 	}
 	step.Status = controlplanev1.StepStatus_STEP_STATUS_PENDING
+	if s.cloud != nil {
+		step.Message = "waiting for the first job from Elastic Fruit Cloud"
+		return step
+	}
 	step.Message = "push a workflow with runs-on: [" + firstRunnerSetLabels(s.activeConfig) + "]"
 	return step
 }

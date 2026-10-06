@@ -106,12 +106,16 @@ export async function fetchDaemonStatus(): Promise<DaemonStatus> {
     startedAt: string
     idleTimeoutSeconds: number
     configMode?: boolean
+    cloudMode?: boolean
+    cloudServerUrl?: string
   }>('GetServiceInfo')
   return {
     buildInfo: data.buildInfo ? toBuildInfo(data.buildInfo) : null,
     startedAt: new Date(data.startedAt),
     idleTimeout: data.idleTimeoutSeconds,
     configMode: data.configMode ?? false,
+    cloudMode: data.cloudMode ?? false,
+    cloudServerUrl: data.cloudServerUrl ?? '',
   }
 }
 

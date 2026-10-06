@@ -211,6 +211,14 @@ func ValidateConfig(cfg *Config) ValidationResult {
 // cloudAndGitHubTargetsMessage is the error for a config that sets both ways to get jobs.
 const cloudAndGitHubTargetsMessage = "cloud and orgs/repos are mutually exclusive, keep only cloud or only orgs/repos"
 
+// Validate returns the first problem with the cloud block, or nil.
+func (c *CloudConfig) Validate() error {
+	if issues := cloudIssues(c); len(issues) > 0 {
+		return errors.New(issues[0].String())
+	}
+	return nil
+}
+
 // cloudIssues checks the cloud block. Every message carries the value it rejects.
 func cloudIssues(cloud *CloudConfig) []ValidationIssue {
 	var issues []ValidationIssue

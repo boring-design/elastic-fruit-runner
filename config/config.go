@@ -62,11 +62,21 @@ func (c *Config) DatabasePath() (string, error) {
 
 // DefaultDatabasePath returns the database path used when the config does not set one.
 func DefaultDatabasePath() (string, error) {
+	dataDir, err := DefaultDataDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve database path: %w", err)
+	}
+	return filepath.Join(dataDir, "jobs.db"), nil
+}
+
+// DefaultDataDir returns the per user directory that holds the config file,
+// the database, and the cloud agent credential.
+func DefaultDataDir() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("determine home directory for database path: %w", err)
+		return "", fmt.Errorf("determine home directory: %w", err)
 	}
-	return filepath.Join(homeDir, ".elastic-fruit-runner", "jobs.db"), nil
+	return filepath.Join(homeDir, ".elastic-fruit-runner"), nil
 }
 
 // CORSConfig holds Cross-Origin Resource Sharing settings.
@@ -210,9 +220,7 @@ func (c *Config) validateMode() error {
 		return errors.New("at least one org or repo must be configured")
 	}
 	if c.Cloud != nil {
-		if issues := cloudIssues(c.Cloud); len(issues) > 0 {
-			return errors.New(issues[0].String())
-		}
+		return c.Cloud.Validate()
 	}
 	return nil
 }
