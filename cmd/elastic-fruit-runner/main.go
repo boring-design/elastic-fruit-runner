@@ -50,6 +50,7 @@ func newRootCommand() *cobra.Command {
 	root.CompletionOptions.DisableDefaultCmd = true
 	root.PersistentFlags().String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
 
+	root.AddCommand(newEnrollCommand(v))
 	root.AddCommand(&cobra.Command{
 		Use:   "reset-password",
 		Short: "Clear the Console admin password",

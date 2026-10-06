@@ -75,6 +75,8 @@ export interface DaemonStatus {
   startedAt: Date
   idleTimeout: number
   configMode: boolean
+  cloudMode: boolean
+  cloudServerUrl: string
 }
 
 export interface DashboardSummary {

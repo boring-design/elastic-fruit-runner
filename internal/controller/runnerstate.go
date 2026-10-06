@@ -81,11 +81,12 @@ func (r *RunnerTracker) MarkStarting(name string) {
 	r.preparing[name] = time.Now()
 }
 
-// MarkIdle moves a runner from preparing to idle.
+// MarkIdle moves a runner to idle from whichever phase it is in.
 func (r *RunnerTracker) MarkIdle(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	delete(r.preparing, name)
+	delete(r.busy, name)
 	if r.idle == nil {
 		r.idle = make(map[string]time.Time)
 	}

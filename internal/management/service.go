@@ -12,7 +12,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 	"github.com/boring-design/elastic-fruit-runner/internal/githubclient"
-	sqlcdb "github.com/boring-design/elastic-fruit-runner/internal/storage/sqlc"
+	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
 // RunnerSetView is the assembled view of a runner set for external consumers.
@@ -25,13 +25,10 @@ type RunnerSetView struct {
 
 // Service manages all ScaleSetControllers and provides aggregated read access.
 type Service struct {
-	cfg             *config.Config
-	controllers     []*controller.ScaleSetController
-	jobs            *JobStore
-	db              *sql.DB
-	queries         *sqlcdb.Queries
-	databasePath    string
-	hostSampleCount int
+	cfg         *config.Config
+	controllers []*controller.ScaleSetController
+	jobs        *JobStore
+	host        *HostStore
 
 	wg sync.WaitGroup
 }
@@ -45,11 +42,9 @@ func New(cfg *config.Config, db *sql.DB) (*Service, error) {
 		return nil, fmt.Errorf("resolve database path: %w", err)
 	}
 	svc := &Service{
-		cfg:          cfg,
-		db:           db,
-		queries:      sqlcdb.New(db),
-		jobs:         NewJobStore(db),
-		databasePath: databasePath,
+		cfg:  cfg,
+		jobs: NewJobStore(db),
+		host: NewHostStore(db, databasePath),
 	}
 
 	for i := range cfg.Orgs {
@@ -139,6 +134,16 @@ func (svc *Service) GetJobSamples(jobID string) []ResourceSample {
 	return svc.jobs.Samples(jobID)
 }
 
+// RecordHostVitals stores one host resource sample.
+func (svc *Service) RecordHostVitals(value vitals.Vitals) {
+	svc.host.RecordHostVitals(value)
+}
+
+// HostSamples returns host resource history between from and to.
+func (svc *Service) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {
+	return svc.host.HostSamples(from, to)
+}
+
 func (svc *Service) runController(ctx context.Context, ctrl *controller.ScaleSetController) {
 	defer svc.wg.Done()
 	info := ctrl.GetRunnerSetInfo()
@@ -154,12 +159,9 @@ func (svc *Service) runController(ctx context.Context, ctrl *controller.ScaleSet
 }
 
 func createBackend(rs *config.RunnerSetConfig) (backend.Backend, error) {
-	switch rs.Backend {
-	case "tart":
-		return backend.NewTartBackend(rs.Image), nil
-	case "docker":
-		return backend.NewDockerBackend(rs.Image, rs.Platform), nil
-	default:
-		return nil, fmt.Errorf("unknown backend %q for runner set %q", rs.Backend, rs.Name)
+	b, err := backend.New(rs.Backend, rs.Image, rs.Platform)
+	if err != nil {
+		return nil, fmt.Errorf("runner set %q: %w", rs.Name, err)
 	}
+	return b, nil
 }

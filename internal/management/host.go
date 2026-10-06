@@ -33,9 +33,27 @@ type HostSample struct {
 	TemperatureCelsius   float64
 }
 
-func (svc *Service) RecordHostVitals(value vitals.Vitals) {
+// HostStore records host resource samples and serves their history.
+// It is shared by the standalone management service and the cloud agent.
+type HostStore struct {
+	db              *sql.DB
+	queries         *sqlcdb.Queries
+	databasePath    string
+	hostSampleCount int
+}
+
+// NewHostStore creates a host sample store on an already opened database.
+func NewHostStore(db *sql.DB, databasePath string) *HostStore {
+	return &HostStore{
+		db:           db,
+		queries:      sqlcdb.New(db),
+		databasePath: databasePath,
+	}
+}
+
+func (store *HostStore) RecordHostVitals(value vitals.Vitals) {
 	now := time.Now().UTC()
-	err := svc.queries.InsertRawHostSample(context.Background(), sqlcdb.InsertRawHostSampleParams{
+	err := store.queries.InsertRawHostSample(context.Background(), sqlcdb.InsertRawHostSampleParams{
 		RecordedAt:           now,
 		CpuPercent:           float64(value.CPUUsagePercent),
 		MemoryUsedBytes:      value.MemoryUsedBytes,
@@ -51,16 +69,16 @@ func (svc *Service) RecordHostVitals(value vitals.Vitals) {
 		slog.Warn("failed to record host resource data", "err", err)
 		return
 	}
-	svc.hostSampleCount++
-	if svc.hostSampleCount%12 == 0 {
-		svc.rollupHostMinute(now)
-		svc.cleanHistory(now)
+	store.hostSampleCount++
+	if store.hostSampleCount%12 == 0 {
+		store.rollupHostMinute(now)
+		store.cleanHistory(now)
 	}
 }
 
-func (svc *Service) rollupHostMinute(now time.Time) {
+func (store *HostStore) rollupHostMinute(now time.Time) {
 	minute := now.Truncate(time.Minute).Add(-time.Minute)
-	err := svc.queries.RollupHostMinute(context.Background(), sqlcdb.RollupHostMinuteParams{
+	err := store.queries.RollupHostMinute(context.Background(), sqlcdb.RollupHostMinuteParams{
 		MinuteStart: minute,
 		MinuteEnd:   minute.Add(time.Minute),
 	})
@@ -69,18 +87,18 @@ func (svc *Service) rollupHostMinute(now time.Time) {
 	}
 }
 
-func (svc *Service) cleanHistory(now time.Time) {
+func (store *HostStore) cleanHistory(now time.Time) {
 	ctx := context.Background()
 	historyCutoff := now.Add(-historyRetention)
-	_ = svc.queries.DeleteExpiredHostSamples(ctx, sqlcdb.DeleteExpiredHostSamplesParams{
+	_ = store.queries.DeleteExpiredHostSamples(ctx, sqlcdb.DeleteExpiredHostSamplesParams{
 		RawCutoff:     now.Add(-rawHostRetention),
 		HistoryCutoff: historyCutoff,
 	})
-	_ = svc.queries.DeleteExpiredJobLogs(ctx, historyCutoff)
-	_ = svc.queries.DeleteExpiredJobResourceSamples(ctx, historyCutoff)
-	_ = svc.queries.DeleteExpiredJobs(ctx, sql.NullTime{Time: historyCutoff, Valid: true})
+	_ = store.queries.DeleteExpiredJobLogs(ctx, historyCutoff)
+	_ = store.queries.DeleteExpiredJobResourceSamples(ctx, historyCutoff)
+	_ = store.queries.DeleteExpiredJobs(ctx, sql.NullTime{Time: historyCutoff, Valid: true})
 
-	currentSize := storage.FileSize(svc.databasePath)
+	currentSize := storage.FileSize(store.databasePath)
 	if currentSize <= maxHistoryBytes {
 		return
 	}
@@ -88,33 +106,33 @@ func (svc *Service) cleanHistory(now time.Time) {
 		bytesToFree := currentSize - targetHistoryBytes
 		var freed int64
 		for freed < bytesToFree {
-			oldest, err := svc.queries.GetOldestCompletedJobSize(ctx)
+			oldest, err := store.queries.GetOldestCompletedJobSize(ctx)
 			if err != nil {
 				break
 			}
-			_ = svc.queries.DeleteJobLogs(ctx, oldest.ID)
-			_ = svc.queries.DeleteJobResourceSamples(ctx, oldest.ID)
-			_ = svc.queries.DeleteCompletedJob(ctx, oldest.ID)
+			_ = store.queries.DeleteJobLogs(ctx, oldest.ID)
+			_ = store.queries.DeleteJobResourceSamples(ctx, oldest.ID)
+			_ = store.queries.DeleteCompletedJob(ctx, oldest.ID)
 			freed += oldest.EstimatedBytes
 		}
 		if freed == 0 {
 			break
 		}
-		if err := storage.Compact(ctx, svc.db); err != nil {
-			slog.Warn("failed to compact history database", "path", svc.databasePath, "err", err)
+		if err := storage.Compact(ctx, store.db); err != nil {
+			slog.Warn("failed to compact history database", "path", store.databasePath, "err", err)
 			break
 		}
-		currentSize = storage.FileSize(svc.databasePath)
+		currentSize = storage.FileSize(store.databasePath)
 	}
 }
 
-func (svc *Service) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {
+func (store *HostStore) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {
 	interval := int64(60)
 	if from.After(time.Now().Add(-rawHostRetention)) {
 		interval = 5
 	}
 	ctx := context.Background()
-	rows, err := svc.queries.ListHostSamples(ctx, sqlcdb.ListHostSamplesParams{
+	rows, err := store.queries.ListHostSamples(ctx, sqlcdb.ListHostSamplesParams{
 		IntervalSeconds: interval,
 		RecordedAt:      from,
 		RecordedAt_2:    to,
@@ -138,7 +156,7 @@ func (svc *Service) HostSamples(from, to time.Time) ([]HostSample, *time.Time) {
 			TemperatureCelsius:   row.TemperatureCelsius,
 		})
 	}
-	earliest, err := svc.queries.GetEarliestHostSampleTime(ctx)
+	earliest, err := store.queries.GetEarliestHostSampleTime(ctx)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			slog.Warn("failed to read earliest host sample time", "err", err)

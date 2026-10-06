@@ -775,9 +775,13 @@ type GetServiceInfoResponse struct {
 	// Configured idle runner timeout in seconds.
 	IdleTimeoutSeconds int32 `protobuf:"varint,3,opt,name=idle_timeout_seconds,json=idleTimeoutSeconds,proto3" json:"idle_timeout_seconds,omitempty"`
 	// True when the daemon started without a valid config file.
-	ConfigMode    bool `protobuf:"varint,4,opt,name=config_mode,json=configMode,proto3" json:"config_mode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ConfigMode bool `protobuf:"varint,4,opt,name=config_mode,json=configMode,proto3" json:"config_mode,omitempty"`
+	// True when an Elastic Fruit Cloud server manages this daemon.
+	CloudMode bool `protobuf:"varint,5,opt,name=cloud_mode,json=cloudMode,proto3" json:"cloud_mode,omitempty"`
+	// Cloud server URL, empty outside cloud mode.
+	CloudServerUrl string `protobuf:"bytes,6,opt,name=cloud_server_url,json=cloudServerUrl,proto3" json:"cloud_server_url,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GetServiceInfoResponse) Reset() {
@@ -836,6 +840,20 @@ func (x *GetServiceInfoResponse) GetConfigMode() bool {
 		return x.ConfigMode
 	}
 	return false
+}
+
+func (x *GetServiceInfoResponse) GetCloudMode() bool {
+	if x != nil {
+		return x.CloudMode
+	}
+	return false
+}
+
+func (x *GetServiceInfoResponse) GetCloudServerUrl() string {
+	if x != nil {
+		return x.CloudServerUrl
+	}
+	return ""
 }
 
 type GetDashboardSummaryRequest struct {
@@ -4035,7 +4053,7 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"csrf_token\x18\x01 \x01(\tR\tcsrfToken\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
 	"\x0eLogoutResponse\"\x17\n" +
-	"\x15GetServiceInfoRequest\"\xe1\x01\n" +
+	"\x15GetServiceInfoRequest\"\xaa\x02\n" +
 	"\x16GetServiceInfoResponse\x129\n" +
 	"\n" +
 	"build_info\x18\x01 \x01(\v2\x1a.controlplane.v1.BuildInfoR\tbuildInfo\x129\n" +
@@ -4043,7 +4061,10 @@ const file_controlplane_v1_controlplane_proto_rawDesc = "" +
 	"started_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tstartedAt\x120\n" +
 	"\x14idle_timeout_seconds\x18\x03 \x01(\x05R\x12idleTimeoutSeconds\x12\x1f\n" +
 	"\vconfig_mode\x18\x04 \x01(\bR\n" +
-	"configMode\"\x1c\n" +
+	"configMode\x12\x1d\n" +
+	"\n" +
+	"cloud_mode\x18\x05 \x01(\bR\tcloudMode\x12(\n" +
+	"\x10cloud_server_url\x18\x06 \x01(\tR\x0ecloudServerUrl\"\x1c\n" +
 	"\x1aGetDashboardSummaryRequest\"\x86\x03\n" +
 	"\x1bGetDashboardSummaryResponse\x12(\n" +
 	"\x10runner_set_count\x18\x01 \x01(\x05R\x0erunnerSetCount\x124\n" +

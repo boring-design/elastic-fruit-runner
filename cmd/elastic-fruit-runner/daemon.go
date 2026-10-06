@@ -18,6 +18,7 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/config"
 	"github.com/boring-design/elastic-fruit-runner/internal/api"
 	"github.com/boring-design/elastic-fruit-runner/internal/auth"
+	"github.com/boring-design/elastic-fruit-runner/internal/cloudagent"
 	"github.com/boring-design/elastic-fruit-runner/internal/configstate"
 	"github.com/boring-design/elastic-fruit-runner/internal/management"
 	"github.com/boring-design/elastic-fruit-runner/internal/storage"
@@ -110,13 +111,6 @@ func runServices(startup *startupState) error {
 	databasePath := startup.databasePath
 	db := startup.db
 
-	// The cloud agent lands in a later change. Until then a cloud config stops the daemon
-	// here so nothing below starts talking to GitHub with an empty orgs and repos list.
-	if cfg != nil && cfg.Mode() == config.RunModeCloud {
-		slog.Error("cloud mode is not available yet", "server_url", cfg.Cloud.ServerURL)
-		return fmt.Errorf("cloud mode is not available yet, server_url=%s", cfg.Cloud.ServerURL)
-	}
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	startedAt := time.Now()
@@ -134,14 +128,15 @@ func runServices(startup *startupState) error {
 
 	vitalsService := vitals.New(startedAt)
 
-	var managementService *management.Service
+	// In config mode there is no job source, so statusSource stays nil.
+	var statusSource api.StatusSource
+	var cloudInfo *api.CloudInfo
+	var waitForStop func()
 	if cfg != nil {
-		managementService, err = management.New(cfg, db)
+		statusSource, cloudInfo, waitForStop, err = startJobSource(ctx, cfg, db, vitalsService)
 		if err != nil {
-			return fmt.Errorf("initialize scale set controller management service: %w", err)
+			return err
 		}
-		vitalsService.SetOnUpdate(managementService.RecordHostVitals)
-		managementService.Start(ctx)
 	}
 	go vitalsService.Start(ctx, 5*time.Second)
 
@@ -167,12 +162,6 @@ func runServices(startup *startupState) error {
 	if apiAddr == "" {
 		apiAddr = ":8080"
 	}
-	// A nil pointer stored in an interface is not nil, so only set the
-	// status source when the management service exists.
-	var statusSource api.StatusSource
-	if managementService != nil {
-		statusSource = managementService
-	}
 	apiServer := api.NewServer(
 		statusSource,
 		vitalsService,
@@ -185,6 +174,7 @@ func runServices(startup *startupState) error {
 			LogPath:      configLogPath(cfg),
 			ConfigMode:   cfg == nil,
 			ActiveConfig: cfg,
+			Cloud:        cloudInfo,
 			RequestRestart: func() {
 				restartRequested.Store(true)
 				stop()
@@ -218,9 +208,9 @@ func runServices(startup *startupState) error {
 	}()
 
 	done := make(chan struct{})
-	if managementService != nil {
+	if waitForStop != nil {
 		go func() {
-			managementService.Wait()
+			waitForStop()
 			close(done)
 		}()
 	} else {
@@ -242,6 +232,59 @@ func runServices(startup *startupState) error {
 		}
 		return nil
 	}
+}
+
+// startJobSource starts whatever feeds jobs to this host: the standalone
+// controllers or the cloud agent. It returns the status source for the
+// console, the cloud info when in cloud mode, and a function that blocks
+// until the job source has stopped.
+func startJobSource(ctx context.Context, cfg *config.Config, db *sql.DB, vitalsService *vitals.Service) (api.StatusSource, *api.CloudInfo, func(), error) {
+	if cfg.Mode() == config.RunModeCloud {
+		agent, err := startCloudAgent(ctx, cfg, db, vitalsService)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		cloudInfo := &api.CloudInfo{ServerURL: cfg.Cloud.ServerURL, Connected: agent.Connected}
+		return agent, cloudInfo, agent.Wait, nil
+	}
+	managementService, err := management.New(cfg, db)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("initialize scale set controller management service: %w", err)
+	}
+	vitalsService.SetOnUpdate(managementService.RecordHostVitals)
+	managementService.Start(ctx)
+	return managementService, nil, managementService.Wait, nil
+}
+
+func startCloudAgent(ctx context.Context, cfg *config.Config, db *sql.DB, vitalsService *vitals.Service) (*cloudagent.Service, error) {
+	credentialPath, err := cloudagent.CredentialPath()
+	if err != nil {
+		return nil, err
+	}
+	credential, err := cloudagent.LoadCredential(credentialPath)
+	if errors.Is(err, cloudagent.ErrCredentialMissing) {
+		return nil, fmt.Errorf("cloud mode needs an agent credential at %s, run: elastic-fruit-runner enroll --server %s --token <token>", credentialPath, cfg.Cloud.ServerURL)
+	}
+	if err != nil {
+		return nil, err
+	}
+	agent, err := cloudagent.New(ctx, cfg, credential, db, vitalsService)
+	if err != nil {
+		return nil, fmt.Errorf("initialize cloud agent for %s: %w", cfg.Cloud.ServerURL, err)
+	}
+	vitalsService.SetOnUpdate(agent.RecordHostVitals)
+	agent.Start(ctx)
+	backends := make([]string, 0)
+	for _, b := range agent.AvailableBackends() {
+		backends = append(backends, b.Backend)
+	}
+	slog.Info("cloud agent started",
+		"server_url", cfg.Cloud.ServerURL,
+		"agent_id", credential.AgentID,
+		"max_runners", cfg.Cloud.MaxRunners,
+		"backends", backends,
+	)
+	return agent, nil
 }
 
 func logSetupRequired(ctx context.Context, authService *auth.Service) {

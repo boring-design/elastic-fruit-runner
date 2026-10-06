@@ -114,6 +114,10 @@ message GetServiceInfoResponse {
   int32 idle_timeout_seconds = 3;
   // True when the daemon started without a valid config file.
   bool config_mode = 4;
+  // True when an Elastic Fruit Cloud server manages this daemon.
+  bool cloud_mode = 5;
+  // Cloud server URL, empty outside cloud mode.
+  string cloud_server_url = 6;
 }
 
 message GetDashboardSummaryRequest {}

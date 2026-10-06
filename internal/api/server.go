@@ -57,6 +57,7 @@ type Server struct {
 	cors              config.CORSConfig
 	configMode        bool
 	activeConfig      *config.Config
+	cloud             *CloudInfo
 	requestRestart    func()
 
 	probeMu       sync.Mutex
@@ -75,8 +76,17 @@ type Dependencies struct {
 	ConfigMode bool
 	// ActiveConfig is the running config, nil in config mode.
 	ActiveConfig *config.Config
+	// Cloud is set in cloud mode and nil otherwise.
+	Cloud *CloudInfo
 	// RequestRestart asks the daemon to shut down and start again with the disk config.
 	RequestRestart func()
+}
+
+// CloudInfo describes the Elastic Fruit Cloud server that manages the daemon in cloud mode.
+type CloudInfo struct {
+	ServerURL string
+	// Connected reports whether the command stream to the cloud is up.
+	Connected func() bool
 }
 
 // NewServer creates an API server backed by the management and vitals services.
@@ -107,6 +117,7 @@ func NewServer(managementService StatusSource, vitalsService *vitals.Service, id
 		server.logPath = dependencies[0].LogPath
 		server.configMode = dependencies[0].ConfigMode
 		server.activeConfig = dependencies[0].ActiveConfig
+		server.cloud = dependencies[0].Cloud
 		server.requestRestart = dependencies[0].RequestRestart
 	}
 	return server
@@ -208,12 +219,17 @@ func (s *Server) Logout(ctx context.Context, req *connect.Request[controlplanev1
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
 	build := buildinfo.Current()
-	return connect.NewResponse(&controlplanev1.GetServiceInfoResponse{
+	response := &controlplanev1.GetServiceInfoResponse{
 		BuildInfo:          toProtoBuildInfo(build),
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 		ConfigMode:         s.configMode,
-	}), nil
+	}
+	if s.cloud != nil {
+		response.CloudMode = true
+		response.CloudServerUrl = s.cloud.ServerURL
+	}
+	return connect.NewResponse(response), nil
 }
 
 func (s *Server) GetDashboardSummary(_ context.Context, _ *connect.Request[controlplanev1.GetDashboardSummaryRequest]) (*connect.Response[controlplanev1.GetDashboardSummaryResponse], error) {
@@ -241,6 +257,11 @@ func (s *Server) GetDashboardSummary(_ context.Context, _ *connect.Request[contr
 	}
 	if len(runnerSets) == 0 {
 		response.GithubConnected = false
+	}
+	// In cloud mode the cloud talks to GitHub, so the connection that matters
+	// is the command stream.
+	if s.cloud != nil {
+		response.GithubConnected = s.cloud.Connected()
 	}
 
 	for _, job := range s.managementService.ListJobRecords() {
