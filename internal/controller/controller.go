@@ -38,7 +38,7 @@ type ScaleSetController struct {
 	connected   atomic.Bool
 	jobRecorder JobRecorder
 
-	runners runnerState
+	runners *RunnerTracker
 
 	// runnerCancel cancels the context used by startRunner goroutines,
 	// allowing in-flight VM preparations to be aborted on shutdown.
@@ -55,6 +55,7 @@ func New(rsCfg *config.RunnerSetConfig, runnerGroup string, idleTimeout time.Dur
 		backend:     b,
 		scope:       scope,
 		jobRecorder: jr,
+		runners:     NewRunnerTracker(),
 		logger:      slog.Default().With("runnerSet", rsCfg.Name),
 	}
 }

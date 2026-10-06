@@ -71,12 +71,32 @@ type JobStore struct {
 
 	captureMu sync.Mutex
 	captures  map[string]*captureState
+
+	observerMu     sync.Mutex
+	sampleObserver func(jobID string, sample backend.ResourceSample)
 }
 
 func NewJobStore(db *sql.DB) *JobStore {
 	return &JobStore{
 		queries:  sqlcdb.New(db),
 		captures: make(map[string]*captureState),
+	}
+}
+
+// SetSampleObserver registers a function that is called with every resource
+// sample after it is stored. Passing nil turns the callback off.
+func (s *JobStore) SetSampleObserver(fn func(jobID string, sample backend.ResourceSample)) {
+	s.observerMu.Lock()
+	defer s.observerMu.Unlock()
+	s.sampleObserver = fn
+}
+
+func (s *JobStore) notifySampleObserver(jobID string, sample backend.ResourceSample) {
+	s.observerMu.Lock()
+	observer := s.sampleObserver
+	s.observerMu.Unlock()
+	if observer != nil {
+		observer(jobID, sample)
 	}
 }
 
@@ -255,6 +275,7 @@ func (s *JobStore) captureResource(ctx context.Context, jobID, runnerName string
 	if err != nil {
 		slog.Warn("failed to record job resource data", "job_id", jobID, "err", err)
 	}
+	s.notifySampleObserver(jobID, sample)
 }
 
 func (s *JobStore) Snapshot() []JobRecord {

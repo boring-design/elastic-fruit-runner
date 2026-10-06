@@ -31,9 +31,23 @@ import (
 
 var _ controlplanev1connect.ControlPlaneServiceHandler = (*Server)(nil)
 
+// StatusSource provides the runner, job, and host data the API serves.
+// management.Service is the standalone implementation.
+type StatusSource interface {
+	ListRunnerSets() []management.RunnerSetView
+	ListJobRecords() []management.JobRecord
+	FindJobRecords(filter management.JobFilter) management.JobPage
+	GetJobRecord(jobID string) (*management.JobRecord, error)
+	GetJobLogs(jobID string, after int64, pageSize int) (logs []management.JobLog, nextSequence int64)
+	GetJobSamples(jobID string) []management.ResourceSample
+	HostSamples(from, to time.Time) ([]management.HostSample, *time.Time)
+}
+
+var _ StatusSource = (*management.Service)(nil)
+
 // Server implements ControlPlaneServiceHandler.
 type Server struct {
-	managementService *management.Service
+	managementService StatusSource
 	vitalsService     *vitals.Service
 	authService       *auth.Service
 	configState       *configstate.Service
@@ -66,7 +80,8 @@ type Dependencies struct {
 }
 
 // NewServer creates an API server backed by the management and vitals services.
-func NewServer(managementService *management.Service, vitalsService *vitals.Service, idleTimeout time.Duration, cors config.CORSConfig, dependencies ...Dependencies) *Server {
+// managementService may be nil when the daemon runs without a valid config.
+func NewServer(managementService StatusSource, vitalsService *vitals.Service, idleTimeout time.Duration, cors config.CORSConfig, dependencies ...Dependencies) *Server {
 	if cors.AllowOrigin == "" {
 		cors.AllowOrigin = "*"
 	}
