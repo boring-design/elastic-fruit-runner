@@ -1,0 +1,245 @@
+// SPDX-License-Identifier: Apache-2.0
+
+// This file defines the contract between an elastic-fruit-runner agent and the
+// cloud control plane. Every call is started by the agent. The cloud never
+// dials the agent. Commands from the cloud to the agent travel back over the
+// server stream opened by WatchCommands.
+
+syntax = "proto3";
+
+package agent.v1;
+
+option go_package = "github.com/boring-design/elastic-fruit-runner/gen/agent/v1;agentv1";
+
+import "google/protobuf/timestamp.proto";
+
+service AgentService {
+  // Enroll registers a new agent with a one time enrollment token and
+  // returns the long lived credential the agent uses for every other call.
+  rpc Enroll(EnrollRequest) returns (EnrollResponse);
+
+  // Heartbeat reports host health and the state of every runner on the host.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // WatchCommands opens a server stream over which the cloud sends commands.
+  // The agent keeps this stream open for as long as it is connected.
+  rpc WatchCommands(WatchCommandsRequest) returns (stream AgentCommand);
+
+  // ReportRunnerEvent tells the cloud how a runner command ended.
+  rpc ReportRunnerEvent(ReportRunnerEventRequest) returns (ReportRunnerEventResponse);
+
+  // ReportResourceSamples uploads resource usage captured while a job ran.
+  rpc ReportResourceSamples(ReportResourceSamplesRequest) returns (ReportResourceSamplesResponse);
+}
+
+// Enroll
+
+message BackendCapability {
+  // Backend name, for example "tart" or "docker".
+  string backend = 1;
+  // Version string reported by the backend CLI.
+  string version = 2;
+}
+
+message EnrollRequest {
+  // One time token issued by the cloud for this enrollment.
+  string enrollment_token = 1;
+  string hostname = 2;
+  string os = 3;
+  string arch = 4;
+  string agent_version = 5;
+  // Backends that are installed and working on this host.
+  repeated BackendCapability available_backends = 6;
+  // Maximum number of runners this host can run at the same time.
+  int32 max_runners = 7;
+}
+
+message EnrollResponse {
+  string agent_id = 1;
+  // Secret the agent presents on every later call.
+  string agent_credential = 2;
+  // Human readable name the cloud assigned to this agent.
+  string agent_name = 3;
+}
+
+// Heartbeat
+
+message HostVitals {
+  // Host CPU utilization (0 to 100).
+  float cpu_usage_percent = 1;
+  // Host memory utilization (0 to 100).
+  float memory_usage_percent = 2;
+  // Host disk utilization (0 to 100).
+  float disk_usage_percent = 3;
+  // CPU or SoC core temperature in Celsius.
+  float temperature_celsius = 4;
+  double load_one = 5;
+  int64 memory_used_bytes = 6;
+  int64 memory_available_bytes = 7;
+  int64 swap_used_bytes = 8;
+  int64 disk_used_bytes = 9;
+  int64 disk_available_bytes = 10;
+  int64 disk_read_bytes = 11;
+  int64 disk_write_bytes = 12;
+}
+
+enum RunnerState {
+  RUNNER_STATE_UNSPECIFIED = 0;
+  // The VM or container is booting and the runner has not registered yet.
+  RUNNER_STATE_STARTING = 1;
+  // The runner is registered and waiting for a job.
+  RUNNER_STATE_IDLE = 2;
+  // The runner is executing a job.
+  RUNNER_STATE_BUSY = 3;
+  // The job finished and the VM or container is being removed.
+  RUNNER_STATE_CLEANING = 4;
+}
+
+message RunnerStatus {
+  string name = 1;
+  RunnerState state = 2;
+  // When the runner entered the current state.
+  google.protobuf.Timestamp since = 3;
+}
+
+message HeartbeatRequest {
+  HostVitals host_vitals = 1;
+  // Every runner the agent currently tracks.
+  repeated RunnerStatus runners = 2;
+  int32 max_runners = 3;
+}
+
+message HeartbeatResponse {}
+
+// WatchCommands
+
+message WatchCommandsRequest {}
+
+message AgentCommand {
+  // Unique id of this command. The agent echoes it in ReportRunnerEvent.
+  string command_id = 1;
+  oneof command {
+    StartRunner start_runner = 2;
+    CleanupRunner cleanup_runner = 3;
+    CleanupRunnerSet cleanup_runner_set = 4;
+    JobAssigned job_assigned = 5;
+    JobFinished job_finished = 6;
+    Keepalive keepalive = 7;
+  }
+}
+
+message StartRunner {
+  string runner_name = 1;
+  string runner_set_name = 2;
+  // Backend name, for example "tart" or "docker".
+  string backend = 3;
+  // VM or container image URI.
+  string image = 4;
+  // Target platform, for example "linux/arm64".
+  string platform = 5;
+  // Encoded just in time runner config from GitHub.
+  string jit_config = 6;
+}
+
+message CleanupRunner {
+  string runner_name = 1;
+}
+
+message CleanupRunnerSet {
+  string runner_set_name = 1;
+}
+
+message JobMetadata {
+  // Unique job identifier from GitHub.
+  string job_id = 1;
+  int64 workflow_run_id = 2;
+  string workflow_ref = 3;
+  string display_name = 4;
+  string owner = 5;
+  string repository = 6;
+  string event_name = 7;
+  // Labels the job requested.
+  repeated string labels = 8;
+  google.protobuf.Timestamp queued_at = 9;
+  google.protobuf.Timestamp scale_set_assigned_at = 10;
+  google.protobuf.Timestamp runner_assigned_at = 11;
+}
+
+message JobAssigned {
+  string runner_name = 1;
+  JobMetadata job = 2;
+}
+
+enum JobResult {
+  JOB_RESULT_UNSPECIFIED = 0;
+  JOB_RESULT_SUCCEEDED = 1;
+  JOB_RESULT_FAILED = 2;
+  JOB_RESULT_CANCELED = 3;
+}
+
+message JobFinished {
+  string runner_name = 1;
+  string job_id = 2;
+  JobResult result = 3;
+  google.protobuf.Timestamp finished_at = 4;
+}
+
+// Keepalive carries no data. The cloud sends it so both sides can tell the
+// stream is still alive.
+message Keepalive {}
+
+// ReportRunnerEvent
+
+message RunnerStarted {}
+
+message RunnerStartFailed {
+  string error = 1;
+}
+
+message RunnerCleaned {}
+
+message ReportRunnerEventRequest {
+  // Id of the AgentCommand this event answers.
+  string command_id = 1;
+  string runner_name = 2;
+  oneof event {
+    RunnerStarted started = 3;
+    RunnerStartFailed start_failed = 4;
+    RunnerCleaned cleaned = 5;
+  }
+}
+
+message ReportRunnerEventResponse {}
+
+// ReportResourceSamples
+
+enum ResourceAccuracy {
+  RESOURCE_ACCURACY_UNSPECIFIED = 0;
+  RESOURCE_ACCURACY_EXACT = 1;
+  RESOURCE_ACCURACY_ESTIMATE = 2;
+}
+
+message ResourceSample {
+  google.protobuf.Timestamp recorded_at = 1;
+  string source = 2;
+  ResourceAccuracy accuracy = 3;
+  double cpu_percent = 4;
+  int64 memory_used_bytes = 5;
+  int64 memory_available_bytes = 6;
+  int64 disk_used_bytes = 7;
+  int64 disk_available_bytes = 8;
+  int64 disk_read_bytes = 9;
+  int64 disk_write_bytes = 10;
+  int64 network_receive_bytes = 11;
+  int64 network_send_bytes = 12;
+  double load_one = 13;
+  double temperature_celsius = 14;
+}
+
+message ReportResourceSamplesRequest {
+  string job_id = 1;
+  string runner_name = 2;
+  repeated ResourceSample samples = 3;
+}
+
+message ReportResourceSamplesResponse {}
