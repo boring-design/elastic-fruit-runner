@@ -7,7 +7,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	agentv1 "github.com/boring-design/elastic-fruit-runner/gen/agent/v1"
+	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
 )
 
 const heartbeatInterval = 10 * time.Second

@@ -9,7 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/boring-design/elastic-fruit-runner/gen/agent/v1/agentv1connect"
+	"github.com/boring-design/elastic-fruit-protocol/gen/agent/v1/agentv1connect"
 )
 
 // newAgentClient builds the Connect client for the cloud server. An empty

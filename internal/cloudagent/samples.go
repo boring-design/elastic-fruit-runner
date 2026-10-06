@@ -5,7 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	agentv1 "github.com/boring-design/elastic-fruit-runner/gen/agent/v1"
+	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
 	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 )
 
