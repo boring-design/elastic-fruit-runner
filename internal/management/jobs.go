@@ -84,7 +84,8 @@ func NewJobStore(db *sql.DB) *JobStore {
 }
 
 // SetSampleObserver registers a function that is called with every resource
-// sample after it is stored. Passing nil turns the callback off.
+// sample after it is read, even when storing it failed. Passing nil turns the
+// callback off.
 func (s *JobStore) SetSampleObserver(fn func(jobID string, sample backend.ResourceSample)) {
 	s.observerMu.Lock()
 	defer s.observerMu.Unlock()
