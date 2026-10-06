@@ -34,7 +34,7 @@ type RunnerState int32
 const (
 	RunnerState_RUNNER_STATE_UNSPECIFIED RunnerState = 0
 	// The VM or container is booting and the runner has not registered yet.
-	RunnerState_RUNNER_STATE_STARTING RunnerState = 1
+	RunnerState_RUNNER_STATE_PREPARING RunnerState = 1
 	// The runner is registered and waiting for a job.
 	RunnerState_RUNNER_STATE_IDLE RunnerState = 2
 	// The runner is executing a job.
@@ -47,14 +47,14 @@ const (
 var (
 	RunnerState_name = map[int32]string{
 		0: "RUNNER_STATE_UNSPECIFIED",
-		1: "RUNNER_STATE_STARTING",
+		1: "RUNNER_STATE_PREPARING",
 		2: "RUNNER_STATE_IDLE",
 		3: "RUNNER_STATE_BUSY",
 		4: "RUNNER_STATE_CLEANING",
 	}
 	RunnerState_value = map[string]int32{
 		"RUNNER_STATE_UNSPECIFIED": 0,
-		"RUNNER_STATE_STARTING":    1,
+		"RUNNER_STATE_PREPARING":   1,
 		"RUNNER_STATE_IDLE":        2,
 		"RUNNER_STATE_BUSY":        3,
 		"RUNNER_STATE_CLEANING":    4,
@@ -88,6 +88,9 @@ func (RunnerState) EnumDescriptor() ([]byte, []int) {
 	return file_agent_v1_agent_proto_rawDescGZIP(), []int{0}
 }
 
+// JobResult values mirror the job result strings GitHub sends
+// ("succeeded", "failed", "canceled"). They intentionally differ from the
+// console enum in controlplane.proto.
 type JobResult int32
 
 const (
@@ -191,7 +194,9 @@ func (ResourceAccuracy) EnumDescriptor() ([]byte, []int) {
 
 type BackendCapability struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Backend name, for example "tart" or "docker".
+	// Backend name, for example "tart" or "docker". A string instead of an
+	// enum so new backends such as hcloud or firecracker can be added without
+	// a proto change.
 	Backend string `protobuf:"bytes,1,opt,name=backend,proto3" json:"backend,omitempty"`
 	// Version string reported by the backend CLI.
 	Version       string `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
@@ -341,7 +346,8 @@ func (x *EnrollRequest) GetMaxRunners() int32 {
 type EnrollResponse struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	AgentId string                 `protobuf:"bytes,1,opt,name=agent_id,json=agentId,proto3" json:"agent_id,omitempty"`
-	// Secret the agent presents on every later call.
+	// Secret the agent sends as "Authorization: Bearer <credential>" on every
+	// later call.
 	AgentCredential string `protobuf:"bytes,2,opt,name=agent_credential,json=agentCredential,proto3" json:"agent_credential,omitempty"`
 	// Human readable name the cloud assigned to this agent.
 	AgentName     string `protobuf:"bytes,3,opt,name=agent_name,json=agentName,proto3" json:"agent_name,omitempty"`
@@ -694,6 +700,11 @@ func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
 	return file_agent_v1_agent_proto_rawDescGZIP(), []int{6}
 }
 
+// WatchCommandsRequest opens the command stream. Commands sent while the
+// stream was down are not replayed in this version. Instead the server sends
+// unacknowledged StartRunner and CleanupRunner commands again after the agent
+// reconnects, keyed by command_id, so the agent must treat them as idempotent.
+// A last_command_id field can be added here later without breaking clients.
 type WatchCommandsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -889,7 +900,9 @@ type StartRunner struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunnerName    string                 `protobuf:"bytes,1,opt,name=runner_name,json=runnerName,proto3" json:"runner_name,omitempty"`
 	RunnerSetName string                 `protobuf:"bytes,2,opt,name=runner_set_name,json=runnerSetName,proto3" json:"runner_set_name,omitempty"`
-	// Backend name, for example "tart" or "docker".
+	// Backend name, for example "tart" or "docker". A string instead of an
+	// enum so new backends such as hcloud or firecracker can be added without
+	// a proto change.
 	Backend string `protobuf:"bytes,3,opt,name=backend,proto3" json:"backend,omitempty"`
 	// VM or container image URI.
 	Image string `protobuf:"bytes,4,opt,name=image,proto3" json:"image,omitempty"`
@@ -1017,6 +1030,9 @@ func (x *CleanupRunner) GetRunnerName() string {
 	return ""
 }
 
+// CleanupRunnerSet asks the agent to remove every runner in the set. The
+// agent reports one RunnerCleaned event per runner it removed, each echoing
+// the command id of this set command. There is no set level event.
 type CleanupRunnerSet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RunnerSetName string                 `protobuf:"bytes,1,opt,name=runner_set_name,json=runnerSetName,proto3" json:"runner_set_name,omitempty"`
@@ -1188,9 +1204,16 @@ func (x *JobMetadata) GetRunnerAssignedAt() *timestamppb.Timestamp {
 }
 
 type JobAssigned struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RunnerName    string                 `protobuf:"bytes,1,opt,name=runner_name,json=runnerName,proto3" json:"runner_name,omitempty"`
-	Job           *JobMetadata           `protobuf:"bytes,2,opt,name=job,proto3" json:"job,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	RunnerName string                 `protobuf:"bytes,1,opt,name=runner_name,json=runnerName,proto3" json:"runner_name,omitempty"`
+	Job        *JobMetadata           `protobuf:"bytes,2,opt,name=job,proto3" json:"job,omitempty"`
+	// Set and backend are repeated here so the agent can record the job
+	// without remembering the StartRunner command that created the runner.
+	RunnerSetName string `protobuf:"bytes,3,opt,name=runner_set_name,json=runnerSetName,proto3" json:"runner_set_name,omitempty"`
+	// Backend name, for example "tart" or "docker". A string instead of an
+	// enum so new backends such as hcloud or firecracker can be added without
+	// a proto change.
+	Backend       string `protobuf:"bytes,4,opt,name=backend,proto3" json:"backend,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1237,6 +1260,20 @@ func (x *JobAssigned) GetJob() *JobMetadata {
 		return x.Job
 	}
 	return nil
+}
+
+func (x *JobAssigned) GetRunnerSetName() string {
+	if x != nil {
+		return x.RunnerSetName
+	}
+	return ""
+}
+
+func (x *JobAssigned) GetBackend() string {
+	if x != nil {
+		return x.Backend
+	}
+	return ""
 }
 
 type JobFinished struct {
@@ -1944,11 +1981,13 @@ const file_agent_v1_agent_proto_rawDesc = "" +
 	"\tqueued_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\bqueuedAt\x12M\n" +
 	"\x15scale_set_assigned_at\x18\n" +
 	" \x01(\v2\x1a.google.protobuf.TimestampR\x12scaleSetAssignedAt\x12H\n" +
-	"\x12runner_assigned_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\x10runnerAssignedAt\"W\n" +
+	"\x12runner_assigned_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\x10runnerAssignedAt\"\x99\x01\n" +
 	"\vJobAssigned\x12\x1f\n" +
 	"\vrunner_name\x18\x01 \x01(\tR\n" +
 	"runnerName\x12'\n" +
-	"\x03job\x18\x02 \x01(\v2\x15.agent.v1.JobMetadataR\x03job\"\xaf\x01\n" +
+	"\x03job\x18\x02 \x01(\v2\x15.agent.v1.JobMetadataR\x03job\x12&\n" +
+	"\x0frunner_set_name\x18\x03 \x01(\tR\rrunnerSetName\x12\x18\n" +
+	"\abackend\x18\x04 \x01(\tR\abackend\"\xaf\x01\n" +
 	"\vJobFinished\x12\x1f\n" +
 	"\vrunner_name\x18\x01 \x01(\tR\n" +
 	"runnerName\x12\x15\n" +
@@ -1994,10 +2033,10 @@ const file_agent_v1_agent_proto_rawDesc = "" +
 	"\vrunner_name\x18\x02 \x01(\tR\n" +
 	"runnerName\x122\n" +
 	"\asamples\x18\x03 \x03(\v2\x18.agent.v1.ResourceSampleR\asamples\"\x1f\n" +
-	"\x1dReportResourceSamplesResponse*\x8f\x01\n" +
+	"\x1dReportResourceSamplesResponse*\x90\x01\n" +
 	"\vRunnerState\x12\x1c\n" +
-	"\x18RUNNER_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
-	"\x15RUNNER_STATE_STARTING\x10\x01\x12\x15\n" +
+	"\x18RUNNER_STATE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16RUNNER_STATE_PREPARING\x10\x01\x12\x15\n" +
 	"\x11RUNNER_STATE_IDLE\x10\x02\x12\x15\n" +
 	"\x11RUNNER_STATE_BUSY\x10\x03\x12\x19\n" +
 	"\x15RUNNER_STATE_CLEANING\x10\x04*q\n" +

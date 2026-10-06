@@ -35,7 +35,9 @@ service AgentService {
 // Enroll
 
 message BackendCapability {
-  // Backend name, for example "tart" or "docker".
+  // Backend name, for example "tart" or "docker". A string instead of an
+  // enum so new backends such as hcloud or firecracker can be added without
+  // a proto change.
   string backend = 1;
   // Version string reported by the backend CLI.
   string version = 2;
@@ -56,7 +58,8 @@ message EnrollRequest {
 
 message EnrollResponse {
   string agent_id = 1;
-  // Secret the agent presents on every later call.
+  // Secret the agent sends as "Authorization: Bearer <credential>" on every
+  // later call.
   string agent_credential = 2;
   // Human readable name the cloud assigned to this agent.
   string agent_name = 3;
@@ -86,7 +89,7 @@ message HostVitals {
 enum RunnerState {
   RUNNER_STATE_UNSPECIFIED = 0;
   // The VM or container is booting and the runner has not registered yet.
-  RUNNER_STATE_STARTING = 1;
+  RUNNER_STATE_PREPARING = 1;
   // The runner is registered and waiting for a job.
   RUNNER_STATE_IDLE = 2;
   // The runner is executing a job.
@@ -113,6 +116,11 @@ message HeartbeatResponse {}
 
 // WatchCommands
 
+// WatchCommandsRequest opens the command stream. Commands sent while the
+// stream was down are not replayed in this version. Instead the server sends
+// unacknowledged StartRunner and CleanupRunner commands again after the agent
+// reconnects, keyed by command_id, so the agent must treat them as idempotent.
+// A last_command_id field can be added here later without breaking clients.
 message WatchCommandsRequest {}
 
 message AgentCommand {
@@ -131,7 +139,9 @@ message AgentCommand {
 message StartRunner {
   string runner_name = 1;
   string runner_set_name = 2;
-  // Backend name, for example "tart" or "docker".
+  // Backend name, for example "tart" or "docker". A string instead of an
+  // enum so new backends such as hcloud or firecracker can be added without
+  // a proto change.
   string backend = 3;
   // VM or container image URI.
   string image = 4;
@@ -145,6 +155,9 @@ message CleanupRunner {
   string runner_name = 1;
 }
 
+// CleanupRunnerSet asks the agent to remove every runner in the set. The
+// agent reports one RunnerCleaned event per runner it removed, each echoing
+// the command id of this set command. There is no set level event.
 message CleanupRunnerSet {
   string runner_set_name = 1;
 }
@@ -168,8 +181,18 @@ message JobMetadata {
 message JobAssigned {
   string runner_name = 1;
   JobMetadata job = 2;
+  // Set and backend are repeated here so the agent can record the job
+  // without remembering the StartRunner command that created the runner.
+  string runner_set_name = 3;
+  // Backend name, for example "tart" or "docker". A string instead of an
+  // enum so new backends such as hcloud or firecracker can be added without
+  // a proto change.
+  string backend = 4;
 }
 
+// JobResult values mirror the job result strings GitHub sends
+// ("succeeded", "failed", "canceled"). They intentionally differ from the
+// console enum in controlplane.proto.
 enum JobResult {
   JOB_RESULT_UNSPECIFIED = 0;
   JOB_RESULT_SUCCEEDED = 1;
