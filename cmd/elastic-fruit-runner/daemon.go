@@ -167,8 +167,14 @@ func runServices(startup *startupState) error {
 	if apiAddr == "" {
 		apiAddr = ":8080"
 	}
+	// A nil pointer stored in an interface is not nil, so only set the
+	// status source when the management service exists.
+	var statusSource api.StatusSource
+	if managementService != nil {
+		statusSource = managementService
+	}
 	apiServer := api.NewServer(
-		managementService,
+		statusSource,
 		vitalsService,
 		idleTimeout,
 		cors,

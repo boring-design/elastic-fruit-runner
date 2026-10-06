@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/actions/scaleset"
@@ -30,9 +29,9 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	_, span := tracer.Start(ctx, "controller.HandleDesiredRunnerCount")
 	defer span.End()
 
-	counts := d.runners.counts()
-	allocated := counts.total()
-	current := counts.idle + counts.busy
+	counts := d.runners.Counts()
+	allocated := counts.Total()
+	current := counts.Idle + counts.Busy
 	needed := min(count, d.rsCfg.MaxRunners) - allocated
 	if needed < 0 {
 		needed = 0
@@ -41,14 +40,14 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	span.SetAttributes(
 		attribute.Int("runner.desired", count),
 		attribute.Int("runner.current", current),
-		attribute.Int("runner.preparing", counts.preparing),
+		attribute.Int("runner.preparing", counts.Preparing),
 		attribute.Int("runner.allocated", allocated),
 		attribute.Int("runner.spawning", needed),
 	)
 	d.logger.Info("scaling",
 		"desired", count,
 		"current", current,
-		"preparing", counts.preparing,
+		"preparing", counts.Preparing,
 		"allocated", allocated,
 		"spawning", needed,
 	)
@@ -56,10 +55,10 @@ func (d *ScaleSetController) HandleDesiredRunnerCount(ctx context.Context, count
 	runnerCtx := d.runners.getRunnerCtx()
 	for range needed {
 		name := fmt.Sprintf("%s-%s", d.rsCfg.Name, randSuffix())
-		d.runners.addPreparing(name)
+		d.runners.MarkStarting(name)
 		go d.startRunner(trace.ContextWithSpan(runnerCtx, span), name)
 	}
-	return d.runners.count(), nil
+	return d.runners.Count(), nil
 }
 
 // HandleJobStarted implements listener.Scaler.
@@ -73,7 +72,7 @@ func (d *ScaleSetController) HandleJobStarted(ctx context.Context, job *scaleset
 	)
 	defer span.End()
 
-	d.runners.markBusy(job.RunnerName)
+	d.runners.MarkBusy(job.RunnerName)
 	diagnostics, _ := d.backend.(backend.Diagnostics)
 	d.jobRecorder.RecordJobMessageStarted(d.rsCfg.Name, d.rsCfg.Backend, diagnostics, job)
 	d.logger.Info("job started", "runner", job.RunnerName, "id", job.RunnerID)
@@ -92,7 +91,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 	defer span.End()
 
 	name := job.RunnerName
-	d.runners.markDone(name)
+	d.runners.Remove(name)
 	d.jobRecorder.RecordJobMessageCompleted(job)
 	d.logger.Info("job completed", "runner", name, "result", job.Result)
 
@@ -112,7 +111,7 @@ func (d *ScaleSetController) HandleJobCompleted(ctx context.Context, job *scales
 // execution environment and starts the runner process. Once the runner is up
 // it moves to idle state and the goroutine exits — the runner's lifecycle
 // is then driven by job events.
-// The caller must call runners.addPreparing(name) before launching this goroutine.
+// The caller must call runners.MarkStarting(name) before launching this goroutine.
 func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 	log := d.logger.With("runner", name)
 
@@ -134,7 +133,7 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		jitSpan.RecordError(err)
 		jitSpan.SetStatus(codes.Error, "generate JIT config failed")
 		span.SetStatus(codes.Error, "generate JIT config failed")
-		d.runners.markDone(name)
+		d.runners.Remove(name)
 		return
 	}
 
@@ -142,13 +141,13 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 		log.Error("start runner failed", "err", err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "start runner failed")
-		d.runners.markDone(name)
+		d.runners.Remove(name)
 		d.backend.Cleanup(context.Background(), name)
 		d.removeGitHubRunner(context.Background(), name)
 		return
 	}
 
-	d.runners.moveToIdle(name)
+	d.runners.MarkIdle(name)
 	log.Info("runner started, waiting for job assignment")
 }
 
@@ -157,19 +156,7 @@ func (d *ScaleSetController) startRunner(ctx context.Context, name string) {
 func (d *ScaleSetController) shutdown(ctx context.Context) {
 	d.logger.Info("shutting down, cleaning up runners")
 
-	d.runners.mu.Lock()
-	toCleanup := make([]string, 0, len(d.runners.idle)+len(d.runners.busy))
-	for name := range d.runners.idle {
-		toCleanup = append(toCleanup, name)
-	}
-	for name := range d.runners.busy {
-		toCleanup = append(toCleanup, name)
-	}
-	preparingCount := len(d.runners.preparing)
-	d.runners.preparing = make(map[string]time.Time)
-	d.runners.idle = make(map[string]time.Time)
-	d.runners.busy = make(map[string]time.Time)
-	d.runners.mu.Unlock()
+	toCleanup, preparingCount := d.runners.removeAll()
 
 	if preparingCount > 0 {
 		d.logger.Info("aborting in-flight preparations", "count", preparingCount)
@@ -202,17 +189,7 @@ func (d *ScaleSetController) reapExpiredIdleRunners() {
 	now := time.Now()
 	timeout := d.idleTimeout
 
-	d.runners.mu.Lock()
-	var expired []string
-	for name, idleSince := range d.runners.idle {
-		if now.Sub(idleSince) > timeout {
-			expired = append(expired, name)
-		}
-	}
-	for _, name := range expired {
-		delete(d.runners.idle, name)
-	}
-	d.runners.mu.Unlock()
+	expired := d.runners.removeIdleOlderThan(now, timeout)
 
 	for _, name := range expired {
 		d.logger.Info("idle runner timed out, cleaning up", "runner", name, "idleTimeout", timeout)
@@ -243,121 +220,12 @@ func (d *ScaleSetController) removeGitHubRunner(ctx context.Context, name string
 	}
 }
 
-// runnerState tracks the lifecycle phase of each runner.
-// preparing: VM is being cloned/started, no job assigned yet.
-// idle:       Runner process is up, waiting for GitHub to assign a job.
-//
-//	The value is the time the runner entered idle state, used for
-//	idle timeout eviction (keepAliveTime semantics).
-//
-// busy:       Runner has picked up a job and is executing it.
-type runnerState struct {
-	mu        sync.Mutex
-	runnerCtx context.Context
-	preparing map[string]time.Time
-	idle      map[string]time.Time
-	busy      map[string]time.Time
-}
-
-type runnerCounts struct {
-	preparing int
-	idle      int
-	busy      int
-}
-
-func (c runnerCounts) total() int {
-	return c.preparing + c.idle + c.busy
-}
-
-func (r *runnerState) setRunnerCtx(ctx context.Context) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.runnerCtx = ctx
-}
-
-func (r *runnerState) getRunnerCtx() context.Context {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.runnerCtx
-}
-
-func (r *runnerState) count() int {
-	return r.counts().total()
-}
-
-func (r *runnerState) counts() runnerCounts {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return runnerCounts{
-		preparing: len(r.preparing),
-		idle:      len(r.idle),
-		busy:      len(r.busy),
-	}
-}
-
 // randSuffix returns a short random hex string (5 chars), similar to
 // Kubernetes Deployment pod suffixes.
 func randSuffix() string {
 	var b [3]byte
 	_, _ = rand.Read(b[:])
 	return hex.EncodeToString(b[:])[:5]
-}
-
-func (r *runnerState) addPreparing(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.preparing == nil {
-		r.preparing = make(map[string]time.Time)
-	}
-	r.preparing[name] = time.Now()
-}
-
-func (r *runnerState) moveToIdle(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.preparing, name)
-	if r.idle == nil {
-		r.idle = make(map[string]time.Time)
-	}
-	r.idle[name] = time.Now()
-}
-
-func (r *runnerState) markBusy(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.idle, name)
-	if r.busy == nil {
-		r.busy = make(map[string]time.Time)
-	}
-	r.busy[name] = time.Now()
-}
-
-// markDone removes the runner from whichever set it is in.
-// Safe to call multiple times (idempotent).
-func (r *runnerState) markDone(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.preparing, name)
-	delete(r.idle, name)
-	delete(r.busy, name)
-}
-
-// snapshot returns a point-in-time copy of all runners.
-func (r *runnerState) snapshot() []RunnerSnapshot {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	result := make([]RunnerSnapshot, 0, len(r.preparing)+len(r.idle)+len(r.busy))
-	for name, since := range r.preparing {
-		result = append(result, RunnerSnapshot{Name: name, State: StatePreparing, Since: since})
-	}
-	for name, since := range r.idle {
-		result = append(result, RunnerSnapshot{Name: name, State: StateIdle, Since: since})
-	}
-	for name, since := range r.busy {
-		result = append(result, RunnerSnapshot{Name: name, State: StateBusy, Since: since})
-	}
-	return result
 }
 
 // GetRunnerSetInfo returns the static configuration of this runner set.
@@ -385,5 +253,5 @@ func (d *ScaleSetController) IsConnected() bool {
 
 // GetRunners returns a point-in-time copy of all runners and their states.
 func (d *ScaleSetController) GetRunners() []RunnerSnapshot {
-	return d.runners.snapshot()
+	return d.runners.Snapshot()
 }
