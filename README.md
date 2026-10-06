@@ -51,3 +51,9 @@ make check
 - [x] GitHub App auth
 - [x] Embedded operations console
 - [ ] Warm pool (pre-clone VMs to reduce job start latency)
+
+---
+
+## License
+
+The code in this repository is licensed under AGPL-3.0, see `LICENSE`. The `proto/` and `gen/` directories are licensed under Apache-2.0 (see `proto/LICENSE` and `gen/LICENSE`) so that other programs can speak the agent protocol without AGPL obligations.
