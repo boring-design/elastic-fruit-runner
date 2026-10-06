@@ -207,6 +207,14 @@ func TestValidate(t *testing.T) {
 			wantErr: "cloud.server_url: \"not a url\" is not a valid URL",
 		},
 		{
+			name: "cloud server_url has no scheme",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "//cloud.example.com", MaxRunners: 4},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud.server_url: \"//cloud.example.com\" is not a valid URL",
+		},
+		{
 			name: "cloud server_url uses http on a remote host",
 			cfg: Config{
 				Cloud:       &CloudConfig{ServerURL: "http://cloud.example.com", MaxRunners: 4},

@@ -15,7 +15,7 @@ type Config struct {
 	Orgs  []OrgConfig  `yaml:"orgs"`
 	Repos []RepoConfig `yaml:"repos"`
 	// Cloud is set in cloud mode and nil in standalone mode.
-	Cloud       *CloudConfig  `yaml:"cloud"`
+	Cloud       *CloudConfig  `yaml:"cloud,omitempty"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
@@ -165,17 +165,8 @@ type RunnerSetConfig struct {
 // Validate returns an error if the configuration is invalid.
 // It also applies defaults (e.g. runner_group → "Default").
 func (c *Config) Validate() error {
-	hasGitHubTargets := len(c.Orgs) > 0 || len(c.Repos) > 0
-	if c.Cloud != nil && hasGitHubTargets {
-		return errors.New(cloudAndGitHubTargetsMessage)
-	}
-	if c.Cloud == nil && !hasGitHubTargets {
-		return fmt.Errorf("at least one org or repo must be configured")
-	}
-	if c.Cloud != nil {
-		if issues := cloudIssues(c.Cloud); len(issues) > 0 {
-			return errors.New(issues[0].String())
-		}
+	if err := c.validateMode(); err != nil {
+		return err
 	}
 
 	if c.IdleTimeout <= 0 {
@@ -203,6 +194,24 @@ func (c *Config) Validate() error {
 	for i := range c.Repos {
 		if err := validateRepo(&c.Repos[i], i, runnerSetNames); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateMode checks that the config picks exactly one way to get jobs,
+// either orgs/repos or cloud, and that a cloud block is complete.
+func (c *Config) validateMode() error {
+	hasGitHubTargets := len(c.Orgs) > 0 || len(c.Repos) > 0
+	if c.Cloud != nil && hasGitHubTargets {
+		return errors.New(cloudAndGitHubTargetsMessage)
+	}
+	if c.Cloud == nil && !hasGitHubTargets {
+		return errors.New("at least one org or repo must be configured")
+	}
+	if c.Cloud != nil {
+		if issues := cloudIssues(c.Cloud); len(issues) > 0 {
+			return errors.New(issues[0].String())
 		}
 	}
 	return nil

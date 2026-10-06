@@ -219,7 +219,7 @@ func cloudIssues(cloud *CloudConfig) []ValidationIssue {
 	}
 	if cloud.ServerURL == "" {
 		addIssue("cloud.server_url", "is required in cloud mode")
-	} else if parsed, err := url.Parse(cloud.ServerURL); err != nil || parsed.Host == "" {
+	} else if parsed, err := url.Parse(cloud.ServerURL); err != nil || parsed.Scheme == "" || parsed.Host == "" {
 		addIssue("cloud.server_url", fmt.Sprintf("%q is not a valid URL", cloud.ServerURL))
 	} else if parsed.Scheme != "https" && (parsed.Scheme != "http" || !isLocalHost(parsed.Hostname())) {
 		addIssue("cloud.server_url", fmt.Sprintf("%q must use https, http is only allowed for localhost and 127.0.0.1", cloud.ServerURL))
