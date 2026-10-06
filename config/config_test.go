@@ -56,6 +56,13 @@ func validAppAuth() AuthConfig {
 	}
 }
 
+func validCloudConfig() *CloudConfig {
+	return &CloudConfig{
+		ServerURL:  "https://cloud.example.com",
+		MaxRunners: 4,
+	}
+}
+
 func TestParsedLogLevel(t *testing.T) {
 	t.Parallel()
 
@@ -143,6 +150,85 @@ func TestValidate(t *testing.T) {
 				IdleTimeout: 15 * time.Minute,
 			},
 			wantErr: "at least one org or repo must be configured",
+		},
+		{
+			name: "valid cloud only",
+			cfg: Config{
+				Cloud:       validCloudConfig(),
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "cloud with http localhost",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "http://localhost:8080", MaxRunners: 1},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "cloud with http loopback address",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "http://127.0.0.1:8080", MaxRunners: 1},
+				IdleTimeout: 15 * time.Minute,
+			},
+		},
+		{
+			name: "cloud and orgs both present",
+			cfg: Config{
+				Orgs:        []OrgConfig{validOrgConfig()},
+				Cloud:       validCloudConfig(),
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud and orgs/repos are mutually exclusive",
+		},
+		{
+			name: "cloud and repos both present",
+			cfg: Config{
+				Repos:       []RepoConfig{validRepoConfig()},
+				Cloud:       validCloudConfig(),
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud and orgs/repos are mutually exclusive",
+		},
+		{
+			name: "cloud missing server_url",
+			cfg: Config{
+				Cloud:       &CloudConfig{MaxRunners: 4},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud.server_url: is required in cloud mode",
+		},
+		{
+			name: "cloud server_url is not a URL",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "not a url", MaxRunners: 4},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud.server_url: \"not a url\" is not a valid URL",
+		},
+		{
+			name: "cloud server_url uses http on a remote host",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "http://cloud.example.com", MaxRunners: 4},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud.server_url: \"http://cloud.example.com\" must use https",
+		},
+		{
+			name: "cloud max_runners is zero",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "https://cloud.example.com"},
+				IdleTimeout: 15 * time.Minute,
+			},
+			wantErr: "cloud.max_runners: must be at least 1, got 0",
+		},
+		{
+			name: "cloud skips org validation",
+			cfg: Config{
+				Cloud:       validCloudConfig(),
+				IdleTimeout: 0,
+			},
+			wantErr: "idle_timeout must be greater than 0",
 		},
 		{
 			name: "org missing org field",
@@ -435,6 +521,124 @@ func TestAuthConfig_Mode(t *testing.T) {
 		auth := AuthConfig{PATToken: strPtr("ghp_test")}
 		if got := auth.Mode(); got != AuthModePAT {
 			t.Errorf("Mode() = %q, want %q", got, AuthModePAT)
+		}
+	})
+}
+
+func TestConfig_Mode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  Config
+		want RunMode
+	}{
+		{name: "no cloud block", cfg: Config{Orgs: []OrgConfig{validOrgConfig()}}, want: RunModeStandalone},
+		{name: "empty config", cfg: Config{}, want: RunModeStandalone},
+		{name: "cloud block present", cfg: Config{Cloud: validCloudConfig()}, want: RunModeCloud},
+		{name: "empty cloud block still counts", cfg: Config{Cloud: &CloudConfig{}}, want: RunModeCloud},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tt.cfg.Mode(); got != tt.want {
+				t.Errorf("Mode() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateConfig_CloudMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		cfg        Config
+		wantErrors []string
+	}{
+		{
+			name: "valid cloud only",
+			cfg:  Config{Cloud: validCloudConfig(), IdleTimeout: 15 * time.Minute, LogLevel: "info"},
+		},
+		{
+			name: "cloud and orgs both present",
+			cfg: Config{
+				Orgs:        []OrgConfig{validOrgConfig()},
+				Cloud:       validCloudConfig(),
+				IdleTimeout: 15 * time.Minute,
+				LogLevel:    "info",
+			},
+			wantErrors: []string{"$: " + cloudAndGitHubTargetsMessage},
+		},
+		{
+			name:       "neither cloud nor orgs keeps the standalone message",
+			cfg:        Config{IdleTimeout: 15 * time.Minute, LogLevel: "info"},
+			wantErrors: []string{"$: at least one org or repo is required"},
+		},
+		{
+			name: "cloud reports every bad field",
+			cfg: Config{
+				Cloud:       &CloudConfig{ServerURL: "ftp://cloud.example.com", MaxRunners: -1},
+				IdleTimeout: 15 * time.Minute,
+				LogLevel:    "info",
+			},
+			wantErrors: []string{
+				"cloud.server_url: \"ftp://cloud.example.com\" must use https, http is only allowed for localhost and 127.0.0.1",
+				"cloud.max_runners: must be at least 1, got -1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ValidateConfig(&tt.cfg)
+			var got []string
+			for _, issue := range result.Errors {
+				got = append(got, issue.String())
+			}
+			if len(got) != len(tt.wantErrors) {
+				t.Fatalf("ValidateConfig() errors = %q, want %q", got, tt.wantErrors)
+			}
+			for i := range got {
+				if got[i] != tt.wantErrors[i] {
+					t.Errorf("ValidateConfig() error[%d] = %q, want %q", i, got[i], tt.wantErrors[i])
+				}
+			}
+		})
+	}
+}
+
+func TestValidateYAML_CloudBlock(t *testing.T) {
+	t.Parallel()
+
+	t.Run("cloud block is read into the config", func(t *testing.T) {
+		t.Parallel()
+		result := ValidateYAML([]byte("cloud:\n  server_url: https://cloud.example.com\n  max_runners: 4\n"))
+		if len(result.Errors) > 0 {
+			t.Fatalf("ValidateYAML() unexpected errors: %v", result.Errors)
+		}
+		if result.Config.Mode() != RunModeCloud {
+			t.Fatalf("Mode() = %q, want %q", result.Config.Mode(), RunModeCloud)
+		}
+		if result.Config.Cloud.ServerURL != "https://cloud.example.com" || result.Config.Cloud.MaxRunners != 4 {
+			t.Errorf("Cloud = %+v, want server_url https://cloud.example.com and max_runners 4", *result.Config.Cloud)
+		}
+		if len(result.Warnings) != 0 {
+			t.Errorf("Warnings = %v, want none in cloud mode", result.Warnings)
+		}
+	})
+
+	t.Run("missing cloud block stays nil and is not written back", func(t *testing.T) {
+		t.Parallel()
+		result := ValidateYAML([]byte("repos:\n  - repo: owner/repo\n    auth:\n      pat_token: ghp_test\n    runner_sets:\n      - name: r\n        backend: docker\n        image: img:latest\n        max_runners: 1\n"))
+		if len(result.Errors) > 0 {
+			t.Fatalf("ValidateYAML() unexpected errors: %v", result.Errors)
+		}
+		if result.Config.Cloud != nil {
+			t.Errorf("Cloud = %+v, want nil", *result.Config.Cloud)
+		}
+		if strings.Contains(result.Normalized, "cloud") {
+			t.Errorf("Normalized output should not mention cloud, got:\n%s", result.Normalized)
 		}
 	})
 }

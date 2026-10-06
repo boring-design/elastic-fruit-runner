@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,8 +12,10 @@ import (
 
 // Config holds all runtime configuration for the daemon.
 type Config struct {
-	Orgs        []OrgConfig   `yaml:"orgs"`
-	Repos       []RepoConfig  `yaml:"repos"`
+	Orgs  []OrgConfig  `yaml:"orgs"`
+	Repos []RepoConfig `yaml:"repos"`
+	// Cloud is set in cloud mode and nil in standalone mode.
+	Cloud       *CloudConfig  `yaml:"cloud"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
@@ -22,6 +25,31 @@ type Config struct {
 	FilePath    string        `yaml:"-"`
 	LoadedHash  string        `yaml:"-"`
 	LoadedYAML  []byte        `yaml:"-"`
+}
+
+// RunMode tells who talks to GitHub: the agent itself or an Elastic Fruit Cloud server.
+type RunMode string
+
+const (
+	// RunModeStandalone means the agent talks to GitHub directly for the configured orgs and repos.
+	RunModeStandalone RunMode = "standalone"
+	// RunModeCloud means an Elastic Fruit Cloud server talks to GitHub and pushes runner start commands to the agent.
+	RunModeCloud RunMode = "cloud"
+)
+
+// CloudConfig connects the agent to an Elastic Fruit Cloud server.
+// It replaces the orgs and repos blocks.
+type CloudConfig struct {
+	ServerURL  string `yaml:"server_url"`
+	MaxRunners int    `yaml:"max_runners"`
+}
+
+// Mode returns cloud when the cloud block is present, otherwise standalone.
+func (c *Config) Mode() RunMode {
+	if c.Cloud != nil {
+		return RunModeCloud
+	}
+	return RunModeStandalone
 }
 
 // DatabasePath returns the configured database path or the default path.
@@ -137,8 +165,17 @@ type RunnerSetConfig struct {
 // Validate returns an error if the configuration is invalid.
 // It also applies defaults (e.g. runner_group → "Default").
 func (c *Config) Validate() error {
-	if len(c.Orgs) == 0 && len(c.Repos) == 0 {
+	hasGitHubTargets := len(c.Orgs) > 0 || len(c.Repos) > 0
+	if c.Cloud != nil && hasGitHubTargets {
+		return errors.New(cloudAndGitHubTargetsMessage)
+	}
+	if c.Cloud == nil && !hasGitHubTargets {
 		return fmt.Errorf("at least one org or repo must be configured")
+	}
+	if c.Cloud != nil {
+		if issues := cloudIssues(c.Cloud); len(issues) > 0 {
+			return errors.New(issues[0].String())
+		}
 	}
 
 	if c.IdleTimeout <= 0 {

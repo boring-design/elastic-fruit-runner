@@ -40,6 +40,7 @@ type ValidationResult struct {
 type rawConfig struct {
 	Orgs        []OrgConfig   `yaml:"orgs"`
 	Repos       []RepoConfig  `yaml:"repos"`
+	Cloud       *CloudConfig  `yaml:"cloud,omitempty"`
 	IdleTimeout durationValue `yaml:"idle_timeout"`
 	LogLevel    string        `yaml:"log_level"`
 	APIAddr     string        `yaml:"api_addr"`
@@ -85,6 +86,7 @@ func ValidateYAML(data []byte) ValidationResult {
 	cfg := &Config{
 		Orgs:        raw.Orgs,
 		Repos:       raw.Repos,
+		Cloud:       raw.Cloud,
 		IdleTimeout: time.Duration(raw.IdleTimeout),
 		LogLevel:    raw.LogLevel,
 		APIAddr:     raw.APIAddr,
@@ -104,6 +106,7 @@ func ValidateYAML(data []byte) ValidationResult {
 		normalized, err := yaml.Marshal(rawConfig{
 			Orgs:        cfg.Orgs,
 			Repos:       cfg.Repos,
+			Cloud:       cfg.Cloud,
 			IdleTimeout: durationValue(cfg.IdleTimeout),
 			LogLevel:    cfg.LogLevel,
 			APIAddr:     cfg.APIAddr,
@@ -124,8 +127,17 @@ func ValidateConfig(cfg *Config) ValidationResult {
 	addError := func(path, message string) {
 		result.Errors = append(result.Errors, ValidationIssue{Path: path, Message: message})
 	}
-	if len(cfg.Orgs) == 0 && len(cfg.Repos) == 0 {
+	hasGitHubTargets := len(cfg.Orgs) > 0 || len(cfg.Repos) > 0
+	if cfg.Cloud != nil && hasGitHubTargets {
+		addError("$", cloudAndGitHubTargetsMessage)
+	}
+	if cfg.Cloud == nil && !hasGitHubTargets {
 		addError("$", "at least one org or repo is required")
+	}
+	if cfg.Cloud != nil {
+		for _, issue := range cloudIssues(cfg.Cloud) {
+			addError(issue.Path, issue.Message)
+		}
 	}
 	if cfg.IdleTimeout <= 0 || cfg.IdleTimeout > 24*time.Hour {
 		addError("idle_timeout", "must be greater than 0 and no more than 24h")
@@ -187,11 +199,39 @@ func ValidateConfig(cfg *Config) ValidationResult {
 			validateRunnerSetAll(&repo.RunnerSets[runnerIndex], path+".runner_sets["+strconv.Itoa(runnerIndex)+"]", names, addError)
 		}
 	}
-	result.Warnings = append(result.Warnings, ValidationIssue{
-		Path:    "$",
-		Message: "GitHub connectivity is not checked during config validation",
-	})
+	if cfg.Mode() == RunModeStandalone {
+		result.Warnings = append(result.Warnings, ValidationIssue{
+			Path:    "$",
+			Message: "GitHub connectivity is not checked during config validation",
+		})
+	}
 	return result
+}
+
+// cloudAndGitHubTargetsMessage is the error for a config that sets both ways to get jobs.
+const cloudAndGitHubTargetsMessage = "cloud and orgs/repos are mutually exclusive, keep only cloud or only orgs/repos"
+
+// cloudIssues checks the cloud block. Every message carries the value it rejects.
+func cloudIssues(cloud *CloudConfig) []ValidationIssue {
+	var issues []ValidationIssue
+	addIssue := func(path, message string) {
+		issues = append(issues, ValidationIssue{Path: path, Message: message})
+	}
+	if cloud.ServerURL == "" {
+		addIssue("cloud.server_url", "is required in cloud mode")
+	} else if parsed, err := url.Parse(cloud.ServerURL); err != nil || parsed.Host == "" {
+		addIssue("cloud.server_url", fmt.Sprintf("%q is not a valid URL", cloud.ServerURL))
+	} else if parsed.Scheme != "https" && (parsed.Scheme != "http" || !isLocalHost(parsed.Hostname())) {
+		addIssue("cloud.server_url", fmt.Sprintf("%q must use https, http is only allowed for localhost and 127.0.0.1", cloud.ServerURL))
+	}
+	if cloud.MaxRunners < 1 {
+		addIssue("cloud.max_runners", fmt.Sprintf("must be at least 1, got %d", cloud.MaxRunners))
+	}
+	return issues
+}
+
+func isLocalHost(hostname string) bool {
+	return hostname == "localhost" || hostname == "127.0.0.1"
 }
 
 var (

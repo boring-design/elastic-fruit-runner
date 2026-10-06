@@ -51,6 +51,12 @@ orgs:
 #         labels: [self-hosted, linux, arm64]
 #         max_runners: 2
 
+# Elastic Fruit Cloud mode. This block replaces orgs and repos: the cloud server talks to
+# GitHub and pushes runner start commands to this agent. Set either this block or orgs/repos.
+# cloud:
+#   server_url: https://cloud.example.com
+#   max_runners: 4
+
 idle_timeout: 15m
 log_level: info
 
