@@ -110,6 +110,13 @@ func runServices(startup *startupState) error {
 	databasePath := startup.databasePath
 	db := startup.db
 
+	// The cloud agent lands in a later change. Until then a cloud config stops the daemon
+	// here so nothing below starts talking to GitHub with an empty orgs and repos list.
+	if cfg != nil && cfg.Mode() == config.RunModeCloud {
+		slog.Error("cloud mode is not available yet", "server_url", cfg.Cloud.ServerURL)
+		return fmt.Errorf("cloud mode is not available yet, server_url=%s", cfg.Cloud.ServerURL)
+	}
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	startedAt := time.Now()
