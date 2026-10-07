@@ -102,3 +102,19 @@ func TestSaveAndLoadCredentialRoundTrip(t *testing.T) {
 		t.Fatalf("LoadCredential() = %+v, want %+v", got, want)
 	}
 }
+
+func TestPlaceholderJobID(t *testing.T) {
+	t.Parallel()
+	id := placeholderJobID("efc-test-abc12")
+	if id != "pending-efc-test-abc12" {
+		t.Fatalf("placeholderJobID() = %q, want %q", id, "pending-efc-test-abc12")
+	}
+	if !isPlaceholderJobID(id) {
+		t.Fatalf("isPlaceholderJobID(%q) = false, want true", id)
+	}
+	for _, real := range []string{"123456789", "job-1", ""} {
+		if isPlaceholderJobID(real) {
+			t.Errorf("isPlaceholderJobID(%q) = true, want false", real)
+		}
+	}
+}

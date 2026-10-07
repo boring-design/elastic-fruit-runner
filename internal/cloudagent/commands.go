@@ -8,6 +8,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/actions/scaleset"
+
 	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 )
@@ -162,7 +164,11 @@ func (s *Service) handleStartRunner(ctx context.Context, commandID string, comma
 		s.reportEvent(ctx, runnerStartFailedEvent(commandID, command.RunnerName, errors.New("runner "+command.RunnerName+" was cleaned up while starting")))
 		return
 	}
-	log.Info("runner started, waiting for job assignment")
+	// Capture starts now under a placeholder id so the job keeps a local
+	// record with logs and samples even when JobAssigned never arrives.
+	diagnostics := s.diagnosticsFor(command.RunnerName, command.Backend)
+	s.jobs.OpenProvisionalJob(placeholderJobID(command.RunnerName), command.RunnerSetName, command.Backend, command.RunnerName, diagnostics)
+	log.Info("runner started, capturing logs while waiting for job assignment")
 	s.reportEvent(ctx, runnerStartedEvent(commandID, command.RunnerName))
 }
 
@@ -173,6 +179,7 @@ func (s *Service) handleCleanupRunner(ctx context.Context, commandID, runnerName
 	ctx = context.WithoutCancel(ctx)
 	log := s.logger.With("command_id", commandID, "runner", runnerName)
 	info, known := s.forgetRunner(runnerName)
+	s.jobs.CloseProvisionalJob(placeholderJobID(runnerName), runnerName)
 	if known && info.backend != nil {
 		log.Info("cleaning up runner")
 		info.backend.Cleanup(ctx, runnerName)
@@ -197,6 +204,9 @@ func (s *Service) handleCleanupRunnerSet(ctx context.Context, commandID, setName
 		backends = s.capableBackends()
 	}
 	log.Info("cleaning up runner set", "runners", removed)
+	for _, runnerName := range removed {
+		s.jobs.CloseProvisionalJob(placeholderJobID(runnerName), runnerName)
+	}
 	for _, b := range backends {
 		b.CleanupAll(ctx, setName)
 	}
@@ -205,7 +215,9 @@ func (s *Service) handleCleanupRunnerSet(ctx context.Context, commandID, setName
 	}
 }
 
-// handleJobAssigned records the job locally and starts log and sample capture.
+// handleJobAssigned fills the job details into the record opened when the
+// runner started. Without such a record, for example after a daemon restart,
+// the job is recorded fresh and capture starts now.
 func (s *Service) handleJobAssigned(command *agentv1.JobAssigned) {
 	if command.Job == nil {
 		s.logger.Warn("job assigned without job metadata ignored", "runner", command.RunnerName)
@@ -215,11 +227,16 @@ func (s *Service) handleJobAssigned(command *agentv1.JobAssigned) {
 	s.tracker.MarkBusy(command.RunnerName)
 	diagnostics := s.diagnosticsFor(command.RunnerName, command.Backend)
 	s.rememberJobRunner(command.Job.JobId, command.RunnerName)
-	s.jobs.RecordJobMessageStarted(command.RunnerSetName, command.Backend, diagnostics, toJobStarted(command))
+	started := toJobStarted(command)
+	if !s.jobs.AttachJobMetadata(placeholderJobID(command.RunnerName), command.RunnerSetName, command.Backend, diagnostics, started) {
+		s.jobs.RecordJobMessageStarted(command.RunnerSetName, command.Backend, diagnostics, started)
+	}
 	s.logger.Info("job started", "runner", command.RunnerName, "job_id", command.Job.JobId, "runner_set", command.RunnerSetName)
 }
 
-// handleJobFinished closes the local job record and stops capture.
+// handleJobFinished closes the local job record and stops capture. When the
+// JobAssigned for this job never arrived, the provisional record of the
+// runner is moved to the real job id first so its logs stay with the job.
 func (s *Service) handleJobFinished(command *agentv1.JobFinished) {
 	result, known := jobResultString(command.Result)
 	if !known {
@@ -227,6 +244,16 @@ func (s *Service) handleJobFinished(command *agentv1.JobFinished) {
 		result = "failed"
 	}
 	s.tracker.MarkIdle(command.RunnerName)
+	attached := s.jobs.AttachJobMetadata(placeholderJobID(command.RunnerName), "", "", nil, &scaleset.JobStarted{
+		RunnerName: command.RunnerName,
+		JobMessageBase: scaleset.JobMessageBase{
+			JobID:          command.JobId,
+			JobDisplayName: "job details were not delivered by the control plane",
+		},
+	})
+	if attached {
+		s.logger.Warn("job finished without an earlier job assignment, kept the runner record", "runner", command.RunnerName, "job_id", command.JobId)
+	}
 	s.jobs.RecordJobMessageCompleted(toJobCompleted(command, result))
 	s.forgetJobRunner(command.JobId)
 	s.logger.Info("job completed", "runner", command.RunnerName, "job_id", command.JobId, "result", result)
