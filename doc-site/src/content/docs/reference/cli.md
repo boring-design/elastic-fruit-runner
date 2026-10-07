@@ -79,7 +79,7 @@ elastic-fruit-runner --version
 Both forms print one line with the version, the Git commit, and the build date:
 
 ```text
-elastic-fruit-runner v0.3.0 (0123456789abcdef0123456789abcdef01234567, 2026-10-06T08:00:00Z)
+elastic-fruit-runner 0.3.0 (0123456789abcdef0123456789abcdef01234567, 2026-10-06T08:00:00Z)
 ```
 
 Release binaries get these values from the release build. A local `go build` prints `dev` as the version and reads the commit and date from the Git checkout when available.
