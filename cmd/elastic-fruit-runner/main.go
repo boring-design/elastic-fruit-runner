@@ -28,6 +28,7 @@ func newRootCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "elastic-fruit-runner",
 		Short:         "Run the Elastic Fruit Runner daemon",
+		Version:       versionString(),
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -48,8 +49,10 @@ func newRootCommand() *cobra.Command {
 		},
 	}
 	root.CompletionOptions.DisableDefaultCmd = true
+	root.SetVersionTemplate("{{.Version}}\n")
 	root.PersistentFlags().String("config", "", "Path to config file (default: ~/.elastic-fruit-runner/config.yaml)")
 
+	root.AddCommand(newVersionCommand())
 	root.AddCommand(newEnrollCommand(v))
 	root.AddCommand(&cobra.Command{
 		Use:   "reset-password",
