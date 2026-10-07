@@ -454,6 +454,25 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) er
 	return err
 }
 
+const jobLogsContainText = `-- name: JobLogsContainText :one
+SELECT EXISTS(
+    SELECT 1 FROM job_logs
+    WHERE job_id = ?1 AND instr(text, ?2) > 0
+)
+`
+
+type JobLogsContainTextParams struct {
+	JobID  string
+	Marker string
+}
+
+func (q *Queries) JobLogsContainText(ctx context.Context, arg JobLogsContainTextParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, jobLogsContainText, arg.JobID, arg.Marker)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listHostSamples = `-- name: ListHostSamples :many
 SELECT recorded_at, interval_seconds, cpu_percent, memory_used_bytes,
     memory_available_bytes, disk_used_bytes, disk_available_bytes,

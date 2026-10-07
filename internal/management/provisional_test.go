@@ -48,13 +48,6 @@ func TestMergeJobMetadata(t *testing.T) {
 
 func TestClosedWithoutJobNote(t *testing.T) {
 	t.Parallel()
-	log := "2026-10-06 10:00:00Z: Listening for Jobs\n2026-10-06 10:00:05Z: Running job: build\n"
-	if !logTextShowsJobStarted(log) {
-		t.Fatal("logTextShowsJobStarted() = false for a log with a job start line")
-	}
-	if logTextShowsJobStarted("Listening for Jobs\n") {
-		t.Fatal("logTextShowsJobStarted() = true for a log without a job start line")
-	}
 	if closedWithoutJobNote(true) == closedWithoutJobNote(false) {
 		t.Fatal("closedWithoutJobNote() gives the same note whether or not a job ran")
 	}

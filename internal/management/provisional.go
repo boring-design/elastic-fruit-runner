@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/actions/scaleset"
@@ -96,7 +95,7 @@ func (s *JobStore) CloseProvisionalJob(placeholderID, runnerName string) {
 	if row.Result != "running" {
 		return
 	}
-	note := closedWithoutJobNote(logTextShowsJobStarted(s.allLogText(placeholderID)))
+	note := closedWithoutJobNote(s.jobLogsShowJobStarted(ctx, placeholderID, runnerName))
 	err = s.queries.CloseRunningJobWithNote(ctx, sqlcdb.CloseRunningJobWithNoteParams{
 		Result:      "unknown",
 		CompletedAt: sql.NullTime{Time: time.Now(), Valid: true},
@@ -131,9 +130,15 @@ func closedWithoutJobNote(jobRan bool) string {
 	return "runner removed before any job was assigned"
 }
 
-// logTextShowsJobStarted reports whether the runner log says a job started.
-func logTextShowsJobStarted(text string) bool {
-	return strings.Contains(text, runnerJobStartMarker)
+// jobLogsShowJobStarted reports whether the stored runner log says a job
+// started. The check runs in SQLite so the log is not loaded into memory.
+func (s *JobStore) jobLogsShowJobStarted(ctx context.Context, jobID, runnerName string) bool {
+	found, err := s.queries.JobLogsContainText(ctx, sqlcdb.JobLogsContainTextParams{JobID: jobID, Marker: runnerJobStartMarker})
+	if err != nil {
+		slog.Warn("failed to search job logs for the job start line", "job_id", jobID, "runner", runnerName, "err", err)
+		return false
+	}
+	return found != 0
 }
 
 // moveJob renames a running job row to the id in params, writes the merged
@@ -177,22 +182,6 @@ func (s *JobStore) lookupCapture(jobID string) *captureState {
 	s.captureMu.Lock()
 	defer s.captureMu.Unlock()
 	return s.captures[jobID]
-}
-
-// allLogText joins every stored log chunk of a job.
-func (s *JobStore) allLogText(jobID string) string {
-	var text strings.Builder
-	var after int64
-	for {
-		logs, next := s.Logs(jobID, after, 500)
-		for _, entry := range logs {
-			text.WriteString(entry.Text)
-		}
-		if len(logs) == 0 || next == after {
-			return text.String()
-		}
-		after = next
-	}
 }
 
 func firstNonEmpty(values ...string) string {

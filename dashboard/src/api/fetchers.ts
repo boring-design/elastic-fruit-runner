@@ -325,7 +325,7 @@ function toJob(job: JobResponse): JobRecord {
     id: job.id,
     runnerName: job.runnerName,
     runnerSetName: job.runnerSetName,
-    result: JOB_RESULT_MAP[job.result] ?? (job.completedAt ? 'failure' : 'running'),
+    result: JOB_RESULT_MAP[job.result] ?? (job.completedAt ? 'unknown' : 'running'),
     startedAt: new Date(job.startedAt),
     completedAt: job.completedAt ? new Date(job.completedAt) : null,
     owner: job.owner ?? '',

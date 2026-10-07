@@ -40,6 +40,12 @@ UPDATE job_logs SET job_id = sqlc.arg(new_id) WHERE job_id = sqlc.arg(old_id);
 -- name: MoveJobResourceSamples :exec
 UPDATE job_resource_samples SET job_id = sqlc.arg(new_id) WHERE job_id = sqlc.arg(old_id);
 
+-- name: JobLogsContainText :one
+SELECT EXISTS(
+    SELECT 1 FROM job_logs
+    WHERE job_id = sqlc.arg(job_id) AND instr(text, sqlc.arg(marker)) > 0
+);
+
 -- name: CloseRunningJobWithNote :exec
 UPDATE jobs
 SET result = ?, completed_at = ?, display_name = ?

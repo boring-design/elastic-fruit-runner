@@ -1,6 +1,6 @@
 export type RunnerState = 'preparing' | 'idle' | 'busy' | 'unknown'
 export type Backend = 'tart' | 'docker' | 'unknown'
-export type JobResult = 'success' | 'failure' | 'canceled' | 'running'
+export type JobResult = 'success' | 'failure' | 'canceled' | 'running' | 'unknown'
 export type ConfigSyncState = 'in_sync' | 'restart_required' | 'disk_invalid' | 'unknown'
 
 export interface SessionState {

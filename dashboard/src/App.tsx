@@ -307,6 +307,7 @@ function JobsPage({ jobs: initialJobs, now }: { jobs: JobRecord[]; now: Date }) 
           <option value="succeeded">Success</option>
           <option value="failed">Failure</option>
           <option value="canceled">Canceled</option>
+          <option value="unknown">Unknown</option>
         </select>
         <input aria-label="Runner set filter" placeholder="Runner set" value={runnerSet} onChange={event => { setRunnerSet(event.target.value); resetPage() }} />
         <input aria-label="Repository filter" placeholder="Repository" value={repository} onChange={event => { setRepository(event.target.value); resetPage() }} />
