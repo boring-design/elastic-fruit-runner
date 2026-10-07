@@ -21,6 +21,10 @@ type sampleReport struct {
 
 // observeSample is called by the job store for every captured sample.
 func (s *Service) observeSample(jobID string, sample backend.ResourceSample) {
+	// The cloud cannot attribute samples for a job it has not named yet.
+	if isPlaceholderJobID(jobID) {
+		return
+	}
 	report := sampleReport{jobID: jobID, runnerName: s.jobRunnerName(jobID), sample: sample}
 	select {
 	case s.samples <- report:

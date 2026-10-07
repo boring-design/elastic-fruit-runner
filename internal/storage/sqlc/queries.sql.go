@@ -20,6 +20,29 @@ func (q *Queries) ClearActiveConfigRevision(ctx context.Context) error {
 	return err
 }
 
+const closeRunningJobWithNote = `-- name: CloseRunningJobWithNote :exec
+UPDATE jobs
+SET result = ?, completed_at = ?, display_name = ?
+WHERE id = ? AND result = 'running'
+`
+
+type CloseRunningJobWithNoteParams struct {
+	Result      string
+	CompletedAt sql.NullTime
+	DisplayName string
+	ID          string
+}
+
+func (q *Queries) CloseRunningJobWithNote(ctx context.Context, arg CloseRunningJobWithNoteParams) error {
+	_, err := q.db.ExecContext(ctx, closeRunningJobWithNote,
+		arg.Result,
+		arg.CompletedAt,
+		arg.DisplayName,
+		arg.ID,
+	)
+	return err
+}
+
 const countAdmin = `-- name: CountAdmin :one
 SELECT COUNT(*) FROM console_admin WHERE id = 1
 `
@@ -671,6 +694,49 @@ func (q *Queries) ListRecentConfigRevisions(ctx context.Context) ([]ListRecentCo
 		return nil, err
 	}
 	return items, nil
+}
+
+const moveJobLogs = `-- name: MoveJobLogs :exec
+UPDATE job_logs SET job_id = ?1 WHERE job_id = ?2
+`
+
+type MoveJobLogsParams struct {
+	NewID string
+	OldID string
+}
+
+func (q *Queries) MoveJobLogs(ctx context.Context, arg MoveJobLogsParams) error {
+	_, err := q.db.ExecContext(ctx, moveJobLogs, arg.NewID, arg.OldID)
+	return err
+}
+
+const moveJobResourceSamples = `-- name: MoveJobResourceSamples :exec
+UPDATE job_resource_samples SET job_id = ?1 WHERE job_id = ?2
+`
+
+type MoveJobResourceSamplesParams struct {
+	NewID string
+	OldID string
+}
+
+func (q *Queries) MoveJobResourceSamples(ctx context.Context, arg MoveJobResourceSamplesParams) error {
+	_, err := q.db.ExecContext(ctx, moveJobResourceSamples, arg.NewID, arg.OldID)
+	return err
+}
+
+const renameRunningJob = `-- name: RenameRunningJob :execresult
+UPDATE jobs
+SET id = ?1
+WHERE id = ?2 AND result = 'running'
+`
+
+type RenameRunningJobParams struct {
+	NewID string
+	OldID string
+}
+
+func (q *Queries) RenameRunningJob(ctx context.Context, arg RenameRunningJobParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, renameRunningJob, arg.NewID, arg.OldID)
 }
 
 const rollupHostMinute = `-- name: RollupHostMinute :exec

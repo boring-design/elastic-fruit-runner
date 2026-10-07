@@ -61,12 +61,19 @@ type JobLog struct {
 type ResourceSample = backend.ResourceSample
 
 type captureState struct {
-	cancel  context.CancelFunc
-	done    chan struct{}
+	cancel context.CancelFunc
+	done   chan struct{}
+
+	// mu guards jobID and logSize. The capture goroutine holds it while it
+	// writes a row, and AttachJobMetadata holds it while it moves the job to
+	// its real id, so no row is written under the old id after the move.
+	mu      sync.Mutex
+	jobID   string
 	logSize int
 }
 
 type JobStore struct {
+	db      *sql.DB
 	queries *sqlcdb.Queries
 
 	captureMu sync.Mutex
@@ -78,6 +85,7 @@ type JobStore struct {
 
 func NewJobStore(db *sql.DB) *JobStore {
 	return &JobStore{
+		db:       db,
 		queries:  sqlcdb.New(db),
 		captures: make(map[string]*captureState),
 	}
@@ -108,9 +116,19 @@ var knownJobResults = map[string]struct{}{
 }
 
 func (s *JobStore) RecordJobMessageStarted(setName, backendName string, diagnostics backend.Diagnostics, job *scaleset.JobStarted) {
-	ctx := context.Background()
+	err := s.queries.UpsertStartedJob(context.Background(), startedJobParams(setName, backendName, job))
+	if err != nil {
+		slog.Error("failed to record job started", "job_id", job.JobID, "err", err)
+		return
+	}
+	if diagnostics != nil {
+		s.startCapture(job.JobID, job.RunnerName, diagnostics)
+	}
+}
+
+func startedJobParams(setName, backendName string, job *scaleset.JobStarted) sqlcdb.UpsertStartedJobParams {
 	labels, _ := json.Marshal(job.RequestLabels)
-	err := s.queries.UpsertStartedJob(ctx, sqlcdb.UpsertStartedJobParams{
+	return sqlcdb.UpsertStartedJobParams{
 		ID:                 job.JobID,
 		RunnerName:         job.RunnerName,
 		RunnerSetName:      setName,
@@ -126,13 +144,6 @@ func (s *JobStore) RecordJobMessageStarted(setName, backendName string, diagnost
 		ScaleSetAssignedAt: nullableTime(job.ScaleSetAssignTime),
 		RunnerAssignedAt:   nullableTime(job.RunnerAssignTime),
 		Backend:            backendName,
-	})
-	if err != nil {
-		slog.Error("failed to record job started", "job_id", job.JobID, "err", err)
-		return
-	}
-	if diagnostics != nil {
-		s.startCapture(job.JobID, job.RunnerName, diagnostics)
 	}
 }
 
@@ -190,7 +201,7 @@ func (s *JobStore) RecordJobCompleted(jobID, result string) {
 
 func (s *JobStore) startCapture(jobID, runnerName string, diagnostics backend.Diagnostics) {
 	ctx, cancel := context.WithCancel(context.Background())
-	state := &captureState{cancel: cancel, done: make(chan struct{})}
+	state := &captureState{cancel: cancel, done: make(chan struct{}), jobID: jobID}
 	s.captureMu.Lock()
 	s.captures[jobID] = state
 	s.captureMu.Unlock()
@@ -201,19 +212,19 @@ func (s *JobStore) startCapture(jobID, runnerName string, diagnostics backend.Di
 		resourceTicker := time.NewTicker(5 * time.Second)
 		defer logTicker.Stop()
 		defer resourceTicker.Stop()
-		s.captureResource(ctx, jobID, runnerName, diagnostics)
+		s.captureResource(ctx, runnerName, diagnostics, state)
 		for {
 			select {
 			case <-ctx.Done():
 				finalCtx, finalCancel := context.WithTimeout(context.Background(), 5*time.Second)
-				s.captureLogs(finalCtx, jobID, runnerName, diagnostics, state)
-				s.captureResource(finalCtx, jobID, runnerName, diagnostics)
+				s.captureLogs(finalCtx, runnerName, diagnostics, state)
+				s.captureResource(finalCtx, runnerName, diagnostics, state)
 				finalCancel()
 				return
 			case <-logTicker.C:
-				s.captureLogs(ctx, jobID, runnerName, diagnostics, state)
+				s.captureLogs(ctx, runnerName, diagnostics, state)
 			case <-resourceTicker.C:
-				s.captureResource(ctx, jobID, runnerName, diagnostics)
+				s.captureResource(ctx, runnerName, diagnostics, state)
 			}
 		}
 	}()
@@ -233,9 +244,14 @@ func (s *JobStore) stopCapture(jobID string) {
 	}
 }
 
-func (s *JobStore) captureLogs(ctx context.Context, jobID, runnerName string, diagnostics backend.Diagnostics, state *captureState) {
+func (s *JobStore) captureLogs(ctx context.Context, runnerName string, diagnostics backend.Diagnostics, state *captureState) {
 	text, err := diagnostics.ReadLogs(ctx, runnerName)
-	if err != nil || len(text) <= state.logSize {
+	if err != nil {
+		return
+	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	if len(text) <= state.logSize {
 		return
 	}
 	added := text[state.logSize:]
@@ -244,20 +260,23 @@ func (s *JobStore) captureLogs(ctx context.Context, jobID, runnerName string, di
 		added = added[len(added)-1024*1024:]
 	}
 	err = s.queries.InsertJobLog(ctx, sqlcdb.InsertJobLogParams{
-		JobID:      jobID,
+		JobID:      state.jobID,
 		RecordedAt: time.Now(),
 		Text:       added,
 	})
 	if err != nil {
-		slog.Warn("failed to record job logs", "job_id", jobID, "err", err)
+		slog.Warn("failed to record job logs", "job_id", state.jobID, "runner", runnerName, "err", err)
 	}
 }
 
-func (s *JobStore) captureResource(ctx context.Context, jobID, runnerName string, diagnostics backend.Diagnostics) {
+func (s *JobStore) captureResource(ctx context.Context, runnerName string, diagnostics backend.Diagnostics, state *captureState) {
 	sample, err := diagnostics.ReadResource(ctx, runnerName)
 	if err != nil {
 		return
 	}
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	jobID := state.jobID
 	err = s.queries.InsertJobResourceSample(ctx, sqlcdb.InsertJobResourceSampleParams{
 		JobID:                jobID,
 		RecordedAt:           sample.RecordedAt,

@@ -29,6 +29,22 @@ WHERE id = ?;
 INSERT OR IGNORE INTO jobs (id, runner_name, runner_set_name, result, started_at, completed_at)
 VALUES (?, '', '', ?, ?, ?);
 
+-- name: RenameRunningJob :execresult
+UPDATE jobs
+SET id = sqlc.arg(new_id)
+WHERE id = sqlc.arg(old_id) AND result = 'running';
+
+-- name: MoveJobLogs :exec
+UPDATE job_logs SET job_id = sqlc.arg(new_id) WHERE job_id = sqlc.arg(old_id);
+
+-- name: MoveJobResourceSamples :exec
+UPDATE job_resource_samples SET job_id = sqlc.arg(new_id) WHERE job_id = sqlc.arg(old_id);
+
+-- name: CloseRunningJobWithNote :exec
+UPDATE jobs
+SET result = ?, completed_at = ?, display_name = ?
+WHERE id = ? AND result = 'running';
+
 -- name: InsertJobLog :exec
 INSERT INTO job_logs (job_id, recorded_at, text)
 VALUES (?, ?, ?);
