@@ -44,13 +44,15 @@ The first command prints the hello world message. The second lists `runsc` among
 
 ## Restart the daemon
 
-elastic-fruit-runner checks the Docker runtimes once when it starts. Restart it after installing gVisor so it sees `runsc`:
+elastic-fruit-runner probes the Docker runtimes once when it starts. This matters in cloud mode, where the agent reports the isolation level to the cloud. Restart it after installing gVisor so the report includes `runsc`:
 
 ```sh
 sudo systemctl restart elastic-fruit-runner
 ```
 
-In cloud mode the agent then reports the isolation level `sandboxed_container` to the cloud. In standalone mode set `runtime: runsc` on a Docker runner set, see [configuration reference](/reference/configuration/).
+If you run it with Docker Compose, restart it with `docker compose restart`. In cloud mode the agent then reports the isolation level `sandboxed_container`.
+
+In standalone mode no restart is needed. The runtime check runs before each container start. Set `runtime: runsc` on a Docker runner set, see [configuration reference](/reference/configuration/).
 
 ## Docker in Docker does not work under the sandbox
 

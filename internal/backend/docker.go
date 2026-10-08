@@ -113,7 +113,10 @@ func (b *DockerBackend) checkRuntimeRegistered(ctx context.Context) error {
 	if b.runtime == "" {
 		return nil
 	}
-	hostname, _ := os.Hostname()
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
 	runtimes, err := DockerRuntimes(ctx)
 	if err != nil {
 		return fmt.Errorf("list Docker runtimes on host %s to check runtime %s: %w", hostname, b.runtime, err)
