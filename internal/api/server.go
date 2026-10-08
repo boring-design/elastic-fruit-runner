@@ -218,9 +218,8 @@ func (s *Server) Logout(ctx context.Context, req *connect.Request[controlplanev1
 }
 
 func (s *Server) GetServiceInfo(_ context.Context, _ *connect.Request[controlplanev1.GetServiceInfoRequest]) (*connect.Response[controlplanev1.GetServiceInfoResponse], error) {
-	build := buildinfo.Current()
 	response := &controlplanev1.GetServiceInfoResponse{
-		BuildInfo:          toProtoBuildInfo(build),
+		BuildInfo:          toProtoBuildInfo(buildinfo.Current()),
 		StartedAt:          timestamppb.New(s.vitalsService.StartedAt()),
 		IdleTimeoutSeconds: int32(s.idleTimeout.Seconds()),
 		ConfigMode:         s.configMode,
@@ -295,10 +294,14 @@ func toProtoBuildInfo(bi *debug.BuildInfo) *controlplanev1.BuildInfo {
 		})
 	}
 
+	// The console shows the same version as the CLI and the cloud report.
+	mainModule := toProtoModule(&bi.Main)
+	mainModule.Version = buildinfo.Version()
+
 	return &controlplanev1.BuildInfo{
 		GoVersion: bi.GoVersion,
 		Path:      bi.Path,
-		Main:      toProtoModule(&bi.Main),
+		Main:      mainModule,
 		Deps:      deps,
 		Settings:  settings,
 	}
