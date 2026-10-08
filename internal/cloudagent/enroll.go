@@ -43,7 +43,7 @@ func Enroll(ctx context.Context, input EnrollInput) (EnrollResult, error) {
 		Hostname:          hostname,
 		Os:                runtime.GOOS,
 		Arch:              runtime.GOARCH,
-		AgentVersion:      buildinfo.MainVersion(buildinfo.Current()),
+		AgentVersion:      buildinfo.Version(),
 		AvailableBackends: toProtoBackendCapabilities(backends),
 		MaxRunners:        int32(input.MaxRunners),
 		Isolation:         isolationFor(backends),
