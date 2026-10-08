@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -51,11 +52,12 @@ type Service struct {
 }
 
 // backendKey identifies one backend instance. Two runner sets with the same
-// backend, image, and platform share one instance.
+// backend, image, platform, and runtime share one instance.
 type backendKey struct {
 	backend  string
 	image    string
 	platform string
+	runtime  string
 }
 
 // runnerSetState is what the agent knows about a runner set it has seen.
@@ -208,15 +210,15 @@ func (s *Service) HostSamples(from, to time.Time) ([]management.HostSample, *tim
 	return s.host.HostSamples(from, to)
 }
 
-// backendFor returns the shared backend instance for the given settings.
-func (s *Service) backendFor(name, image, platform string) (backend.Backend, error) {
-	key := backendKey{backend: name, image: image, platform: platform}
+// backendFor returns the shared backend instance for the given spec.
+func (s *Service) backendFor(spec backend.Spec) (backend.Backend, error) {
+	key := backendKey{backend: spec.Backend, image: spec.Image, platform: spec.Platform, runtime: spec.Runtime}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if existing, ok := s.backends[key]; ok {
 		return existing, nil
 	}
-	created, err := backend.New(name, image, platform)
+	created, err := backend.New(spec)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +288,7 @@ func (s *Service) capableBackends() []backend.Backend {
 		if found {
 			continue
 		}
-		created, err := backend.New(probed.Backend, "", "")
+		created, err := backend.New(backend.Spec{Backend: probed.Backend})
 		if err != nil {
 			s.logger.Warn("skip backend for cleanup", "backend", probed.Backend, "err", err)
 			continue
@@ -377,4 +379,36 @@ func ProbeBackends(ctx context.Context) []probe.BackendResult {
 		}
 	}
 	return available
+}
+
+// Isolation levels reported to the cloud. The cloud uses them to decide
+// which runner sets a host may run.
+const (
+	// IsolationVM means every runner is a virtual machine.
+	IsolationVM = "vm"
+	// IsolationSandboxedContainer means runners are containers that can run under gVisor.
+	IsolationSandboxedContainer = "sandboxed_container"
+	// IsolationContainer means runners are plain containers.
+	IsolationContainer = "container"
+)
+
+// isolationFor derives the isolation level from the probed backends.
+func isolationFor(backends []probe.BackendResult) string {
+	hasDocker := false
+	hasTart := false
+	for _, result := range backends {
+		switch result.Backend {
+		case "docker":
+			hasDocker = true
+			if slices.Contains(result.Runtimes, "runsc") {
+				return IsolationSandboxedContainer
+			}
+		case "tart":
+			hasTart = true
+		}
+	}
+	if hasTart && !hasDocker {
+		return IsolationVM
+	}
+	return IsolationContainer
 }

@@ -5,7 +5,7 @@ go 1.25.3
 require (
 	connectrpc.com/connect v1.19.1
 	github.com/actions/scaleset v0.2.0
-	github.com/boring-design/elastic-fruit-protocol v0.1.0
+	github.com/boring-design/elastic-fruit-protocol v0.2.0
 	github.com/cucumber/godog v0.15.1
 	github.com/go-viper/mapstructure/v2 v2.4.0
 	github.com/google/go-github/v79 v79.0.0

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
 )
 
@@ -19,6 +20,8 @@ type BackendResult struct {
 	HostOS    string
 	HostArch  string
 	Error     string
+	// Runtimes lists the container runtimes Docker knows, such as runc and runsc. Docker only.
+	Runtimes []string
 }
 
 const backendTimeout = 10 * time.Second
@@ -33,6 +36,9 @@ func CheckBackend(ctx context.Context, name string) BackendResult {
 	switch name {
 	case "docker":
 		result.Version, result.Error = runVersionCommand(ctx, "docker", "version", "--format", "{{.Server.Version}}")
+		if result.Error == "" {
+			result.Runtimes, result.Error = dockerRuntimes(ctx)
+		}
 	case "tart":
 		if runtime.GOOS != "darwin" {
 			result.Error = "tart runs only on macOS"
@@ -45,6 +51,16 @@ func CheckBackend(ctx context.Context, name string) BackendResult {
 	}
 	result.Available = result.Error == ""
 	return result
+}
+
+func dockerRuntimes(ctx context.Context) (runtimes []string, errorMessage string) {
+	ctx, cancel := context.WithTimeout(ctx, backendTimeout)
+	defer cancel()
+	runtimes, err := backend.DockerRuntimes(ctx)
+	if err != nil {
+		return nil, err.Error()
+	}
+	return runtimes, ""
 }
 
 func runVersionCommand(ctx context.Context, name string, args ...string) (version, errorMessage string) {

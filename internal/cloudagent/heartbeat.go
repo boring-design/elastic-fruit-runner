@@ -57,5 +57,6 @@ func (s *Service) heartbeatRequest() *agentv1.HeartbeatRequest {
 		HostVitals: toProtoHostVitals(s.vitals.GetVitals()),
 		Runners:    runners,
 		MaxRunners: int32(s.maxRunners),
+		Isolation:  isolationFor(s.availableBackends),
 	}
 }

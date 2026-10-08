@@ -159,7 +159,12 @@ func (svc *Service) runController(ctx context.Context, ctrl *controller.ScaleSet
 }
 
 func createBackend(rs *config.RunnerSetConfig) (backend.Backend, error) {
-	b, err := backend.New(rs.Backend, rs.Image, rs.Platform)
+	b, err := backend.New(backend.Spec{
+		Backend:  rs.Backend,
+		Image:    rs.Image,
+		Platform: rs.Platform,
+		Runtime:  rs.Runtime,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("runner set %q: %w", rs.Name, err)
 	}

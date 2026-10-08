@@ -46,6 +46,7 @@ func Enroll(ctx context.Context, input EnrollInput) (EnrollResult, error) {
 		AgentVersion:      buildinfo.MainVersion(buildinfo.Current()),
 		AvailableBackends: toProtoBackendCapabilities(backends),
 		MaxRunners:        int32(input.MaxRunners),
+		Isolation:         isolationFor(backends),
 	}))
 	if err != nil {
 		return EnrollResult{}, fmt.Errorf("enroll with %s: %w", input.ServerURL, err)

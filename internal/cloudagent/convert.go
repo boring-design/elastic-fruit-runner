@@ -83,8 +83,9 @@ func toProtoBackendCapabilities(results []probe.BackendResult) []*agentv1.Backen
 	capabilities := make([]*agentv1.BackendCapability, 0, len(results))
 	for _, result := range results {
 		capabilities = append(capabilities, &agentv1.BackendCapability{
-			Backend: result.Backend,
-			Version: result.Version,
+			Backend:  result.Backend,
+			Version:  result.Version,
+			Runtimes: result.Runtimes,
 		})
 	}
 	return capabilities

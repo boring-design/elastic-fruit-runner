@@ -2,15 +2,30 @@ package backend
 
 import "fmt"
 
-// New builds the backend that runs a runner set from its name, image, and platform.
-// Both standalone runner sets and cloud start commands go through this one constructor.
-func New(name, image, platform string) (Backend, error) {
-	switch name {
+// Spec describes which backend to build and how it should run runners.
+// Both standalone runner sets and cloud start commands are turned into a Spec.
+type Spec struct {
+	// Backend is the backend name, docker or tart.
+	Backend string
+	// Image is the runner image. Empty means the backend default.
+	Image string
+	// Platform is the docker platform such as linux/arm64. Docker only.
+	Platform string
+	// Runtime is the container runtime passed to docker run, such as runsc. Docker only.
+	Runtime string
+}
+
+// New builds the backend that runs a runner set from its spec.
+func New(spec Spec) (Backend, error) {
+	switch spec.Backend {
 	case "tart":
-		return NewTartBackend(image), nil
+		if spec.Runtime != "" {
+			return nil, fmt.Errorf("runtime %q is not supported by the tart backend", spec.Runtime)
+		}
+		return NewTartBackend(spec.Image), nil
 	case "docker":
-		return NewDockerBackend(image, platform), nil
+		return NewDockerBackend(spec.Image, spec.Platform, spec.Runtime), nil
 	default:
-		return nil, fmt.Errorf("unknown backend %q, expected docker or tart", name)
+		return nil, fmt.Errorf("unknown backend %q, expected docker or tart", spec.Backend)
 	}
 }

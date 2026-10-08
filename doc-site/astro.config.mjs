@@ -27,6 +27,7 @@ export default defineConfig({
 					items: [
 						{ slug: 'how-to/install-macos' },
 						{ slug: 'how-to/install-linux-docker' },
+						{ slug: 'how-to/install-gvisor-ubuntu' },
 						{ slug: 'how-to/configure-github-app' },
 						{ slug: 'how-to/use-console' },
 						{ slug: 'how-to/set-up-console' },

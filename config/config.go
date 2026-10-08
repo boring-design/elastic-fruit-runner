@@ -170,6 +170,8 @@ type RunnerSetConfig struct {
 	Labels     []string `yaml:"labels"`
 	MaxRunners int      `yaml:"max_runners"`
 	Platform   string   `yaml:"platform"`
+	// Runtime is the container runtime passed to docker run, such as runsc. Docker only.
+	Runtime string `yaml:"runtime"`
 }
 
 // Validate returns an error if the configuration is invalid.
@@ -317,6 +319,17 @@ func validateRunnerSet(rs *RunnerSetConfig, prefix string, seen map[string]struc
 	if rs.MaxRunners <= 0 {
 		return fmt.Errorf("%s.max_runners must be > 0", prefix)
 	}
+	if rs.Runtime != "" && rs.Backend == "tart" {
+		return fmt.Errorf("%s.runtime must be empty for the tart backend, got %q", prefix, rs.Runtime)
+	}
+	if !isSingleWord(rs.Runtime) {
+		return fmt.Errorf("%s.runtime must be a single word such as runsc, got %q", prefix, rs.Runtime)
+	}
 
 	return nil
+}
+
+// isSingleWord reports whether value is empty or one word without spaces.
+func isSingleWord(value string) bool {
+	return !strings.ContainsAny(value, " \t\n")
 }

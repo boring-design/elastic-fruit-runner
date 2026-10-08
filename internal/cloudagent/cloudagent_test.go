@@ -6,6 +6,7 @@ import (
 	"time"
 
 	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
+	"github.com/boring-design/elastic-fruit-runner/internal/probe"
 )
 
 func TestNextReconnectDelay(t *testing.T) {
@@ -115,6 +116,27 @@ func TestPlaceholderJobID(t *testing.T) {
 	for _, real := range []string{"123456789", "job-1", ""} {
 		if isPlaceholderJobID(real) {
 			t.Errorf("isPlaceholderJobID(%q) = true, want false", real)
+		}
+	}
+}
+
+func TestIsolationFor(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name     string
+		backends []probe.BackendResult
+		want     string
+	}{
+		{"nothing available", nil, IsolationContainer},
+		{"only tart", []probe.BackendResult{{Backend: "tart"}}, IsolationVM},
+		{"docker with runc", []probe.BackendResult{{Backend: "docker", Runtimes: []string{"runc"}}}, IsolationContainer},
+		{"docker with runsc", []probe.BackendResult{{Backend: "docker", Runtimes: []string{"runc", "runsc"}}}, IsolationSandboxedContainer},
+		{"tart and docker", []probe.BackendResult{{Backend: "tart"}, {Backend: "docker", Runtimes: []string{"runc"}}}, IsolationContainer},
+		{"tart and docker with runsc", []probe.BackendResult{{Backend: "tart"}, {Backend: "docker", Runtimes: []string{"runsc"}}}, IsolationSandboxedContainer},
+	}
+	for _, tc := range cases {
+		if got := isolationFor(tc.backends); got != tc.want {
+			t.Errorf("%s: isolationFor = %q, want %q", tc.name, got, tc.want)
 		}
 	}
 }
