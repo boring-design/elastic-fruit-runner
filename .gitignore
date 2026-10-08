@@ -1,6 +1,9 @@
 # Build output
 /elastic-fruit-runner
 /output/
+# goreleaser and the release workflow write build output here.
+# It must stay ignored, otherwise Go stamps release binaries as +dirty.
+/dist/
 dashboard/dist/
 
 # Generated protobuf code is committed so CI does not require buf

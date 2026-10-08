@@ -10,6 +10,12 @@ builds:
     goarch:
       - amd64
       - arm64
+    # The CLI and the cloud report both read these values from internal/buildinfo.
+    ldflags:
+      - -s -w
+      - -X {{ .ModulePath }}/internal/buildinfo.version={{ .Version }}
+      - -X {{ .ModulePath }}/internal/buildinfo.commit={{ .Commit }}
+      - -X {{ .ModulePath }}/internal/buildinfo.date={{ .Date }}
 
 archives:
   - formats: ["tar.gz"]

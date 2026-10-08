@@ -112,12 +112,11 @@ func (d *ScaleSetController) Run(ctx context.Context) error {
 	d.scaleSetID = ss.ID
 	d.logger.Info("scale set ready", "id", ss.ID, "name", ss.Name)
 
-	build := buildinfo.Current()
 	d.client.SetSystemInfo(scaleset.SystemInfo{
 		System:     "elastic-fruit-runner",
 		Subsystem:  "controller",
-		Version:    buildinfo.MainVersion(build),
-		CommitSHA:  buildinfo.VCSRevision(build),
+		Version:    buildinfo.Version(),
+		CommitSHA:  buildinfo.Commit(),
 		ScaleSetID: ss.ID,
 	})
 
