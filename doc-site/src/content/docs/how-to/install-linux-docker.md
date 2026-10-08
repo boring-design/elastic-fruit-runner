@@ -117,6 +117,10 @@ Host Docker Engine
 
 The daemon container mounts the host's Docker socket (`/var/run/docker.sock`). When a job arrives, it creates a sibling container (not nested) on the host engine. Each runner container is destroyed after the job completes.
 
+## Sandbox runner containers with gVisor
+
+To run each runner container inside a gVisor sandbox, install the `runsc` runtime and set `runtime: runsc` on the runner set. See [How to install gVisor on Ubuntu](/how-to/install-gvisor-ubuntu/).
+
 ## View logs
 
 ```sh

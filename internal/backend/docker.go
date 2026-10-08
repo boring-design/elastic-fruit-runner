@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -32,10 +34,13 @@ const defaultDockerRunnerImage = "ghcr.io/quipper/actions-runner:2.337.0"
 type DockerBackend struct {
 	image    string
 	platform string
+	runtime  string
 	logger   *slog.Logger
 }
 
-func NewDockerBackend(image, platform string) *DockerBackend {
+// NewDockerBackend builds a Docker backend. An empty runtime uses the Docker
+// default runtime. A named runtime such as runsc is passed to docker run.
+func NewDockerBackend(image, platform, runtime string) *DockerBackend {
 	if image == "" {
 		image = defaultDockerRunnerImage
 	}
@@ -43,16 +48,20 @@ func NewDockerBackend(image, platform string) *DockerBackend {
 	if platform != "" {
 		logger = logger.With("platform", platform)
 	}
+	if runtime != "" {
+		logger = logger.With("runtime", runtime)
+	}
 	return &DockerBackend{
 		image:    image,
 		platform: platform,
+		runtime:  runtime,
 		logger:   logger,
 	}
 }
 
-// Run starts a DinD container and launches the GitHub Actions runner.
+// Run starts a runner container and launches the GitHub Actions runner.
 //
-// Uses the quipper/actions-runner image (github.com/quipper/actions-runner)
+// The default image is quipper/actions-runner (github.com/quipper/actions-runner)
 // whose entrypoint unconditionally starts dockerd, then execs CMD
 // (/home/runner/run.sh) which reads ACTIONS_RUNNER_INPUT_JITCONFIG.
 func (b *DockerBackend) Run(ctx context.Context, name, jitConfig string) error {
@@ -61,17 +70,13 @@ func (b *DockerBackend) Run(ctx context.Context, name, jitConfig string) error {
 	)
 	defer span.End()
 
-	args := []string{
-		"run", "-d", "--privileged",
-		"--name", name,
-		"-e", "ACTIONS_RUNNER_INPUT_JITCONFIG=" + jitConfig,
+	if err := b.checkRuntimeRegistered(ctx); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
-	if b.platform != "" {
-		args = append(args, "--platform", b.platform)
-	}
-	args = append(args, b.image)
 
-	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), args...)
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), b.runArgs(name, jitConfig)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		err = fmt.Errorf("docker run: %s: %w", string(out), err)
@@ -80,6 +85,72 @@ func (b *DockerBackend) Run(ctx context.Context, name, jitConfig string) error {
 		return err
 	}
 	return nil
+}
+
+// runArgs builds the docker run arguments for one runner container.
+// The default runtime keeps --privileged because Docker in Docker images need it.
+// A named runtime such as runsc gets --runtime instead and runs without --privileged.
+func (b *DockerBackend) runArgs(name, jitConfig string) []string {
+	args := []string{"run", "-d"}
+	if b.runtime == "" {
+		args = append(args, "--privileged")
+	} else {
+		args = append(args, "--runtime="+b.runtime)
+	}
+	args = append(args,
+		"--name", name,
+		"-e", "ACTIONS_RUNNER_INPUT_JITCONFIG="+jitConfig,
+	)
+	if b.platform != "" {
+		args = append(args, "--platform", b.platform)
+	}
+	return append(args, b.image)
+}
+
+// checkRuntimeRegistered fails fast when a named runtime is requested but
+// Docker on this host does not list it.
+func (b *DockerBackend) checkRuntimeRegistered(ctx context.Context) error {
+	if b.runtime == "" {
+		return nil
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	runtimes, err := DockerRuntimes(ctx)
+	if err != nil {
+		return fmt.Errorf("list Docker runtimes on host %s to check runtime %s: %w", hostname, b.runtime, err)
+	}
+	if !slices.Contains(runtimes, b.runtime) {
+		return fmt.Errorf("runtime %s is not registered with Docker on host %s, known runtimes: %s", b.runtime, hostname, strings.Join(runtimes, ", "))
+	}
+	return nil
+}
+
+// DockerRuntimes returns the sorted names of the runtimes Docker on this host
+// knows, for example runc and runsc.
+func DockerRuntimes(ctx context.Context) ([]string, error) {
+	cmd := exec.CommandContext(ctx, binpath.Lookup("docker"), "info", "--format", "{{json .Runtimes}}")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("docker info: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return parseDockerRuntimes(out)
+}
+
+// parseDockerRuntimes reads the runtime names from the JSON object that
+// docker info prints for .Runtimes.
+func parseDockerRuntimes(raw []byte) ([]string, error) {
+	var byName map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &byName); err != nil {
+		return nil, fmt.Errorf("parse Docker runtimes %q: %w", strings.TrimSpace(string(raw)), err)
+	}
+	names := make([]string, 0, len(byName))
+	for name := range byName {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names, nil
 }
 
 func (b *DockerBackend) Cleanup(ctx context.Context, name string) {

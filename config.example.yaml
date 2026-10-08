@@ -30,6 +30,10 @@ orgs:
         labels: [self-hosted, linux, arm64]
         max_runners: 4
         platform: linux/arm64
+        # Optional container runtime passed to docker run, for example runsc for gVisor.
+        # With a runtime set the container runs without --privileged, so Docker in Docker
+        # images do not work. Use a plain runner image such as ghcr.io/actions/actions-runner.
+        # runtime: runsc
 
       # linux amd64 runners via Docker (uses Rosetta 2 emulation on Apple Silicon)
       - name: efr-linux-amd64

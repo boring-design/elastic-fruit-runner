@@ -61,6 +61,7 @@ The daemon refuses to start in cloud mode when the credential file is missing. T
 * It sends a heartbeat every ten seconds with host resource usage and the state of every runner.
 * It reports each runner start, start failure, and cleanup back to the cloud.
 * It uploads the resource samples captured while a job runs.
+* It reports the isolation level of the host at enrollment and in every heartbeat: `vm` when only Tart is available, `sandboxed_container` when Docker lists the gVisor `runsc` runtime, and `container` otherwise. To offer sandboxed containers, see [How to install gVisor on Ubuntu](/how-to/install-gvisor-ubuntu/).
 
 When the stream is down no new runners start. Runners that are already running keep running and finish their jobs. Stopping the daemon does not stop running runners either.
 

@@ -150,16 +150,19 @@ Each `runner_sets[]` item supports:
 | `labels` | list of strings | no | GitHub runner labels |
 | `max_runners` | integer | yes | From 1 through 1000 |
 | `platform` | string | no | Backend specific |
+| `runtime` | string | no | Docker only, a single word such as `runsc` |
 
 ### Docker
 
 `platform` can be empty. When set, it must start with `linux/`, such as `linux/arm64` or `linux/amd64`.
 
+`runtime` can be empty. When set, it is passed to `docker run` as `--runtime`, and the container runs without `--privileged`. Docker in Docker images do not work then. See [How to install gVisor on Ubuntu](/how-to/install-gvisor-ubuntu/).
+
 The image must contain the GitHub Actions runner and the tools needed by the workflow.
 
 ### Tart
 
-`platform` must be empty. The image is a local or OCI Tart VM image.
+`platform` and `runtime` must be empty. The image is a local or OCI Tart VM image.
 
 Tart requires Apple Silicon and the Tart CLI on the host.
 

@@ -324,11 +324,22 @@ func validateRunnerSetAll(rs *RunnerSetConfig, path string, names map[string]str
 	if rs.MaxRunners < 1 || rs.MaxRunners > 1000 {
 		addError(path+".max_runners", "must be between 1 and 1000")
 	}
+	validateRunnerSetBackendOptions(rs, path, addError)
+}
+
+// validateRunnerSetBackendOptions checks the fields that only some backends use.
+func validateRunnerSetBackendOptions(rs *RunnerSetConfig, path string, addError func(string, string)) {
 	if rs.Backend == "tart" && rs.Platform != "" {
 		addError(path+".platform", "must be empty for the tart backend")
 	}
 	if rs.Backend == "docker" && rs.Platform != "" && !strings.HasPrefix(rs.Platform, "linux/") {
 		addError(path+".platform", "must use linux/architecture format")
+	}
+	if rs.Backend == "tart" && rs.Runtime != "" {
+		addError(path+".runtime", "must be empty for the tart backend")
+	}
+	if !isSingleWord(rs.Runtime) {
+		addError(path+".runtime", "must be a single word such as runsc")
 	}
 }
 

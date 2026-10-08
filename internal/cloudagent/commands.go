@@ -11,6 +11,7 @@ import (
 	"github.com/actions/scaleset"
 
 	agentv1 "github.com/boring-design/elastic-fruit-protocol/gen/agent/v1"
+	"github.com/boring-design/elastic-fruit-runner/internal/backend"
 	"github.com/boring-design/elastic-fruit-runner/internal/controller"
 )
 
@@ -128,8 +129,14 @@ func (s *Service) handleStartRunner(ctx context.Context, commandID string, comma
 		"runner", command.RunnerName,
 		"runner_set", command.RunnerSetName,
 		"backend", command.Backend,
+		"runtime", command.Runtime,
 	)
-	b, err := s.backendFor(command.Backend, command.Image, command.Platform)
+	b, err := s.backendFor(backend.Spec{
+		Backend:  command.Backend,
+		Image:    command.Image,
+		Platform: command.Platform,
+		Runtime:  command.Runtime,
+	})
 	if err != nil {
 		log.Error("start runner rejected", "err", err)
 		s.reportEvent(ctx, runnerStartFailedEvent(commandID, command.RunnerName, err))
