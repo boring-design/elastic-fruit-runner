@@ -34,6 +34,8 @@ import (
 	"github.com/boring-design/elastic-fruit-runner/internal/vitals"
 )
 
+const tartCapacityError = "The number of VMs exceeds the system limit"
+
 // scenarioState holds shared state across steps within a single scenario.
 type scenarioState struct {
 	// config steps
@@ -714,12 +716,27 @@ func initializeScenario(sc *godog.ScenarioContext) {
 	})
 
 	sc.Step(`^I wait for the VM IP address$`, func() error {
-		ip, err := state.tartMgr.IPAddress(context.Background(), state.tartVMName)
-		if err != nil {
-			return err
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+		for {
+			ip, err := state.tartMgr.IPAddress(ctx, state.tartVMName)
+			if err == nil {
+				state.tartVMIP = ip
+				return nil
+			}
+			if !strings.Contains(err.Error(), tartCapacityError) {
+				return err
+			}
+			fmt.Println("Tart capacity is full; waiting 15 seconds before starting the test VM again")
+			select {
+			case <-ctx.Done():
+				return fmt.Errorf("waiting for Tart capacity for VM %s: %w", state.tartVMName, ctx.Err())
+			case <-time.After(15 * time.Second):
+			}
+			if err := state.tartMgr.Start(context.Background(), state.tartVMName); err != nil {
+				return err
+			}
 		}
-		state.tartVMIP = ip
-		return nil
 	})
 
 	sc.Step(`^the VM IP should be a valid address$`, func() error {

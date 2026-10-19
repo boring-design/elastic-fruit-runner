@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/boring-design/elastic-fruit-runner/internal/binpath"
@@ -30,7 +32,16 @@ var (
 
 // Manager wraps the tart CLI for VM lifecycle operations.
 // All operations call `tart` which must be installed on the host.
-type Manager struct{}
+type Manager struct {
+	mu        sync.Mutex
+	processes map[string]*vmProcess
+}
+
+type vmProcess struct {
+	done   chan struct{}
+	stderr bytes.Buffer
+	err    error
+}
 
 func NewManager() *Manager {
 	return &Manager{}
@@ -122,15 +133,24 @@ func (m *Manager) Start(ctx context.Context, name string) error {
 	slog.Info("starting VM", "name", name)
 	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "run", name, "--no-graphics")
 	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	process := &vmProcess{done: make(chan struct{})}
+	cmd.Stderr = io.MultiWriter(os.Stderr, &process.stderr)
 	if err := cmd.Start(); err != nil {
 		err = fmt.Errorf("start VM %s: %w", name, err)
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
-	// Detach: we don't wait for this process — it outlives this call.
-	go func() { _ = cmd.Wait() }()
+	m.mu.Lock()
+	if m.processes == nil {
+		m.processes = make(map[string]*vmProcess)
+	}
+	m.processes[name] = process
+	m.mu.Unlock()
+	go func() {
+		process.err = cmd.Wait()
+		close(process.done)
+	}()
 	return nil
 }
 
@@ -141,9 +161,30 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	)
 	defer span.End()
 
+	m.mu.Lock()
+	process := m.processes[name]
+	m.mu.Unlock()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if process != nil {
+		go func() {
+			select {
+			case <-process.done:
+				cancel()
+			case <-ctx.Done():
+			}
+		}()
+	}
 	slog.Info("waiting for VM IP", "name", name)
 	cmd := exec.CommandContext(ctx, binpath.Lookup("tart"), "ip", name, "--wait", ipAddressWaitSeconds)
 	out, err := cmd.CombinedOutput()
+	if process != nil {
+		select {
+		case <-process.done:
+			return "", fmt.Errorf("VM %s exited before IP was ready: %w\n%s", name, process.err, process.stderr.String())
+		default:
+		}
+	}
 	if err != nil {
 		err = fmt.Errorf("tart ip %s: %w\n%s", name, err, out)
 		span.RecordError(err)
@@ -277,6 +318,9 @@ func (m *Manager) Delete(ctx context.Context, name string) error {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
+	m.mu.Lock()
+	delete(m.processes, name)
+	m.mu.Unlock()
 	return nil
 }
 

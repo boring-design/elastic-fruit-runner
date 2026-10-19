@@ -30,7 +30,7 @@ jobs:
           ./fastfetch-${VARIANT}/usr/bin/fastfetch
 
   test-linux-amd64:
-    runs-on: [self-hosted, linux, x64]
+    runs-on: elastic-fruit
     steps:
       - name: fastfetch
         run: |
