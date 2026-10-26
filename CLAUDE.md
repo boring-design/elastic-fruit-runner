@@ -2,7 +2,7 @@
 
 ## Coherence
 
-Read this first: it is the reason for every rule below.
+Read this first: it is the reason behind the coding rules in this file.
 
 - **What it is.** Decoherence is the accumulation of locally valid but mutually incompatible or redundant models and patterns in one system: four ways to handle errors, three ways to load config, two data models for the same thing. Each one works on its own; together they make every change expensive.
 - **Why it compounds.** Every extra way of doing something has to be understood, and translated to and from, by every later change. Paths get longer, connections multiply, and each change switches between paradigms, so the cost of change grows faster than linearly with decoherence. It grows with change, not with time: the faster the code changes, the faster it decays.
