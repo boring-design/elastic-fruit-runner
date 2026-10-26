@@ -46,7 +46,7 @@ brews:
       working_dir var/"elastic-fruit-runner"
       log_path var/"log/elastic-fruit-runner.log"
       error_log_path var/"log/elastic-fruit-runner.log"
-      environment_variables PATH: std_service_path_env
+      environment_variables PATH: "#{std_service_path_env}:/usr/local/bin"
     caveats: |
       For the Docker backend, install a Docker-compatible runtime separately
       (e.g. Docker Desktop, OrbStack, Colima).
