@@ -1,5 +1,17 @@
 # Project Notes
 
+## Coherence
+
+Read this first: it is the reason for every rule below.
+
+- **What it is.** Decoherence is the accumulation of locally valid but mutually incompatible or redundant models and patterns in one system: four ways to handle errors, three ways to load config, two data models for the same thing. Each one works on its own; together they make every change expensive.
+- **Why it compounds.** Every extra way of doing something has to be understood, and translated to and from, by every later change. Paths get longer, connections multiply, and each change switches between paradigms, so the cost of change grows faster than linearly with decoherence. It grows with change, not with time: the faster the code changes, the faster it decays.
+- **Why AI agents must care most.** An agent has no memory across sessions. Each session re-infers the conventions from the small slice of code it read, and small differences between those inferences pile up into parallel patterns. Agents also change code fast, which makes them the largest source of decoherence. Left unchecked, the system slides into a state that only agents can change and that agents can no longer untangle (Decoherence Collapse).
+- **So:** consistency beats local optimality. Fit new code into the existing patterns, even when another approach looks slightly better in isolation. When you touch an area with duplicate patterns, unify one small instance in the same PR and say so in the description (recohere). A PR that lowers coherence is a defect, even if it works.
+- Source: [The Decoherence Trap](https://maevyn.codes/decoherence/).
+
+The sections below (Standard patterns, Find the existing pattern first, Review checklist) apply this one.
+
 ## Build
 
 - `make build` — Build dashboard + Go binary to `output/`
