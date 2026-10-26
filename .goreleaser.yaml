@@ -36,7 +36,7 @@ brews:
     description: Elastic GitHub Actions self-hosted runner manager for Apple Silicon
     license: AGPL-3.0
     dependencies:
-      - name: cirruslabs/cli/tart
+      - name: openai/tools/tart
       - name: sshpass
     install: |
       bin.install "elastic-fruit-runner"
