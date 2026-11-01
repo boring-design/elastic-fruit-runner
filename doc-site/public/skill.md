@@ -45,7 +45,7 @@ tart --version
 
 Offer these three, in this order. The first is the default; recommend it unless the user has a reason not to.
 
-1. **Install the Elastic Fruit Cloud app (default, recommended).** Elastic Fruit Cloud only talks to GitHub for you; the jobs still run on this Mac. Nothing to create or rotate on GitHub. **For now it runs Linux jobs only on this Mac**; macOS (Tart) support is coming. If the user needs macOS jobs today, use option 2 or 3.
+1. **Install the Elastic Fruit Cloud app (default, recommended).** Elastic Fruit Cloud talks to GitHub for you and sends jobs to the user's own machines. If the account has shared pool minutes, jobs can also run on the Elastic Fruit pool when the user's machines are busy or offline; the account's Overview page shows its pool minutes. Accounts with no pool minutes only ever run on their own machines. Nothing to create or rotate on GitHub. **For now it runs Linux jobs only on this Mac**; macOS (Tart) support is coming. If the user needs macOS jobs today, use option 2 or 3.
 2. **A GitHub token.** Quick to try; the token expires and is tied to one person.
 3. **Your own GitHub App.** Does not expire and is not tied to a person; takes a few more clicks.
 
