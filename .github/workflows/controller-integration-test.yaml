@@ -99,14 +99,43 @@ jobs:
         run: |
           echo "${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}" > /tmp/efr-test-app-key.pem
 
+      # The PAT and workflow dispatch steps use a short lived installation
+      # token of the test GitHub App instead of a personal token that expires.
+      - name: Mint GitHub App installation token
+        if: matrix.name != 'Tart'
+        env:
+          APP_CLIENT_ID: ${{ secrets.EFR_TEST_APP_CLIENT_ID }}
+          APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/efr-test-app-mint.pem"
+          printf '%s\n' "$APP_PRIVATE_KEY" > "$key"
+          b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
+          now=$(date +%s)
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+          payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' $((now - 60)) $((now + 540)) "$APP_CLIENT_ID" | b64url)
+          signature=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign "$key" | b64url)
+          rm -f "$key"
+          token=$(curl -fsS -X POST \
+            -H "Authorization: Bearer $header.$payload.$signature" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/app/installations/$APP_INSTALLATION_ID/access_tokens" | jq -r .token)
+          if [ -z "$token" ] || [ "$token" = "null" ]; then
+            echo "::error::Could not mint an installation token for installation $APP_INSTALLATION_ID"
+            exit 1
+          fi
+          echo "::add-mask::$token"
+          echo "EFR_TEST_INSTALLATION_TOKEN=$token" >> "$GITHUB_ENV"
+
       - name: Run integration tests
         env:
           EFR_TEST_CONFIG_URL: ${{ vars.EFR_TEST_CONFIG_URL }}
           EFR_TEST_WORKFLOW_ORG: ${{ vars.EFR_TEST_WORKFLOW_ORG }}
           EFR_TEST_WORKFLOW_REPO: ${{ vars.EFR_TEST_WORKFLOW_REPO }}
           EFR_TEST_WORKFLOW_FILE: ${{ vars.EFR_TEST_WORKFLOW_FILE }}
-          EFR_TEST_WORKFLOW_TOKEN: ${{ secrets.EFR_TEST_WORKFLOW_TOKEN }}
-          EFR_TEST_PAT: ${{ secrets.EFR_TEST_PAT }}
+          EFR_TEST_WORKFLOW_TOKEN: ${{ env.EFR_TEST_INSTALLATION_TOKEN }}
+          EFR_TEST_PAT: ${{ env.EFR_TEST_INSTALLATION_TOKEN }}
           EFR_TEST_APP_CLIENT_ID: ${{ secrets.EFR_TEST_APP_CLIENT_ID }}
           EFR_TEST_APP_INSTALLATION_ID: ${{ secrets.EFR_TEST_APP_INSTALLATION_ID }}
           EFR_TEST_APP_PRIVATE_KEY_PATH: ${{ matrix.needs-app-key && '/tmp/efr-test-app-key.pem' || '' }}
