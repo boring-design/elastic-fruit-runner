@@ -151,14 +151,19 @@ func (b *TartBackend) startVM(ctx context.Context, name string) error {
 		if !errors.Is(err, tart.ErrNoCapacity) {
 			return fmt.Errorf("VM unreachable: %w", err)
 		}
-		if time.Now().After(deadline) {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
 			return fmt.Errorf("wait for Tart capacity for VM %s after %s: %w", name, capacityMaxWait, err)
 		}
-		b.logger.Info("Tart capacity is full, waiting to start VM again", "vm", name, "retry_in", backoff)
+		wait := min(backoff, remaining)
+		b.logger.Info("Tart capacity is full, waiting to start VM again", "vm", name, "retry_in", wait)
 		select {
-		case <-time.After(backoff):
+		case <-time.After(wait):
 		case <-ctx.Done():
 			return fmt.Errorf("wait for Tart capacity for VM %s: %w", name, ctx.Err())
+		}
+		if time.Until(deadline) <= 0 {
+			return fmt.Errorf("wait for Tart capacity for VM %s after %s: %w", name, capacityMaxWait, err)
 		}
 		backoff = min(backoff*2, capacityMaxBackoff)
 	}
