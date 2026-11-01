@@ -3,6 +3,7 @@ package tart
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -22,6 +23,13 @@ import (
 var tracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/tart")
 
 const ipAddressWaitSeconds = "180"
+
+// capacityMessage is what `tart run` prints when the host already runs
+// as many macOS VMs as the system allows.
+const capacityMessage = "The number of VMs exceeds the system limit"
+
+// ErrNoCapacity reports that a VM exited because the host had no free VM slot.
+var ErrNoCapacity = errors.New("tart VM limit reached")
 
 var (
 	sshReadyMaxWait        = 120 * time.Second
@@ -181,7 +189,11 @@ func (m *Manager) IPAddress(ctx context.Context, name string) (string, error) {
 	if process != nil {
 		select {
 		case <-process.done:
-			return "", fmt.Errorf("VM %s exited before IP was ready: %w\n%s", name, process.err, process.stderr.String())
+			stderr := process.stderr.String()
+			if strings.Contains(stderr, capacityMessage) {
+				return "", fmt.Errorf("VM %s exited before IP was ready: %w: %w\n%s", name, ErrNoCapacity, process.err, stderr)
+			}
+			return "", fmt.Errorf("VM %s exited before IP was ready: %w\n%s", name, process.err, stderr)
 		default:
 		}
 	}

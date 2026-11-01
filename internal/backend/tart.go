@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os/exec"
@@ -32,6 +33,16 @@ func isRemoteImage(image string) bool {
 }
 
 var tartTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/tart")
+
+// A job waits this long for a free VM slot before it fails. It stays
+// well under the cloud's 10 minute runner start timeout
+// (runnerStartTimeout in elastic-fruit-cloud), leaving time to boot the
+// VM and download the runner after a slot frees up.
+var (
+	capacityMaxWait        = 6 * time.Minute
+	capacityInitialBackoff = 15 * time.Second
+	capacityMaxBackoff     = time.Minute
+)
 
 const (
 	runnerDownloadURL = "https://github.com/actions/runner/releases/download/v%s/actions-runner-osx-arm64-%s.tar.gz"
@@ -81,14 +92,7 @@ func (b *TartBackend) Run(ctx context.Context, name, jitConfig string) error {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
-	if err := b.tart.Start(ctx, name); err != nil {
-		err = fmt.Errorf("start VM: %w", err)
-		span.RecordError(err)
-		span.SetStatus(codes.Error, err.Error())
-		return err
-	}
-	if _, err := b.tart.IPAddress(ctx, name); err != nil {
-		err = fmt.Errorf("VM unreachable: %w", err)
+	if err := b.startVM(ctx, name); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return err
@@ -128,6 +132,41 @@ nohup ./run.sh --jitconfig "%s" > /tmp/runner.log 2>&1 &
 		return err
 	}
 	return nil
+}
+
+// startVM boots a cloned VM and waits for its IP. When the host already
+// runs as many VMs as macOS allows, it waits for a slot to free up and
+// boots the same clone again, instead of failing the job.
+func (b *TartBackend) startVM(ctx context.Context, name string) error {
+	deadline := time.Now().Add(capacityMaxWait)
+	backoff := capacityInitialBackoff
+	for {
+		if err := b.tart.Start(ctx, name); err != nil {
+			return fmt.Errorf("start VM: %w", err)
+		}
+		_, err := b.tart.IPAddress(ctx, name)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, tart.ErrNoCapacity) {
+			return fmt.Errorf("VM unreachable: %w", err)
+		}
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return fmt.Errorf("wait for Tart capacity for VM %s after %s: %w", name, capacityMaxWait, err)
+		}
+		wait := min(backoff, remaining)
+		b.logger.Info("Tart capacity is full, waiting to start VM again", "vm", name, "retry_in", wait)
+		select {
+		case <-time.After(wait):
+		case <-ctx.Done():
+			return fmt.Errorf("wait for Tart capacity for VM %s: %w", name, ctx.Err())
+		}
+		if time.Until(deadline) <= 0 {
+			return fmt.Errorf("wait for Tart capacity for VM %s after %s: %w", name, capacityMaxWait, err)
+		}
+		backoff = min(backoff*2, capacityMaxBackoff)
+	}
 }
 
 func (b *TartBackend) Cleanup(ctx context.Context, name string) {
