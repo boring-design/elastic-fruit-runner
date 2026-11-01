@@ -109,14 +109,15 @@ jobs:
           APP_PRIVATE_KEY: ${{ secrets.EFR_TEST_APP_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+          umask 077
           key="$RUNNER_TEMP/efr-test-app-mint.pem"
+          trap 'rm -f "$key"' EXIT
           printf '%s\n' "$APP_PRIVATE_KEY" > "$key"
           b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
           now=$(date +%s)
           header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
           payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' $((now - 60)) $((now + 540)) "$APP_CLIENT_ID" | b64url)
           signature=$(printf '%s.%s' "$header" "$payload" | openssl dgst -sha256 -sign "$key" | b64url)
-          rm -f "$key"
           token=$(curl -fsS -X POST \
             -H "Authorization: Bearer $header.$payload.$signature" \
             -H "Accept: application/vnd.github+json" \
