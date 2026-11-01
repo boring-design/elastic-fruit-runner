@@ -34,9 +34,12 @@ func isRemoteImage(image string) bool {
 
 var tartTracer = otel.Tracer("github.com/boring-design/elastic-fruit-runner/internal/backend/tart")
 
-// A job waits this long for a free VM slot before it fails.
+// A job waits this long for a free VM slot before it fails. It stays
+// well under the cloud's 10 minute runner start timeout
+// (runnerStartTimeout in elastic-fruit-cloud), leaving time to boot the
+// VM and download the runner after a slot frees up.
 var (
-	capacityMaxWait        = 15 * time.Minute
+	capacityMaxWait        = 6 * time.Minute
 	capacityInitialBackoff = 15 * time.Second
 	capacityMaxBackoff     = time.Minute
 )
