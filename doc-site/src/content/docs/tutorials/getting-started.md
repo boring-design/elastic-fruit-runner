@@ -5,7 +5,21 @@ description: Install Elastic Fruit Runner on an Apple Silicon Mac, open the Cons
 
 This tutorial takes you from an empty Mac to one completed GitHub Actions job. You will also use the Console to see what the runner is doing.
 
-## What you need
+## Let your AI agent do it
+
+The fastest way: open your coding agent (Claude Code, Codex, Cursor or any other) on the Mac that will run the jobs and tell it:
+
+```text
+Read https://elastic-fruit-runner.boringboring.design/skill.md and follow the instructions
+```
+
+The agent installs Elastic Fruit Runner, asks you to connect GitHub with a token or your own GitHub App, writes the config, starts the service and checks that the runners are up. It stops and asks you only for the steps a person must do.
+
+## Install it yourself
+
+Prefer to do it by hand? Follow the steps below.
+
+### What you need
 
 * A Mac with Apple Silicon
 * Homebrew
