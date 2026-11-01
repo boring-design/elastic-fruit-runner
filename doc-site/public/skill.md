@@ -49,7 +49,14 @@ Offer these two and let the user choose:
 
 #### Option 1: a GitHub token
 
-The user creates a token that can manage the organization's self-hosted runners: a fine grained token with **Organization permissions › Self-hosted runners: Read and write**, or a classic token with the `admin:org` scope. If the GitHub CLI is signed in with `admin:org` (`gh auth refresh -s admin:org`), `gh auth token` prints a usable token. Put it in the config as `auth: { pat_token: <token> }` (see Configure). When the token expires, runners stop until it is replaced.
+The user creates a token that can manage the organization's self-hosted runners: a fine grained token with **Organization permissions › Self-hosted runners: Read and write**, or a classic token with the `admin:org` scope. The GitHub CLI can supply one too, once it is signed in with `admin:org` (`gh auth refresh -s admin:org`). When the token expires, runners stop until it is replaced.
+
+**Never show the token** in tool output, logs or chat. Write the config with the placeholder `__GITHUB_TOKEN__` as `auth: { pat_token: __GITHUB_TOKEN__ }` (see Configure), make the file private, then let the user paste the token into the file, or fill it in from the GitHub CLI without printing it:
+
+```bash
+chmod 600 ~/.elastic-fruit-runner/config.yaml
+TOKEN="$(gh auth token)" && sed -i '' "s|__GITHUB_TOKEN__|$TOKEN|" ~/.elastic-fruit-runner/config.yaml; unset TOKEN
+```
 
 #### Option 2: your own GitHub App
 
@@ -64,7 +71,7 @@ Ask the user for the Client ID, the installation ID and the key file path. Do no
 
 ### Configure
 
-Write `~/.elastic-fruit-runner/config.yaml`. This example uses option 2; for option 1 replace the `github_app` block with `pat_token: <token>`:
+Write `~/.elastic-fruit-runner/config.yaml`. This example uses option 2; for option 1 replace the `github_app` block with `pat_token: __GITHUB_TOKEN__` and fill it in as described above:
 
 ```yaml
 orgs:
