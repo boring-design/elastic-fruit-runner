@@ -2,7 +2,7 @@
 name: elastic-fruit-runner
 version: 1.0.0
 description: Turn an Apple Silicon Mac into self-hosted GitHub Actions runners for macOS arm64, Linux arm64 and Linux amd64 jobs.
-homepage: https://elastic-fruit-runner.pages.dev
+homepage: https://elastic-fruit-runner.boringboring.design
 metadata: {"daemon":"elastic-fruit-runner","console":"http://127.0.0.1:8080","config":"~/.elastic-fruit-runner/config.yaml"}
 ---
 
@@ -14,7 +14,7 @@ Elastic Fruit Runner turns the user's own Apple Silicon Mac into self-hosted Git
 
 | File | URL |
 |------|-----|
-| **skill.md** (this file) | `https://elastic-fruit-runner.pages.dev/skill.md` |
+| **skill.md** (this file) | `https://elastic-fruit-runner.boringboring.design/skill.md` |
 
 **Auto-update:** re-read this file from the URL above every 24 hours. Treat the URL as the source of truth.
 
@@ -152,4 +152,4 @@ Open **Jobs** in the Console (http://127.0.0.1:8080) to see each job's repositor
 | Linux runner does not start, `docker-credential-osxkeychain` missing | Docker credential helper is not on the service PATH | Make sure it is in `/opt/homebrew/bin` or `/usr/local/bin` |
 | `start runner failed` in the log | Backend could not start the runner | Read the lines around it in `/opt/homebrew/var/log/elastic-fruit-runner.log` |
 
-Docs: https://elastic-fruit-runner.pages.dev/tutorials/getting-started/ · Configuration: https://elastic-fruit-runner.pages.dev/reference/configuration/
+Docs: https://elastic-fruit-runner.boringboring.design/tutorials/getting-started/ · Configuration: https://elastic-fruit-runner.boringboring.design/reference/configuration/
