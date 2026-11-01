@@ -194,13 +194,9 @@ Keep only the runner sets the user needs. macOS allows at most 2 macOS VMs per M
 
 Restarting or stopping the service cancels runners that are starting and removes running ones, on **every** runner set, Docker and Tart alike. Before `brew services restart`, before `enroll`, and before an upgrade:
 
-1. Open **Runner Sets** in the Console (http://127.0.0.1:8080). Every card must show no runner in `preparing` or `busy`. Or check the log: the latest `"msg":"scaling"` line of each runner set must show `"current":0` and `"preparing":0`:
+1. Right before the restart, open or refresh **Runner Sets** in the Console (http://127.0.0.1:8080). Every runner set must show no runner in `preparing` or `busy`. The daemon log is not a safe substitute: a set can show zero runners there while new ones are about to start.
 
-   ```bash
-   grep '"msg":"scaling"' /opt/homebrew/var/log/elastic-fruit-runner.log | tail -n 40
-   ```
-
-2. If any job is running, wait for it to finish, or ask the user. Do not restart a busy host.
+2. If any runner is preparing or busy, wait for it to finish, or ask the user. If you cannot read the current state, do not restart; ask the user.
 
 ### Start and check
 
