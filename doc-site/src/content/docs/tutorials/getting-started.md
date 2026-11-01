@@ -13,7 +13,7 @@ The fastest way: open your coding agent (Claude Code, Codex, Cursor or any other
 Read https://elastic-fruit-runner.boringboring.design/skill.md and follow the instructions
 ```
 
-The agent installs Elastic Fruit Runner, asks you to connect GitHub with a token or your own GitHub App, writes the config, starts the service and checks that the runners are up. It stops and asks you only for the steps a person must do.
+The agent installs Elastic Fruit Runner, asks you to connect GitHub, by default through the Elastic Fruit Cloud app (or a token, or your own GitHub App), writes the config, starts the service and checks that the runners are up. It stops and asks you only for the steps a person must do.
 
 ## Install it yourself
 

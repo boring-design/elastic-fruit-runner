@@ -20,6 +20,7 @@ Elastic Fruit Runner turns the user's own Apple Silicon Mac into self-hosted Git
 
 🔒 **SECURITY:**
 - A GitHub App private key, a GitHub Personal Access Token and the Console admin password stay on the user's machine. Never paste them into chat, issues, logs or other services.
+- Use an Elastic Fruit Cloud enrollment token only with `elastic-fruit-runner enroll --server https://elastic-fruit.strrl.cloud`. Send it nowhere else.
 - Never print secrets in full. Refer to them by file path or environment variable name.
 
 ---
@@ -42,12 +43,30 @@ tart --version
 
 ### Connect GitHub: ask the user to pick one
 
-Offer these two and let the user choose:
+Offer these three, in this order. The first is the default; recommend it unless the user has a reason not to.
 
-1. **A GitHub token.** Quickest to try; the token expires and is tied to one person.
-2. **Your own GitHub App.** Does not expire and is not tied to a person; takes a few more clicks.
+1. **Install the Elastic Fruit Cloud app (default, recommended).** Elastic Fruit Cloud only talks to GitHub for you; the jobs still run on this Mac. Nothing to create or rotate on GitHub. **For now it runs Linux jobs only on this Mac**; macOS (Tart) support is coming. If the user needs macOS jobs today, use option 2 or 3.
+2. **A GitHub token.** Quick to try; the token expires and is tied to one person.
+3. **Your own GitHub App.** Does not expire and is not tied to a person; takes a few more clicks.
 
-#### Option 1: a GitHub token
+#### Option 1: Elastic Fruit Cloud app (default)
+
+Person steps (the user does these in a browser):
+
+1. Sign in at https://elastic-fruit.strrl.cloud with GitHub.
+2. Install the Elastic Fruit Cloud GitHub App on the organization or the repositories, and enable the repositories that should run jobs.
+3. Open **Your machines** › **Enroll a machine**. It shows a one time token, valid for one hour, and the command to run.
+
+Then on this Mac (see [Before any restart](#before-any-restart) if the service already runs):
+
+```bash
+elastic-fruit-runner enroll --server https://elastic-fruit.strrl.cloud --token <token> --max-runners 2
+brew services restart elastic-fruit-runner
+```
+
+`enroll` checks which backends work here (Docker, Tart), saves the machine credential and writes the `cloud` block of the config. It stops if the config has `orgs` or `repos`; with this option, do not write them, and skip [Configure](#configure). Workflows use `runs-on: elastic-fruit`. Docker must be running for Linux jobs.
+
+#### Option 2: a GitHub token
 
 The user creates a token that can manage the organization's self-hosted runners: a fine grained token with **Organization permissions › Self-hosted runners: Read and write**, or a classic token with the `admin:org` scope. The GitHub CLI can supply one too, once it is signed in with `admin:org` (`gh auth refresh -s admin:org`). When the token expires, runners stop until it is replaced.
 
@@ -58,7 +77,7 @@ chmod 600 ~/.elastic-fruit-runner/config.yaml
 TOKEN="$(gh auth token)" && sed -i '' "s|__GITHUB_TOKEN__|$TOKEN|" ~/.elastic-fruit-runner/config.yaml; unset TOKEN
 ```
 
-#### Option 2: your own GitHub App
+#### Option 3: your own GitHub App
 
 The user creates it; you only write the config afterwards.
 
@@ -71,7 +90,7 @@ Ask the user for the Client ID, the installation ID and the key file path. Do no
 
 ### Configure
 
-Write `~/.elastic-fruit-runner/config.yaml`. This example uses option 2; for option 1 replace the `github_app` block with `pat_token: __GITHUB_TOKEN__` and fill it in as described above:
+For options 2 and 3, write `~/.elastic-fruit-runner/config.yaml`. This example uses option 3; for option 2 replace the `github_app` block with `pat_token: __GITHUB_TOKEN__` and fill it in as described above:
 
 ```yaml
 orgs:
@@ -109,7 +128,7 @@ Keep only the runner sets the user needs. macOS allows at most 2 macOS VMs per M
 
 ### Before any restart
 
-Restarting or stopping the service cancels runners that are starting and removes running ones, on **every** runner set, Docker and Tart alike. Before `brew services restart` and before an upgrade:
+Restarting or stopping the service cancels runners that are starting and removes running ones, on **every** runner set, Docker and Tart alike. Before `brew services restart`, before `enroll`, and before an upgrade:
 
 1. Right before the restart, open or refresh **Runner Sets** in the Console (http://127.0.0.1:8080). Every runner set must show no runner in `preparing` or `busy`. The daemon log is not a safe substitute: a set can show zero runners there while new ones are about to start.
 
@@ -128,7 +147,7 @@ The local Console is at http://127.0.0.1:8080. The user chooses its admin passwo
 
 ### Use it in a workflow
 
-`runs-on` is the runner set **name**:
+With option 1, use `runs-on: elastic-fruit`. With options 2 and 3, `runs-on` is the runner set **name**:
 
 ```yaml
 jobs:
@@ -150,6 +169,7 @@ Open **Jobs** in the Console (http://127.0.0.1:8080) to see each job's repositor
 | `The number of VMs exceeds the system limit` in the log | Two macOS VMs already run on this Mac | Since v0.4.2 the job waits up to 6 minutes for a free slot, then fails. Lower parallel macOS jobs or add a Mac |
 | Jobs stay queued after a repository became public | The runner group does not allow public repositories | Organization Settings › Actions › Runner groups › allow public repositories |
 | Linux runner does not start, `docker-credential-osxkeychain` missing | Docker credential helper is not on the service PATH | Make sure it is in `/opt/homebrew/bin` or `/usr/local/bin` |
+| Daemon refuses to start after option 1 | Machine credential file missing | Ask the user for a new enrollment token and run `enroll` again |
 | `start runner failed` in the log | Backend could not start the runner | Read the lines around it in `/opt/homebrew/var/log/elastic-fruit-runner.log` |
 
 Docs: https://elastic-fruit-runner.boringboring.design/tutorials/getting-started/ · Configuration: https://elastic-fruit-runner.boringboring.design/reference/configuration/
