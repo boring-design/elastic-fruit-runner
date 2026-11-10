@@ -9,6 +9,7 @@ Read this first: it is the reason behind the coding rules in this file.
 - **Why AI agents must care most.** An agent has no memory across sessions. Each session re-infers the conventions from the small slice of code it read, and small differences between those inferences pile up into parallel patterns. Agents also change code fast, which makes them the largest source of decoherence. Left unchecked, the system slides into a state that only agents can change and that agents can no longer untangle (Decoherence Collapse).
 - **So:** consistency beats local optimality. Fit new code into the existing patterns, even when another approach looks slightly better in isolation. When you touch an area with duplicate patterns, unify one small instance in the same PR and say so in the description (recohere). A PR that lowers coherence is a defect, even if it works.
 - Source: [The Decoherence Trap](https://maevyn.codes/decoherence/).
+- **Ratchet.** `.ast-grep/rules/` counts legacy patterns (one rule per category); CI fails a PR if any count rises versus its base. Run locally: `.ast-grep/ratchet.sh origin/main` (ast-grep 0.51.1, jq).
 
 The sections below (Standard patterns, Find the existing pattern first, Review checklist) apply this one.
 

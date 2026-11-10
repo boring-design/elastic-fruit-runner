@@ -1,0 +1,17 @@
+# Legacy validator definitions: (*Config).Validate, validateMode, validateOrg/Repo/Auth/RunnerSet.
+# Current: config.ValidateYAML / config.ValidateConfig (config/validation.go). Target 0.
+id: efr-legacy-config-validate-defs
+language: go
+severity: warning
+message: legacy (*Config).Validate family; use config.ValidateConfig
+files: ["config/**"]
+ignores: ["**/*_test.go"]
+rule:
+  any:
+    - all:
+        - kind: method_declaration
+        - has: { field: receiver, stopBy: end, kind: type_identifier, regex: ^Config$ }
+        - has: { field: name, regex: ^(Validate|validateMode)$ }
+    - all:
+        - kind: function_declaration
+        - has: { field: name, regex: ^validate(Org|Repo|Auth|RunnerSet)$ }
