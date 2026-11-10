@@ -1,0 +1,15 @@
+# Callers of legacy (*Config).Validate outside the config package. No type info:
+# heuristic = receiver named cfg/config/conf (or a .cfg/.config field) that is not a CloudConfig.
+# CloudConfig.Validate (current, in validation.go) is excluded by name (cloud / .Cloud).
+id: efr-legacy-config-validate-calls
+language: go
+severity: warning
+message: call to legacy (*Config).Validate; use config.ValidateConfig
+ignores: ["**/*_test.go", "config/**"]
+rule:
+  pattern: $X.Validate()
+  not:
+    any:
+      - has: { field: function, stopBy: end, regex: '(?i)cloud' }
+constraints:
+  X: { regex: '(^|\.)(cfg|config|conf)$' }

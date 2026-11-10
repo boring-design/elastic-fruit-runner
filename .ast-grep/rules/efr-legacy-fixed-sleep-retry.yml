@@ -1,0 +1,18 @@
+# Legacy retry: time.Sleep inside a loop (ignores ctx). Current: sleepWithContext + backoff
+# (internal/cloudagent/commands.go). Stops at func literal so a Sleep in a goroutine
+# started from a loop is not counted.
+id: efr-legacy-fixed-sleep-retry
+language: go
+severity: warning
+message: time.Sleep in a loop ignores ctx; use sleepWithContext with backoff
+ignores: ["**/*_test.go"]
+rule:
+  kind: call_expression
+  has: { field: function, regex: ^time\.Sleep$ }
+  inside:
+    kind: for_statement
+    stopBy:
+      any:
+        - kind: func_literal
+        - kind: function_declaration
+        - kind: method_declaration

@@ -1,0 +1,17 @@
+# Legacy: http.DefaultClient (no timeout) and package-level helpers that use it.
+# Current: client built per target (internal/cloudagent/client.go, githubclient.New).
+id: efr-http-default-client
+language: go
+severity: warning
+message: http.DefaultClient has no timeout; build a client per target
+ignores: ["**/*_test.go"]
+# Note: plain Go patterns like `http.Get($$$)` parse as type conversions in ast-grep 0.51,
+# so match by node kind + regex instead.
+rule:
+  any:
+    - all:
+        - kind: selector_expression
+        - regex: ^http\.DefaultClient$
+    - all:
+        - kind: call_expression
+        - has: { field: function, regex: ^http\.(Get|Head|Post|PostForm)$ }
